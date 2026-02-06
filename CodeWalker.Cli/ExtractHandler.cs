@@ -11,73 +11,18 @@ namespace CodeWalker.Cli;
 
 public record ExtractOptions
 {
-    public required string RpfPath { get; init; }
-    public required string ExePath { get; init; }
+    public required RpfOptions Rpf { get; init; }
     public required string? OutputPath { get; init; }
-    public required bool Gen9 { get; init; }
-    public required string[] Filters { get; init; }
-    public required bool Verbose { get; init; }
-    public required bool Json { get; init; }
-    public required bool Recursive { get; init; }
     public required bool DryRun { get; init; }
     public required bool Progress { get; init; }
-    public required int Threads { get; init; }
-    public required SizeFormat SizeFormat { get; init; } = SizeFormat.IEC;
-
-    public static readonly JsonSerializerOptions JsonSerializerOptions = new()
-    {
-        WriteIndented = true,
-    };
 }
 
 public static class ExtractHandler
 {
     public static Command CreateCommand()
     {
+        RpfCommandOptions rpfOpts = new();
         // csharpier-ignore-start
-        Option<FileInfo> rpfOption = new("--rpf", "-r")
-        {
-            Description = "Path to the RPF file",
-            Required = true,
-        };
-
-        Option<DirectoryInfo> exeOption = new("--exe", "-e")
-        {
-            Description = "Path to the GTA V installation directory (containing GTA5.exe)",
-            Required = true,
-        };
-
-        Option<bool> gen9Option = new("--gen9", "-g")
-        {
-            Description = "Use GTA V Enhanced (Gen9) mode",
-        };
-
-        Option<string[]> filterOption = new("--filter", "-f")
-        {
-            Description = "Filter files by glob patterns (e.g. *.ydd); can be specified multiple times",
-            AllowMultipleArgumentsPerToken = true,
-        };
-
-        Option<bool> verboseOption = new("--verbose", "-v")
-        {
-            Description = "Show verbose output",
-        };
-
-        Option<bool> jsonOption = new("--json")
-        {
-            Description = "Output results in JSON format for scripting",
-        };
-
-        Option<bool> recursiveOption = new("--recursive", "-R")
-        {
-            Description = "Process nested RPF archives",
-        };
-
-        Option<bool> siOption = new("--si")
-        {
-            Description = "Use SI units (1000-based: KB, MB) instead of IEC (1024-based: KiB, MiB)",
-        };
-
         Option<DirectoryInfo> outputOption = new("--output", "-o")
         {
             Description = "Output directory",
@@ -93,47 +38,25 @@ public static class ExtractHandler
         {
             Description = "Show progress bar during extraction",
         };
-
-        Option<int> threadsOption = new("--threads", "-t")
-        {
-            Description = "Number of threads for parallel processing",
-            DefaultValueFactory = _ => Environment.ProcessorCount,
-        };
         // csharpier-ignore-end
 
         Command command = new("extract", "Extract files from an RPF archive")
         {
-            rpfOption,
-            exeOption,
-            gen9Option,
-            filterOption,
-            verboseOption,
             outputOption,
-            jsonOption,
-            recursiveOption,
             dryRunOption,
             progressOption,
-            siOption,
-            threadsOption,
         };
+        rpfOpts.AddTo(command);
         command.Aliases.Add("x");
 
         command.SetAction(parseResult =>
         {
             ExtractOptions options = new()
             {
-                RpfPath = parseResult.GetRequiredValue(rpfOption).FullName,
-                ExePath = parseResult.GetRequiredValue(exeOption).FullName,
+                Rpf = rpfOpts.Parse(parseResult),
                 OutputPath = parseResult.GetValue(outputOption)?.FullName,
-                Gen9 = parseResult.GetValue(gen9Option),
-                Filters = parseResult.GetValue(filterOption) ?? [],
-                Verbose = parseResult.GetValue(verboseOption),
-                Json = parseResult.GetValue(jsonOption),
-                Recursive = parseResult.GetValue(recursiveOption),
                 DryRun = parseResult.GetValue(dryRunOption),
                 Progress = parseResult.GetValue(progressOption),
-                Threads = parseResult.GetValue(threadsOption),
-                SizeFormat = parseResult.GetValue(siOption) ? SizeFormat.SI : SizeFormat.IEC,
             };
             return Execute(options);
         });
@@ -160,49 +83,45 @@ public static class ExtractHandler
             ErrorMessages = errorMessages,
         };
 
-        // Validate inputs
-        if (!File.Exists(options.RpfPath))
+        string? validationError = RpfService.ValidateInputs(
+            options.Rpf.RpfPath,
+            options.Rpf.ExePath,
+            options.Rpf.Gen9
+        );
+        if (validationError != null)
         {
-            return ReportError($"RPF file not found: {options.RpfPath}", options, result);
-        }
-
-        string exeFile = options.Gen9 ? "GTA5_Enhanced.exe" : "GTA5.exe";
-        if (!File.Exists(Path.Combine(options.ExePath, exeFile)))
-        {
-            return ReportError($"{exeFile} not found in: {options.ExePath}", options, result);
+            return ReportError(validationError, options, result);
         }
 
         try
         {
-            if (!options.Json)
+            if (!options.Rpf.Json)
             {
                 Console.Error.WriteLine("Loading encryption keys...");
             }
-            GTA5Keys.LoadFromPath(options.ExePath, options.Gen9);
+            RpfService.LoadKeys(options.Rpf.ExePath, options.Rpf.Gen9);
 
-            if (!options.Json)
+            if (!options.Rpf.Json)
             {
-                Console.Error.WriteLine($"Opening RPF: {options.RpfPath}");
+                Console.Error.WriteLine($"Opening RPF: {options.Rpf.RpfPath}");
             }
 
-            string rpfName = Path.GetFileName(options.RpfPath);
-            RpfFile rpf = new(options.RpfPath, rpfName);
-
-            rpf.ScanStructure(
-                status =>
+            RpfFile rpf = RpfService.OpenRpf(
+                options.Rpf.RpfPath,
+                onStatus: status =>
                 {
-                    if (options.Verbose && !options.Json)
+                    if (options.Rpf.Verbose && !options.Rpf.Json)
                         Console.Error.WriteLine(status);
                 },
-                error =>
+                onError: error =>
                 {
-                    if (!options.Json)
+                    if (!options.Rpf.Json)
                         Console.Error.WriteLine($"Error: {error}");
                     errorMessages.Add(error);
                 }
             );
 
-            if (!options.Json)
+            if (!options.Rpf.Json)
             {
                 Console.Error.WriteLine(
                     $"Found {rpf.GrandTotalFileCount} files in {rpf.GrandTotalRpfCount} archive(s)"
@@ -211,12 +130,12 @@ public static class ExtractHandler
 
             result = result with
             {
-                RpfFile = options.RpfPath,
+                RpfFile = options.Rpf.RpfPath,
                 OutputDir = options.OutputPath ?? Directory.GetCurrentDirectory(),
                 TotalFiles = rpf.GrandTotalFileCount,
             };
 
-            if (!options.Json && options.DryRun)
+            if (!options.Rpf.Json && options.DryRun)
             {
                 Console.Error.WriteLine("Dry run mode - no files will be extracted");
             }
@@ -229,12 +148,14 @@ public static class ExtractHandler
             }
 
             // Collect files first for progress bar
-            List<(RpfFile rpf, RpfFileEntry entry)> filesToExtract = [];
-            CollectFiles(rpf, options.Filters, options.Recursive, filesToExtract);
+            List<(RpfFile rpf, RpfFileEntry entry)> filesToExtract = RpfService.CollectFiles(
+                rpf,
+                options.Rpf.Filters,
+                options.Rpf.Recursive
+            );
 
             // Count non-RPF files that were excluded by filters
-            int totalNonRpfFiles = 0;
-            CountNonRpfFiles(rpf, options.Recursive, ref totalNonRpfFiles);
+            int totalNonRpfFiles = RpfService.CountNonRpfFiles(rpf, options.Rpf.Recursive);
             int skipped = totalNonRpfFiles - filesToExtract.Count;
 
             // Process files in parallel, storing results by index to preserve order
@@ -247,13 +168,19 @@ public static class ExtractHandler
             object consoleLock = new();
 
             using (
-                ProgressBar progress = new(filesToExtract.Count, options.Progress && !options.Json)
+                ProgressBar progress = new(
+                    filesToExtract.Count,
+                    options.Progress && !options.Rpf.Json
+                )
             )
             {
                 Parallel.For(
                     0,
                     filesToExtract.Count,
-                    new ParallelOptions { MaxDegreeOfParallelism = Math.Max(1, options.Threads) },
+                    new ParallelOptions
+                    {
+                        MaxDegreeOfParallelism = Math.Max(1, options.Rpf.Threads),
+                    },
                     i =>
                     {
                         (RpfFile sourceRpf, RpfFileEntry fileEntry) = filesToExtract[i];
@@ -274,14 +201,14 @@ public static class ExtractHandler
                                 Path = fileEntry.Path,
                                 Name = fileEntry.Name,
                                 Size = size,
-                                SizeFormatted = options.SizeFormat.ToFormattedString(size),
-                                Type = GetFileType(fileEntry),
+                                SizeFormatted = options.Rpf.SizeFormat.ToFormattedString(size),
+                                Type = RpfService.GetFileType(fileEntry),
                                 Extension = ext,
                             };
 
                             if (options.DryRun)
                             {
-                                if (options.Verbose && !options.Json)
+                                if (options.Rpf.Verbose && !options.Rpf.Json)
                                 {
                                     lock (consoleLock)
                                     {
@@ -297,7 +224,7 @@ public static class ExtractHandler
                                     Directory.CreateDirectory(fileDir);
                                 }
 
-                                if (options.Verbose && !options.Json && !options.Progress)
+                                if (options.Rpf.Verbose && !options.Rpf.Json && !options.Progress)
                                 {
                                     lock (consoleLock)
                                     {
@@ -313,7 +240,7 @@ public static class ExtractHandler
                                 }
                                 else
                                 {
-                                    if (options.Verbose && !options.Json)
+                                    if (options.Rpf.Verbose && !options.Rpf.Json)
                                     {
                                         lock (consoleLock)
                                         {
@@ -334,7 +261,7 @@ public static class ExtractHandler
                         }
                         catch (Exception ex)
                         {
-                            if (!options.Json)
+                            if (!options.Rpf.Json)
                             {
                                 lock (consoleLock)
                                 {
@@ -380,10 +307,10 @@ public static class ExtractHandler
                 Success = errors == 0,
             };
 
-            if (options.Json)
+            if (options.Rpf.Json)
             {
                 Console.WriteLine(
-                    JsonSerializer.Serialize(result, ExtractOptions.JsonSerializerOptions)
+                    JsonSerializer.Serialize(result, RpfService.JsonSerializerOptions)
                 );
             }
             else
@@ -399,69 +326,13 @@ public static class ExtractHandler
         }
         catch (Exception ex)
         {
-            return ReportError(ex.Message, options, result, options.Verbose ? ex.StackTrace : null);
+            return ReportError(
+                ex.Message,
+                options,
+                result,
+                options.Rpf.Verbose ? ex.StackTrace : null
+            );
         }
-    }
-
-    private static void CollectFiles(
-        RpfFile rpf,
-        string[]? filters,
-        bool recursive,
-        List<(RpfFile, RpfFileEntry)> files
-    )
-    {
-        foreach (RpfEntry entry in rpf.AllEntries)
-        {
-            if (entry is RpfFileEntry fileEntry)
-            {
-                // Skip nested RPFs in collection
-                if (entry.NameLower.EndsWith(".rpf"))
-                    continue;
-
-                if (!Filter.Matches(entry.Path, filters))
-                    continue;
-
-                files.Add((rpf, fileEntry));
-            }
-        }
-
-        // Process nested RPFs
-        if (recursive && rpf.Children != null)
-        {
-            foreach (RpfFile child in rpf.Children)
-            {
-                CollectFiles(child, filters, recursive, files);
-            }
-        }
-    }
-
-    private static void CountNonRpfFiles(RpfFile rpf, bool recursive, ref int count)
-    {
-        foreach (RpfEntry entry in rpf.AllEntries)
-        {
-            if (entry is RpfFileEntry && !entry.NameLower.EndsWith(".rpf"))
-            {
-                count++;
-            }
-        }
-
-        if (recursive && rpf.Children != null)
-        {
-            foreach (RpfFile child in rpf.Children)
-            {
-                CountNonRpfFiles(child, recursive, ref count);
-            }
-        }
-    }
-
-    private static string GetFileType(RpfFileEntry fileEntry)
-    {
-        return fileEntry switch
-        {
-            RpfResourceFileEntry => "resource",
-            RpfBinaryFileEntry => "binary",
-            _ => "unknown",
-        };
     }
 
     private static int ReportError(
@@ -471,16 +342,14 @@ public static class ExtractHandler
         string? stackTrace = null
     )
     {
-        if (options.Json)
+        if (options.Rpf.Json)
         {
             result = result with
             {
                 Success = false,
                 ErrorMessages = [.. result.ErrorMessages, message],
             };
-            Console.WriteLine(
-                JsonSerializer.Serialize(result, ExtractOptions.JsonSerializerOptions)
-            );
+            Console.WriteLine(JsonSerializer.Serialize(result, RpfService.JsonSerializerOptions));
         }
         else
         {

@@ -14,11 +14,6 @@ public record HashOptions
 
     public const string DefaultEncoding = "utf8";
     public const JenkHashInputEncoding DefaultJenkHashEncoding = JenkHashInputEncoding.UTF8;
-
-    public static readonly JsonSerializerOptions JsonSerializerOptions = new()
-    {
-        WriteIndented = true,
-    };
 }
 
 public static class HashHandler
@@ -129,7 +124,7 @@ public static class HashHandler
             if (options.Json)
             {
                 Console.WriteLine(
-                    JsonSerializer.Serialize(result, HashOptions.JsonSerializerOptions)
+                    JsonSerializer.Serialize(result, RpfService.JsonSerializerOptions)
                 );
             }
 
@@ -146,7 +141,7 @@ public static class HashHandler
         if (options.Json)
         {
             result = result with { Success = false, ErrorMessage = message };
-            Console.WriteLine(JsonSerializer.Serialize(result, HashOptions.JsonSerializerOptions));
+            Console.WriteLine(JsonSerializer.Serialize(result, RpfService.JsonSerializerOptions));
         }
         else
         {
