@@ -52,3 +52,16 @@ namespace System.Diagnostics.CodeAnalysis
     internal sealed class SetsRequiredMembersAttribute : Attribute { }
 #endif
 }
+
+#if !NETCOREAPP
+namespace CodeWalker.Cli.Polyfills
+{
+    internal static class StringExtensions
+    {
+        public static bool Contains(this string s, char value)
+        {
+            return s.IndexOf(value) >= 0;
+        }
+    }
+}
+#endif
