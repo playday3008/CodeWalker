@@ -128,7 +128,7 @@ public static class TreeHandler
             else
             {
                 Console.WriteLine(Path.GetFileName(options.Rpf.RpfPath));
-                PrintTree(rpf.Root, rpf, options, "", true, 0, ref totalFiles, ref totalDirs);
+                PrintTree(rpf.Root, rpf, options, "", 0, ref totalFiles, ref totalDirs);
 
                 Console.Error.WriteLine();
                 Console.Error.WriteLine($"{totalDirs} directories, {totalFiles} files");
@@ -152,7 +152,6 @@ public static class TreeHandler
         RpfFile rpf,
         TreeOptions options,
         string prefix,
-        bool isRoot,
         int depth,
         ref int totalFiles,
         ref int totalDirs
@@ -188,7 +187,6 @@ public static class TreeHandler
                         childRpf ?? rpf,
                         options,
                         childPrefix,
-                        false,
                         depth + 1,
                         ref totalFiles,
                         ref totalDirs

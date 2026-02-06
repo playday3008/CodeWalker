@@ -14,9 +14,11 @@ public record PackOptions
     public required string OutputPath { get; init; }
     public required string ExePath { get; init; }
     public required bool Gen9 { get; init; }
+    public required bool Force { get; init; }
     public required bool Progress { get; init; }
     public required bool Verbose { get; init; }
     public required bool Json { get; init; }
+    public required SizeFormat SizeFormat { get; init; }
 }
 
 public static class PackHandler
@@ -47,6 +49,11 @@ public static class PackHandler
             Description = "Use GTA V Enhanced (Gen9) mode",
         };
 
+        Option<bool> forceOption = new("--force", "-F")
+        {
+            Description = "Overwrite existing output file",
+        };
+
         Option<bool> progressOption = new("--progress", "-P")
         {
             Description = "Show progress bar",
@@ -61,6 +68,11 @@ public static class PackHandler
         {
             Description = "Output results in JSON format",
         };
+
+        Option<bool> siOption = new("--si")
+        {
+            Description = "Use SI units (1000-based: KB, MB) instead of IEC (1024-based: KiB, MiB)",
+        };
         // csharpier-ignore-end
 
         Command command = new("pack", "Create an RPF archive from a directory of loose files")
@@ -69,9 +81,11 @@ public static class PackHandler
             outputOption,
             exeOption,
             gen9Option,
+            forceOption,
             progressOption,
             verboseOption,
             jsonOption,
+            siOption,
         };
         command.Aliases.Add("p");
 
@@ -83,9 +97,11 @@ public static class PackHandler
                 OutputPath = parseResult.GetRequiredValue(outputOption).FullName,
                 ExePath = parseResult.GetRequiredValue(exeOption).FullName,
                 Gen9 = parseResult.GetValue(gen9Option),
+                Force = parseResult.GetValue(forceOption),
                 Progress = parseResult.GetValue(progressOption),
                 Verbose = parseResult.GetValue(verboseOption),
                 Json = parseResult.GetValue(jsonOption),
+                SizeFormat = parseResult.GetValue(siOption) ? SizeFormat.SI : SizeFormat.IEC,
             };
             return Execute(options);
         });
@@ -117,19 +133,17 @@ public static class PackHandler
 
         if (File.Exists(options.OutputPath))
         {
-            return ReportError(
-                $"Output file already exists: {options.OutputPath}",
-                options,
-                result
-            );
+            if (!options.Force)
+            {
+                return ReportError(
+                    $"Output file already exists: {options.OutputPath}. Use --force to overwrite.",
+                    options,
+                    result
+                );
+            }
+            File.Delete(options.OutputPath);
         }
 
-        string? validationError = RpfService.ValidateInputs(
-            options.OutputPath,
-            options.ExePath,
-            options.Gen9
-        );
-        // ValidateInputs checks RPF exists, but we're creating one so just check exe
         string exeFile = options.Gen9 ? "GTA5_Enhanced.exe" : "GTA5.exe";
         if (!File.Exists(Path.Combine(options.ExePath, exeFile)))
         {
@@ -201,7 +215,7 @@ public static class PackHandler
             }
             RpfFile.Defragment(rpf);
 
-            SizeFormat sizeFormat = SizeFormat.IEC;
+            SizeFormat sizeFormat = options.SizeFormat;
 
             result = result with
             {

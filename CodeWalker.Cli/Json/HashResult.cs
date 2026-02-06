@@ -11,8 +11,8 @@ public record HashResult
     [JsonPropertyName("hashes")]
     public required IReadOnlyList<HashEntry> Hashes { get; init; }
 
-    [JsonPropertyName("errorMessage")]
-    public required string? ErrorMessage { get; init; }
+    [JsonPropertyName("errorMessages")]
+    public required IReadOnlyList<string> ErrorMessages { get; init; }
 }
 
 public record HashEntry

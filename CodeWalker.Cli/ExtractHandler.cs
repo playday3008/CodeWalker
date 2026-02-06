@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.CommandLine;
 using System.IO;
 using System.Text.Json;
+using System.Threading;
 using System.Threading.Tasks;
 using CodeWalker.Cli.Helpers;
 using CodeWalker.GameFiles;
@@ -14,6 +15,7 @@ public record ExtractOptions
     public required RpfOptions Rpf { get; init; }
     public required string? OutputPath { get; init; }
     public required bool DryRun { get; init; }
+    public required bool NoOverwrite { get; init; }
     public required bool Progress { get; init; }
 }
 
@@ -34,6 +36,11 @@ public static class ExtractHandler
             Description = "Show what would be extracted without actually extracting",
         };
 
+        Option<bool> noOverwriteOption = new("--no-overwrite")
+        {
+            Description = "Skip existing files instead of overwriting",
+        };
+
         Option<bool> progressOption = new("--progress", "-P")
         {
             Description = "Show progress bar during extraction",
@@ -44,6 +51,7 @@ public static class ExtractHandler
         {
             outputOption,
             dryRunOption,
+            noOverwriteOption,
             progressOption,
         };
         rpfOpts.AddTo(command);
@@ -56,6 +64,7 @@ public static class ExtractHandler
                 Rpf = rpfOpts.Parse(parseResult),
                 OutputPath = parseResult.GetValue(outputOption)?.FullName,
                 DryRun = parseResult.GetValue(dryRunOption),
+                NoOverwrite = parseResult.GetValue(noOverwriteOption),
                 Progress = parseResult.GetValue(progressOption),
             };
             return Execute(options);
@@ -157,6 +166,7 @@ public static class ExtractHandler
             // Count non-RPF files that were excluded by filters
             int totalNonRpfFiles = RpfService.CountNonRpfFiles(rpf, options.Rpf.Recursive);
             int skipped = totalNonRpfFiles - filesToExtract.Count;
+            int overwriteSkipped = 0;
 
             // Process files in parallel, storing results by index to preserve order
             (bool success, Json.FileEntry? jsonEntry, string? errorMessage)[] results = new (
@@ -216,6 +226,19 @@ public static class ExtractHandler
                                     }
                                 }
                                 results[i] = (true, jsonEntry, null);
+                            }
+                            else if (options.NoOverwrite && File.Exists(outputPath))
+                            {
+                                Interlocked.Increment(ref overwriteSkipped);
+                                if (options.Rpf.Verbose && !options.Rpf.Json && !options.Progress)
+                                {
+                                    lock (consoleLock)
+                                    {
+                                        Console.Error.WriteLine(
+                                            $"Skipping (exists): {fileEntry.Path}"
+                                        );
+                                    }
+                                }
                             }
                             else
                             {
@@ -298,6 +321,8 @@ public static class ExtractHandler
                     errorMessages.Add(errorMessage);
                 }
             }
+
+            skipped += overwriteSkipped;
 
             result = result with
             {

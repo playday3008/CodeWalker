@@ -17,6 +17,7 @@ public record DiffOptions
     public required bool Recursive { get; init; }
     public required bool Verbose { get; init; }
     public required bool Json { get; init; }
+    public required SizeFormat SizeFormat { get; init; }
 }
 
 public static class DiffHandler
@@ -61,6 +62,11 @@ public static class DiffHandler
         {
             Description = "Output results in JSON format",
         };
+
+        Option<bool> siOption = new("--si")
+        {
+            Description = "Use SI units (1000-based: KB, MB) instead of IEC (1024-based: KiB, MiB)",
+        };
         // csharpier-ignore-end
 
         Command command = new("diff", "Compare two RPF archives")
@@ -72,6 +78,7 @@ public static class DiffHandler
             recursiveOption,
             verboseOption,
             jsonOption,
+            siOption,
         };
         command.Aliases.Add("d");
 
@@ -86,6 +93,7 @@ public static class DiffHandler
                 Recursive = parseResult.GetValue(recursiveOption),
                 Verbose = parseResult.GetValue(verboseOption),
                 Json = parseResult.GetValue(jsonOption),
+                SizeFormat = parseResult.GetValue(siOption) ? SizeFormat.SI : SizeFormat.IEC,
             };
             return Execute(options);
         });
@@ -188,16 +196,16 @@ public static class DiffHandler
             );
 
             // Build dictionaries keyed by path
-            Dictionary<string, RpfFileEntry> leftDict = [];
-            foreach ((_, RpfFileEntry entry) in leftFiles)
+            Dictionary<string, (RpfFile rpf, RpfFileEntry entry)> leftDict = [];
+            foreach ((RpfFile rpf, RpfFileEntry entry) in leftFiles)
             {
-                leftDict[entry.Path] = entry;
+                leftDict[entry.Path] = (rpf, entry);
             }
 
-            Dictionary<string, RpfFileEntry> rightDict = [];
-            foreach ((_, RpfFileEntry entry) in rightFiles)
+            Dictionary<string, (RpfFile rpf, RpfFileEntry entry)> rightDict = [];
+            foreach ((RpfFile rpf, RpfFileEntry entry) in rightFiles)
             {
-                rightDict[entry.Path] = entry;
+                rightDict[entry.Path] = (rpf, entry);
             }
 
             List<Json.DiffEntry> added = [];
@@ -205,22 +213,34 @@ public static class DiffHandler
             List<Json.DiffEntry> modified = [];
             List<Json.DiffEntry> unchanged = [];
 
-            SizeFormat sizeFormat = SizeFormat.IEC;
+            SizeFormat sizeFormat = options.SizeFormat;
 
             // Find removed and modified/unchanged
-            foreach (KeyValuePair<string, RpfFileEntry> kvp in leftDict)
+            foreach (KeyValuePair<string, (RpfFile rpf, RpfFileEntry entry)> kvp in leftDict)
             {
                 string path = kvp.Key;
-                RpfFileEntry leftEntry = kvp.Value;
+                (RpfFile leftRpfRef, RpfFileEntry leftEntry) = kvp.Value;
 
-                if (rightDict.TryGetValue(path, out RpfFileEntry? rightEntry))
+                if (rightDict.TryGetValue(path, out (RpfFile rpf, RpfFileEntry entry) right))
                 {
                     long leftSize = leftEntry.GetFileSize();
-                    long rightSize = rightEntry.GetFileSize();
+                    long rightSize = right.entry.GetFileSize();
                     string leftType = RpfService.GetFileType(leftEntry);
-                    string rightType = RpfService.GetFileType(rightEntry);
+                    string rightType = RpfService.GetFileType(right.entry);
 
+                    bool isModified;
                     if (leftSize != rightSize || leftType != rightType)
+                    {
+                        isModified = true;
+                    }
+                    else
+                    {
+                        byte[]? leftData = leftRpfRef.ExtractFile(leftEntry);
+                        byte[]? rightData = right.rpf.ExtractFile(right.entry);
+                        isModified = !ContentEquals(leftData, rightData);
+                    }
+
+                    if (isModified)
                     {
                         modified.Add(
                             new Json.DiffEntry
@@ -264,17 +284,17 @@ public static class DiffHandler
             }
 
             // Find added
-            foreach (KeyValuePair<string, RpfFileEntry> kvp in rightDict)
+            foreach (KeyValuePair<string, (RpfFile rpf, RpfFileEntry entry)> kvp in rightDict)
             {
                 if (!leftDict.ContainsKey(kvp.Key))
                 {
-                    long size = kvp.Value.GetFileSize();
+                    long size = kvp.Value.entry.GetFileSize();
                     added.Add(
                         new Json.DiffEntry
                         {
                             Path = kvp.Key,
-                            Name = kvp.Value.Name,
-                            Type = RpfService.GetFileType(kvp.Value),
+                            Name = kvp.Value.entry.Name,
+                            Type = RpfService.GetFileType(kvp.Value.entry),
                             Size = size,
                             SizeFormatted = sizeFormat.ToFormattedString(size),
                         }
@@ -367,6 +387,22 @@ public static class DiffHandler
         {
             return ReportError(ex.Message, options, result, options.Verbose ? ex.StackTrace : null);
         }
+    }
+
+    private static bool ContentEquals(byte[]? a, byte[]? b)
+    {
+        if (a == null && b == null)
+            return true;
+        if (a == null || b == null)
+            return false;
+        if (a.Length != b.Length)
+            return false;
+        for (int i = 0; i < a.Length; i++)
+        {
+            if (a[i] != b[i])
+                return false;
+        }
+        return true;
     }
 
     private static int ReportError(
