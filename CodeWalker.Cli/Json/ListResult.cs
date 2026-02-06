@@ -3,11 +3,8 @@ using System.Text.Json.Serialization;
 
 namespace CodeWalker.Cli.Json;
 
-public record ListResult
+public record ListResult : BaseResult
 {
-    [JsonPropertyName("success")]
-    public required bool Success { get; init; }
-
     [JsonPropertyName("rpfFile")]
     public required string RpfFile { get; init; }
 
@@ -25,7 +22,4 @@ public record ListResult
 
     [JsonPropertyName("files")]
     public required IReadOnlyList<FileEntry> Files { get; init; }
-
-    [JsonPropertyName("errorMessages")]
-    public required IReadOnlyList<string> ErrorMessages { get; init; }
 }

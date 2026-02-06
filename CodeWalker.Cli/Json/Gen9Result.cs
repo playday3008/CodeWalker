@@ -3,11 +3,8 @@ using System.Text.Json.Serialization;
 
 namespace CodeWalker.Cli.Json;
 
-public record Gen9Result
+public record Gen9Result : BaseResult
 {
-    [JsonPropertyName("success")]
-    public required bool Success { get; init; }
-
     [JsonPropertyName("inputFolder")]
     public required string InputFolder { get; init; }
 
@@ -31,9 +28,6 @@ public record Gen9Result
 
     [JsonPropertyName("files")]
     public required IReadOnlyList<Gen9FileEntry> Files { get; init; }
-
-    [JsonPropertyName("errorMessages")]
-    public required IReadOnlyList<string> ErrorMessages { get; init; }
 }
 
 public record Gen9FileEntry

@@ -35,7 +35,7 @@ public static class ListHandler
         Json.ListResult result = new()
         {
             Success = false,
-            RpfFile = null!,
+            RpfFile = options.RpfPath,
             TotalFiles = 0,
             TotalSize = 0,
             TotalSizeFormatted = "0 B",
@@ -44,56 +44,27 @@ public static class ListHandler
             ErrorMessages = errorMessages,
         };
 
-        string? validationError = RpfService.ValidateInputs(
+        string? initError = RpfService.ValidateAndLoadKeys(
             options.RpfPath,
             options.ExePath,
-            options.Gen9
+            options.Gen9,
+            options.Json
         );
-        if (validationError != null)
+        if (initError != null)
         {
-            return ReportError(validationError, options, result);
+            return RpfService.ReportError(initError, options.Json, result);
         }
 
         try
         {
-            if (!options.Json)
-            {
-                Console.Error.WriteLine("Loading encryption keys...");
-            }
-            RpfService.LoadKeys(options.ExePath, options.Gen9);
-
-            if (!options.Json)
-            {
-                Console.Error.WriteLine($"Opening RPF: {options.RpfPath}");
-            }
-
             RpfFile rpf = RpfService.OpenRpf(
                 options.RpfPath,
-                onStatus: status =>
-                {
-                    if (options.Verbose && !options.Json)
-                        Console.Error.WriteLine(status);
-                },
-                onError: error =>
-                {
-                    if (!options.Json)
-                        Console.Error.WriteLine($"Error: {error}");
-                    errorMessages.Add(error);
-                }
+                options.Verbose,
+                options.Json,
+                errorMessages
             );
 
-            if (!options.Json)
-            {
-                Console.Error.WriteLine(
-                    $"Found {rpf.GrandTotalFileCount} files in {rpf.GrandTotalRpfCount} archive(s)"
-                );
-            }
-
-            result = result with
-            {
-                RpfFile = options.RpfPath,
-                NestedRpfCount = rpf.GrandTotalRpfCount,
-            };
+            result = result with { NestedRpfCount = rpf.GrandTotalRpfCount };
 
             if (!options.Json)
             {
@@ -193,34 +164,12 @@ public static class ListHandler
         }
         catch (Exception ex)
         {
-            return ReportError(ex.Message, options, result, options.Verbose ? ex.StackTrace : null);
+            return RpfService.ReportError(
+                ex.Message,
+                options.Json,
+                result,
+                options.Verbose ? ex.StackTrace : null
+            );
         }
-    }
-
-    private static int ReportError(
-        string message,
-        RpfOptions options,
-        Json.ListResult result,
-        string? stackTrace = null
-    )
-    {
-        if (options.Json)
-        {
-            result = result with
-            {
-                Success = false,
-                ErrorMessages = [.. result.ErrorMessages, message],
-            };
-            Console.WriteLine(JsonSerializer.Serialize(result, RpfService.JsonSerializerOptions));
-        }
-        else
-        {
-            Console.Error.WriteLine($"Error: {message}");
-            if (stackTrace != null)
-            {
-                Console.Error.WriteLine(stackTrace);
-            }
-        }
-        return 1;
     }
 }

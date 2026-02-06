@@ -3,11 +3,8 @@ using System.Text.Json.Serialization;
 
 namespace CodeWalker.Cli.Json;
 
-public record PackResult
+public record PackResult : BaseResult
 {
-    [JsonPropertyName("success")]
-    public required bool Success { get; init; }
-
     [JsonPropertyName("inputDir")]
     public required string InputDir { get; init; }
 
@@ -28,7 +25,4 @@ public record PackResult
 
     [JsonPropertyName("errors")]
     public required int Errors { get; init; }
-
-    [JsonPropertyName("errorMessages")]
-    public required IReadOnlyList<string> ErrorMessages { get; init; }
 }

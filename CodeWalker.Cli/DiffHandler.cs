@@ -124,7 +124,7 @@ public static class DiffHandler
             ErrorMessages = errorMessages,
         };
 
-        // Validate both RPF files
+        // Validate both RPF files exist before loading keys
         string? leftError = RpfService.ValidateInputs(
             options.LeftPath,
             options.ExePath,
@@ -132,7 +132,7 @@ public static class DiffHandler
         );
         if (leftError != null)
         {
-            return ReportError(leftError, options, result);
+            return RpfService.ReportError(leftError, options.Json, result);
         }
 
         string? rightError = RpfService.ValidateInputs(
@@ -142,45 +142,27 @@ public static class DiffHandler
         );
         if (rightError != null)
         {
-            return ReportError(rightError, options, result);
+            return RpfService.ReportError(rightError, options.Json, result);
         }
 
         try
         {
             if (!options.Json)
-            {
                 Console.Error.WriteLine("Loading encryption keys...");
-            }
             RpfService.LoadKeys(options.ExePath, options.Gen9);
-
-            if (!options.Json)
-            {
-                Console.Error.WriteLine($"Opening left RPF: {options.LeftPath}");
-            }
 
             RpfFile leftRpf = RpfService.OpenRpf(
                 options.LeftPath,
-                onError: error =>
-                {
-                    if (!options.Json)
-                        Console.Error.WriteLine($"Error: {error}");
-                    errorMessages.Add(error);
-                }
+                options.Verbose,
+                options.Json,
+                errorMessages
             );
-
-            if (!options.Json)
-            {
-                Console.Error.WriteLine($"Opening right RPF: {options.RightPath}");
-            }
 
             RpfFile rightRpf = RpfService.OpenRpf(
                 options.RightPath,
-                onError: error =>
-                {
-                    if (!options.Json)
-                        Console.Error.WriteLine($"Error: {error}");
-                    errorMessages.Add(error);
-                }
+                options.Verbose,
+                options.Json,
+                errorMessages
             );
 
             // Collect files from both archives
@@ -385,7 +367,12 @@ public static class DiffHandler
         }
         catch (Exception ex)
         {
-            return ReportError(ex.Message, options, result, options.Verbose ? ex.StackTrace : null);
+            return RpfService.ReportError(
+                ex.Message,
+                options.Json,
+                result,
+                options.Verbose ? ex.StackTrace : null
+            );
         }
     }
 
@@ -397,38 +384,15 @@ public static class DiffHandler
             return false;
         if (a.Length != b.Length)
             return false;
+#if NET5_0_OR_GREATER
+        return a.AsSpan().SequenceEqual(b);
+#else
         for (int i = 0; i < a.Length; i++)
         {
             if (a[i] != b[i])
                 return false;
         }
         return true;
-    }
-
-    private static int ReportError(
-        string message,
-        DiffOptions options,
-        Json.DiffResult result,
-        string? stackTrace = null
-    )
-    {
-        if (options.Json)
-        {
-            result = result with
-            {
-                Success = false,
-                ErrorMessages = [.. result.ErrorMessages, message],
-            };
-            Console.WriteLine(JsonSerializer.Serialize(result, RpfService.JsonSerializerOptions));
-        }
-        else
-        {
-            Console.Error.WriteLine($"Error: {message}");
-            if (stackTrace != null)
-            {
-                Console.Error.WriteLine(stackTrace);
-            }
-        }
-        return 1;
+#endif
     }
 }

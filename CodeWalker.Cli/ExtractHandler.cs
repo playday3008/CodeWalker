@@ -81,8 +81,8 @@ public static class ExtractHandler
         Json.ExtractResult result = new()
         {
             Success = false,
-            RpfFile = null!,
-            OutputDir = null!,
+            RpfFile = options.Rpf.RpfPath,
+            OutputDir = options.OutputPath ?? Directory.GetCurrentDirectory(),
             TotalFiles = 0,
             Extracted = 0,
             Skipped = 0,
@@ -92,57 +92,27 @@ public static class ExtractHandler
             ErrorMessages = errorMessages,
         };
 
-        string? validationError = RpfService.ValidateInputs(
+        string? initError = RpfService.ValidateAndLoadKeys(
             options.Rpf.RpfPath,
             options.Rpf.ExePath,
-            options.Rpf.Gen9
+            options.Rpf.Gen9,
+            options.Rpf.Json
         );
-        if (validationError != null)
+        if (initError != null)
         {
-            return ReportError(validationError, options, result);
+            return RpfService.ReportError(initError, options.Rpf.Json, result);
         }
 
         try
         {
-            if (!options.Rpf.Json)
-            {
-                Console.Error.WriteLine("Loading encryption keys...");
-            }
-            RpfService.LoadKeys(options.Rpf.ExePath, options.Rpf.Gen9);
-
-            if (!options.Rpf.Json)
-            {
-                Console.Error.WriteLine($"Opening RPF: {options.Rpf.RpfPath}");
-            }
-
             RpfFile rpf = RpfService.OpenRpf(
                 options.Rpf.RpfPath,
-                onStatus: status =>
-                {
-                    if (options.Rpf.Verbose && !options.Rpf.Json)
-                        Console.Error.WriteLine(status);
-                },
-                onError: error =>
-                {
-                    if (!options.Rpf.Json)
-                        Console.Error.WriteLine($"Error: {error}");
-                    errorMessages.Add(error);
-                }
+                options.Rpf.Verbose,
+                options.Rpf.Json,
+                errorMessages
             );
 
-            if (!options.Rpf.Json)
-            {
-                Console.Error.WriteLine(
-                    $"Found {rpf.GrandTotalFileCount} files in {rpf.GrandTotalRpfCount} archive(s)"
-                );
-            }
-
-            result = result with
-            {
-                RpfFile = options.Rpf.RpfPath,
-                OutputDir = options.OutputPath ?? Directory.GetCurrentDirectory(),
-                TotalFiles = rpf.GrandTotalFileCount,
-            };
+            result = result with { TotalFiles = rpf.GrandTotalFileCount };
 
             if (!options.Rpf.Json && options.DryRun)
             {
@@ -225,7 +195,7 @@ public static class ExtractHandler
                                         Console.WriteLine($"Would extract: {fileEntry.Path}");
                                     }
                                 }
-                                results[i] = (true, jsonEntry, null);
+                                results[i] = (true, jsonEntry with { Status = "dry_run" }, null);
                             }
                             else if (options.NoOverwrite && File.Exists(outputPath))
                             {
@@ -239,6 +209,7 @@ public static class ExtractHandler
                                         );
                                     }
                                 }
+                                results[i] = (false, jsonEntry with { Status = "skipped" }, null);
                             }
                             else
                             {
@@ -259,7 +230,14 @@ public static class ExtractHandler
                                 if (data != null)
                                 {
                                     File.WriteAllBytes(outputPath, data);
-                                    results[i] = (true, jsonEntry, null);
+                                    results[i] = (
+                                        true,
+                                        jsonEntry with
+                                        {
+                                            Status = "extracted",
+                                        },
+                                        null
+                                    );
                                 }
                                 else
                                 {
@@ -310,12 +288,12 @@ public static class ExtractHandler
             foreach (var (success, jsonEntry, errorMessage) in results)
             {
                 if (success)
-                {
                     extracted++;
-                    if (jsonEntry != null)
-                        files.Add(jsonEntry);
-                }
-                else if (errorMessage != null)
+
+                if (jsonEntry != null)
+                    files.Add(jsonEntry);
+
+                if (!success && errorMessage != null)
                 {
                     errors++;
                     errorMessages.Add(errorMessage);
@@ -351,39 +329,12 @@ public static class ExtractHandler
         }
         catch (Exception ex)
         {
-            return ReportError(
+            return RpfService.ReportError(
                 ex.Message,
-                options,
+                options.Rpf.Json,
                 result,
                 options.Rpf.Verbose ? ex.StackTrace : null
             );
         }
-    }
-
-    private static int ReportError(
-        string message,
-        ExtractOptions options,
-        Json.ExtractResult result,
-        string? stackTrace = null
-    )
-    {
-        if (options.Rpf.Json)
-        {
-            result = result with
-            {
-                Success = false,
-                ErrorMessages = [.. result.ErrorMessages, message],
-            };
-            Console.WriteLine(JsonSerializer.Serialize(result, RpfService.JsonSerializerOptions));
-        }
-        else
-        {
-            Console.Error.WriteLine($"Error: {message}");
-            if (stackTrace != null)
-            {
-                Console.Error.WriteLine(stackTrace);
-            }
-        }
-        return 1;
     }
 }

@@ -3,11 +3,8 @@ using System.Text.Json.Serialization;
 
 namespace CodeWalker.Cli.Json;
 
-public record TreeResult
+public record TreeResult : BaseResult
 {
-    [JsonPropertyName("success")]
-    public required bool Success { get; init; }
-
     [JsonPropertyName("rpfFile")]
     public required string RpfFile { get; init; }
 
@@ -19,9 +16,6 @@ public record TreeResult
 
     [JsonPropertyName("root")]
     public TreeNode? Root { get; init; }
-
-    [JsonPropertyName("errorMessages")]
-    public required IReadOnlyList<string> ErrorMessages { get; init; }
 }
 
 public record TreeNode

@@ -68,10 +68,17 @@ public static class Filter
             {
                 // Convert glob pattern to regex
                 // Escape all regex special chars except * and ?
-                string regexPattern = Regex
-                    .Escape(p)
-                    .Replace("\\*", ".*") // * matches any sequence of characters
-                    .Replace("\\?", "."); // ? matches any single character
+                string regexPattern = Regex.Escape(p);
+
+                // Handle ** (globstar) before * — order matters
+                // **/ matches zero or more directory segments
+                regexPattern = regexPattern.Replace("\\*\\*/", "(.*/)?");
+                // standalone ** matches any characters including /
+                regexPattern = regexPattern.Replace("\\*\\*", ".*");
+                // * matches any characters except / (single path segment)
+                regexPattern = regexPattern.Replace("\\*", "[^/]*");
+                // ? matches any single character except /
+                regexPattern = regexPattern.Replace("\\?", "[^/]");
 
                 // Patterns with path separators match at any path boundary;
                 // filename-only patterns are anchored to the full filename.

@@ -3,16 +3,10 @@ using System.Text.Json.Serialization;
 
 namespace CodeWalker.Cli.Json;
 
-public record HashResult
+public record HashResult : BaseResult
 {
-    [JsonPropertyName("success")]
-    public required bool Success { get; init; }
-
     [JsonPropertyName("hashes")]
     public required IReadOnlyList<HashEntry> Hashes { get; init; }
-
-    [JsonPropertyName("errorMessages")]
-    public required IReadOnlyList<string> ErrorMessages { get; init; }
 }
 
 public record HashEntry

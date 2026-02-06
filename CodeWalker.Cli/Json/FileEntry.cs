@@ -21,4 +21,8 @@ public record FileEntry
 
     [JsonPropertyName("extension")]
     public required string Extension { get; init; }
+
+    [JsonPropertyName("status")]
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+    public string? Status { get; init; }
 }

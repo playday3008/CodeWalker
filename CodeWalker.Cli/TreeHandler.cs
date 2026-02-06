@@ -54,48 +54,30 @@ public static class TreeHandler
         Json.TreeResult result = new()
         {
             Success = false,
-            RpfFile = null!,
+            RpfFile = options.Rpf.RpfPath,
             TotalFiles = 0,
             TotalDirs = 0,
             ErrorMessages = errorMessages,
         };
 
-        string? validationError = RpfService.ValidateInputs(
+        string? initError = RpfService.ValidateAndLoadKeys(
             options.Rpf.RpfPath,
             options.Rpf.ExePath,
-            options.Rpf.Gen9
+            options.Rpf.Gen9,
+            options.Rpf.Json
         );
-        if (validationError != null)
+        if (initError != null)
         {
-            return ReportError(validationError, options, result);
+            return RpfService.ReportError(initError, options.Rpf.Json, result);
         }
 
         try
         {
-            if (!options.Rpf.Json)
-            {
-                Console.Error.WriteLine("Loading encryption keys...");
-            }
-            RpfService.LoadKeys(options.Rpf.ExePath, options.Rpf.Gen9);
-
-            if (!options.Rpf.Json)
-            {
-                Console.Error.WriteLine($"Opening RPF: {options.Rpf.RpfPath}");
-            }
-
             RpfFile rpf = RpfService.OpenRpf(
                 options.Rpf.RpfPath,
-                onStatus: status =>
-                {
-                    if (options.Rpf.Verbose && !options.Rpf.Json)
-                        Console.Error.WriteLine(status);
-                },
-                onError: error =>
-                {
-                    if (!options.Rpf.Json)
-                        Console.Error.WriteLine($"Error: {error}");
-                    errorMessages.Add(error);
-                }
+                options.Rpf.Verbose,
+                options.Rpf.Json,
+                errorMessages
             );
 
             int totalFiles = 0;
@@ -138,9 +120,9 @@ public static class TreeHandler
         }
         catch (Exception ex)
         {
-            return ReportError(
+            return RpfService.ReportError(
                 ex.Message,
-                options,
+                options.Rpf.Json,
                 result,
                 options.Rpf.Verbose ? ex.StackTrace : null
             );
@@ -344,32 +326,5 @@ public static class TreeHandler
         }
 
         return items;
-    }
-
-    private static int ReportError(
-        string message,
-        TreeOptions options,
-        Json.TreeResult result,
-        string? stackTrace = null
-    )
-    {
-        if (options.Rpf.Json)
-        {
-            result = result with
-            {
-                Success = false,
-                ErrorMessages = [.. result.ErrorMessages, message],
-            };
-            Console.WriteLine(JsonSerializer.Serialize(result, RpfService.JsonSerializerOptions));
-        }
-        else
-        {
-            Console.Error.WriteLine($"Error: {message}");
-            if (stackTrace != null)
-            {
-                Console.Error.WriteLine(stackTrace);
-            }
-        }
-        return 1;
     }
 }
