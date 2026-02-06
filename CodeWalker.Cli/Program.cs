@@ -10,6 +10,7 @@ RootCommand rootCommand = new(description: "CodeWalker CLI - RPF Archive Tool")
     Gen9Handler.CreateCommand(),
     PackHandler.CreateCommand(),
     DiffHandler.CreateCommand(),
+    ExportHandler.CreateCommand(),
 };
 
 return rootCommand.Parse(args).Invoke();
