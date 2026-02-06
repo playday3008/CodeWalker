@@ -53,15 +53,20 @@ namespace System.Diagnostics.CodeAnalysis
 #endif
 }
 
-#if !NETCOREAPP
 namespace CodeWalker.Cli.Polyfills
 {
+#if !NETCOREAPP
     internal static class StringExtensions
     {
         public static bool Contains(this string s, char value)
         {
             return s.IndexOf(value) >= 0;
         }
+
+        public static bool StartsWith(this string s, char value)
+        {
+            return s.Length > 0 && s[0] == value;
+        }
     }
-}
 #endif
+}

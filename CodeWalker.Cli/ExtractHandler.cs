@@ -311,8 +311,8 @@ public static class ExtractHandler
                 Skipped = skipped,
                 Errors = errors,
                 DryRun = options.DryRun,
-                Files = files.ToArray(),
-                ErrorMessages = errorMessages.ToArray(),
+                Files = [.. files],
+                ErrorMessages = [.. errorMessages],
             };
 
             if (options.Rpf.Json)

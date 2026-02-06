@@ -107,7 +107,7 @@ public static class TreeHandler
                     TotalFiles = totalFiles,
                     TotalDirs = totalDirs,
                     Root = rootNode,
-                    ErrorMessages = scanErrors.ToArray(),
+                    ErrorMessages = [.. scanErrors],
                 };
 
                 Console.WriteLine(

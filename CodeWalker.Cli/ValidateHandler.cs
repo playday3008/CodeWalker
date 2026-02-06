@@ -3,7 +3,6 @@ using System.Collections.Generic;
 using System.CommandLine;
 using System.IO;
 using System.Text.Json;
-using System.Threading;
 using System.Threading.Tasks;
 using CodeWalker.Cli.Helpers;
 using CodeWalker.GameFiles;
@@ -211,7 +210,7 @@ public static class ValidateHandler
                 Errors = errors,
                 Skipped = skipped,
                 Files = files,
-                ErrorMessages = scanErrors.ToArray(),
+                ErrorMessages = [.. scanErrors],
             };
 
             if (options.Rpf.Json)

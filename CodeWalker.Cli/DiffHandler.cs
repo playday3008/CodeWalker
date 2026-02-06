@@ -174,7 +174,7 @@ public static class DiffHandler
                     if (rightDict.ContainsKey(path))
                         paths.Add(path);
                 }
-                commonPaths = paths.ToArray();
+                commonPaths = [.. paths];
             }
 
             // Result per common path: null = unchanged, non-null = modified entry
@@ -308,12 +308,12 @@ public static class DiffHandler
                 Success = true,
                 LeftRpf = options.LeftPath,
                 RightRpf = options.RightPath,
-                Added = added.ToArray(),
-                Removed = removed.ToArray(),
-                Modified = modified.ToArray(),
-                Unchanged = unchanged.ToArray(),
+                Added = [.. added],
+                Removed = [.. removed],
+                Modified = [.. modified],
+                Unchanged = [.. unchanged],
                 Summary = summary,
-                ErrorMessages = errorMessages.ToArray(),
+                ErrorMessages = [.. errorMessages],
             };
 
             if (options.Common.Json)

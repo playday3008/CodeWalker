@@ -19,10 +19,7 @@ public static class ListHandler
         rpfOpts.AddTo(command);
         command.Aliases.Add("l");
 
-        command.SetAction(parseResult =>
-        {
-            return Execute(rpfOpts.Parse(parseResult));
-        });
+        command.SetAction(parseResult => Execute(rpfOpts.Parse(parseResult)));
 
         return command;
     }
@@ -146,8 +143,8 @@ public static class ListHandler
                 TotalSize = totalSize,
                 TotalSizeFormatted = options.SizeFormat.ToFormattedString(totalSize),
                 NestedRpfCount = nestedRpfCount,
-                Files = files.ToArray(),
-                ErrorMessages = scanErrors.ToArray(),
+                Files = [.. files],
+                ErrorMessages = [.. scanErrors],
             };
 
             if (options.Json)

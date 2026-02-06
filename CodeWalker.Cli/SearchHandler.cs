@@ -10,7 +10,6 @@ using CodeWalker.GameFiles;
 using CodeWalker.Cli.Polyfills;
 #endif
 
-
 namespace CodeWalker.Cli;
 
 public static class SearchHandler
@@ -31,9 +30,8 @@ public static class SearchHandler
         command.Aliases.Add("s");
 
         command.SetAction(parseResult =>
-        {
-            return Execute(rpfOpts.Parse(parseResult), parseResult.GetRequiredValue(patternArg));
-        });
+            Execute(rpfOpts.Parse(parseResult), parseResult.GetRequiredValue(patternArg))
+        );
 
         return command;
     }
@@ -187,7 +185,7 @@ public static class SearchHandler
                 PatternType = patternType,
                 MatchCount = matches.Count,
                 Matches = matches,
-                ErrorMessages = scanErrors.ToArray(),
+                ErrorMessages = [.. scanErrors],
             };
 
             if (options.Json)
@@ -241,10 +239,7 @@ public static class SearchHandler
     {
         if (rpf.AllEntries != null)
         {
-            foreach (RpfEntry entry in rpf.AllEntries)
-            {
-                entries.Add(entry);
-            }
+            entries.AddRange(rpf.AllEntries);
         }
 
         if (recursive && rpf.Children != null)

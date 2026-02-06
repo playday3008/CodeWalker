@@ -2,7 +2,6 @@ using System;
 using System.Collections.Generic;
 using System.CommandLine;
 using System.IO;
-using System.Linq;
 using System.Text.Json;
 using CodeWalker.Cli.Helpers;
 using CodeWalker.GameFiles;
@@ -31,9 +30,8 @@ public static class InspectHandler
         command.Aliases.Add("i");
 
         command.SetAction(parseResult =>
-        {
-            return Execute(rpfOpts.Parse(parseResult), parseResult.GetRequiredValue(pathArg));
-        });
+            Execute(rpfOpts.Parse(parseResult), parseResult.GetRequiredValue(pathArg))
+        );
 
         return command;
     }
@@ -120,7 +118,7 @@ public static class InspectHandler
                     : null,
                 EncryptionType = found is RpfBinaryFileEntry bfe2 ? bfe2.EncryptionType : null,
                 Details = GetDetails(found, ext),
-                ErrorMessages = scanErrors.ToArray(),
+                ErrorMessages = [.. scanErrors],
             };
 
             if (options.Json)

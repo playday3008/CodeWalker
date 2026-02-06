@@ -3,7 +3,6 @@ using System.Collections.Generic;
 using System.CommandLine;
 using System.IO;
 using System.Text.Json;
-using System.Threading;
 using System.Threading.Tasks;
 using CodeWalker.Cli.Helpers;
 using CodeWalker.Core.Utils;
@@ -439,8 +438,8 @@ public static class Gen9Handler
                     Skipped = skipped,
                     Copied = copied,
                     Errors = errors,
-                    Files = files.ToArray(),
-                    ErrorMessages = errorMessages.ToArray(),
+                    Files = [.. files],
+                    ErrorMessages = [.. errorMessages],
                 };
 
                 if (options.Common.Json)

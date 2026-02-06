@@ -205,7 +205,7 @@ public static class PackHandler
                 TotalSize = totalSize,
                 TotalSizeFormatted = sizeFormat.ToFormattedString(totalSize),
                 Errors = errors,
-                ErrorMessages = errorMessages.ToArray(),
+                ErrorMessages = [.. errorMessages],
             };
 
             if (options.Common.Json)

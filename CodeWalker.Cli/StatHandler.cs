@@ -19,10 +19,7 @@ public static class StatHandler
         rpfOpts.AddTo(command);
         command.Aliases.Add("S");
 
-        command.SetAction(parseResult =>
-        {
-            return Execute(rpfOpts.Parse(parseResult));
-        });
+        command.SetAction(parseResult => Execute(rpfOpts.Parse(parseResult)));
 
         return command;
     }
@@ -124,19 +121,21 @@ public static class StatHandler
             double compressionRatio =
                 uncompressedSize > 0 ? (double)compressedSize / uncompressedSize : 0;
 
-            List<Json.ExtensionStat> extensionStats = extStats
-                .OrderByDescending(kv => kv.Value.total)
-                .Select(kv => new Json.ExtensionStat
-                {
-                    Extension = kv.Key,
-                    Count = kv.Value.count,
-                    TotalSize = kv.Value.total,
-                    TotalSizeFormatted = options.SizeFormat.ToFormattedString(kv.Value.total),
-                    AvgSize = kv.Value.count > 0 ? kv.Value.total / kv.Value.count : 0,
-                    MinSize = kv.Value.min,
-                    MaxSize = kv.Value.max,
-                })
-                .ToList();
+            List<Json.ExtensionStat> extensionStats =
+            [
+                .. extStats
+                    .OrderByDescending(kv => kv.Value.total)
+                    .Select(kv => new Json.ExtensionStat
+                    {
+                        Extension = kv.Key,
+                        Count = kv.Value.count,
+                        TotalSize = kv.Value.total,
+                        TotalSizeFormatted = options.SizeFormat.ToFormattedString(kv.Value.total),
+                        AvgSize = kv.Value.count > 0 ? kv.Value.total / kv.Value.count : 0,
+                        MinSize = kv.Value.min,
+                        MaxSize = kv.Value.max,
+                    }),
+            ];
 
             Json.StatResult result = new()
             {
@@ -151,7 +150,7 @@ public static class StatHandler
                 UncompressedSize = uncompressedSize,
                 CompressionRatio = Math.Round(compressionRatio, 4),
                 Extensions = extensionStats,
-                ErrorMessages = scanErrors.ToArray(),
+                ErrorMessages = [.. scanErrors],
             };
 
             if (options.Json)

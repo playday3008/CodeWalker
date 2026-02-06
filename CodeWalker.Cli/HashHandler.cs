@@ -125,7 +125,7 @@ public static class HashHandler
                 Json.HashResult result = new()
                 {
                     Success = true,
-                    Hashes = hashes.ToArray(),
+                    Hashes = [.. hashes],
                     ErrorMessages = [],
                 };
                 Console.WriteLine(
