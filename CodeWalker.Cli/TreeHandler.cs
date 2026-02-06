@@ -49,16 +49,15 @@ public static class TreeHandler
 
     public static int Execute(TreeOptions options)
     {
-        List<string> errorMessages = [];
-
-        Json.TreeResult result = new()
-        {
-            Success = false,
-            RpfFile = options.Rpf.RpfPath,
-            TotalFiles = 0,
-            TotalDirs = 0,
-            ErrorMessages = errorMessages,
-        };
+        Json.TreeResult ErrorResult(string[] errorMessages) =>
+            new()
+            {
+                Success = false,
+                RpfFile = options.Rpf.RpfPath,
+                TotalFiles = 0,
+                TotalDirs = 0,
+                ErrorMessages = errorMessages,
+            };
 
         string? initError = RpfService.ValidateAndLoadKeys(
             options.Rpf.RpfPath,
@@ -68,16 +67,17 @@ public static class TreeHandler
         );
         if (initError != null)
         {
-            return RpfService.ReportError(initError, options.Rpf.Json, result);
+            return RpfService.ReportError(initError, options.Rpf.Json, ErrorResult([]));
         }
 
         try
         {
+            List<string> scanErrors = [];
             RpfFile rpf = RpfService.OpenRpf(
                 options.Rpf.RpfPath,
                 options.Rpf.Verbose,
                 options.Rpf.Json,
-                errorMessages
+                scanErrors
             );
 
             int totalFiles = 0;
@@ -94,13 +94,14 @@ public static class TreeHandler
                     ref totalDirs
                 );
 
-                result = result with
+                Json.TreeResult result = new()
                 {
                     Success = true,
                     RpfFile = options.Rpf.RpfPath,
                     TotalFiles = totalFiles,
                     TotalDirs = totalDirs,
                     Root = rootNode,
+                    ErrorMessages = scanErrors.ToArray(),
                 };
 
                 Console.WriteLine(
@@ -123,7 +124,7 @@ public static class TreeHandler
             return RpfService.ReportError(
                 ex.Message,
                 options.Rpf.Json,
-                result,
+                ErrorResult([]),
                 options.Rpf.Verbose ? ex.StackTrace : null
             );
         }

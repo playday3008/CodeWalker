@@ -27,6 +27,19 @@ public static class RpfService
     };
 
     /// <summary>
+    /// Validates that the GTA V executable exists in the given directory.
+    /// Returns null on success, or an error message on failure.
+    /// </summary>
+    public static string? ValidateExe(string exePath, bool gen9)
+    {
+        string exeFile = gen9 ? "GTA5_Enhanced.exe" : "GTA5.exe";
+        if (!File.Exists(Path.Combine(exePath, exeFile)))
+            return $"{exeFile} not found in: {exePath}";
+
+        return null;
+    }
+
+    /// <summary>
     /// Validates that the RPF file and GTA V executable exist.
     /// Returns null on success, or an error message on failure.
     /// </summary>
@@ -35,9 +48,23 @@ public static class RpfService
         if (!File.Exists(rpfPath))
             return $"RPF file not found: {rpfPath}";
 
-        string exeFile = gen9 ? "GTA5_Enhanced.exe" : "GTA5.exe";
-        if (!File.Exists(Path.Combine(exePath, exeFile)))
-            return $"{exeFile} not found in: {exePath}";
+        return ValidateExe(exePath, gen9);
+    }
+
+    /// <summary>
+    /// Validates the GTA V exe, loads encryption keys, and prints status to stderr.
+    /// For commands that have no --rpf (e.g. gen9, pack).
+    /// Returns an error message on failure, or null on success.
+    /// </summary>
+    public static string? ValidateExeAndLoadKeys(string exePath, bool gen9, bool json)
+    {
+        string? error = ValidateExe(exePath, gen9);
+        if (error != null)
+            return error;
+
+        if (!json)
+            Console.Error.WriteLine("Loading encryption keys...");
+        LoadKeys(exePath, gen9);
 
         return null;
     }

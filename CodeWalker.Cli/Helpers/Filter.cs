@@ -1,4 +1,5 @@
 using System.Collections.Concurrent;
+using System.Collections.Generic;
 using System.Text.RegularExpressions;
 
 namespace CodeWalker.Cli.Helpers;
@@ -11,10 +12,29 @@ public static class Filter
     private static readonly ConcurrentDictionary<string, Regex> RegexCache = new();
 
     /// <summary>
+    /// Normalizes filter patterns once at parse time: trims, lowercases, and strips blanks.
+    /// </summary>
+    public static string[] Normalize(string[]? filters)
+    {
+        if (filters == null || filters.Length == 0)
+            return [];
+
+        List<string> result = [];
+        foreach (string filter in filters)
+        {
+            if (string.IsNullOrWhiteSpace(filter))
+                continue;
+            result.Add(filter.Trim().ToLowerInvariant());
+        }
+        return result.ToArray();
+    }
+
+    /// <summary>
     /// Determines if the given path matches any of the provided glob patterns.
+    /// Filters should be pre-normalized via <see cref="Normalize"/>.
     /// </summary>
     /// <param name="path">Path to check.</param>
-    /// <param name="filters">Glob patterns to match against.</param>
+    /// <param name="filters">Glob patterns to match against (pre-normalized).</param>
     /// <returns>True if the path matches any pattern; otherwise, false.</returns>
     public static bool Matches(string path, string[]? filters)
     {
@@ -25,12 +45,7 @@ public static class Filter
 
         foreach (string filter in filters)
         {
-            if (string.IsNullOrWhiteSpace(filter))
-                continue;
-
-            string p = filter.Trim().ToLowerInvariant();
-
-            if (MatchesGlob(nameLower, p))
+            if (MatchesGlob(nameLower, filter))
                 return true;
         }
 

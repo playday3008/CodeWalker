@@ -29,20 +29,18 @@ public static class ListHandler
 
     public static int Execute(RpfOptions options)
     {
-        List<Json.FileEntry> files = [];
-        List<string> errorMessages = [];
-
-        Json.ListResult result = new()
-        {
-            Success = false,
-            RpfFile = options.RpfPath,
-            TotalFiles = 0,
-            TotalSize = 0,
-            TotalSizeFormatted = "0 B",
-            NestedRpfCount = 0,
-            Files = files,
-            ErrorMessages = errorMessages,
-        };
+        Json.ListResult ErrorResult(string[] errorMessages) =>
+            new()
+            {
+                Success = false,
+                RpfFile = options.RpfPath,
+                TotalFiles = 0,
+                TotalSize = 0,
+                TotalSizeFormatted = "0 B",
+                NestedRpfCount = 0,
+                Files = [],
+                ErrorMessages = errorMessages,
+            };
 
         string? initError = RpfService.ValidateAndLoadKeys(
             options.RpfPath,
@@ -52,19 +50,20 @@ public static class ListHandler
         );
         if (initError != null)
         {
-            return RpfService.ReportError(initError, options.Json, result);
+            return RpfService.ReportError(initError, options.Json, ErrorResult([]));
         }
 
         try
         {
+            List<string> scanErrors = [];
             RpfFile rpf = RpfService.OpenRpf(
                 options.RpfPath,
                 options.Verbose,
                 options.Json,
-                errorMessages
+                scanErrors
             );
 
-            result = result with { NestedRpfCount = rpf.GrandTotalRpfCount };
+            uint nestedRpfCount = rpf.GrandTotalRpfCount;
 
             if (!options.Json)
             {
@@ -127,6 +126,7 @@ public static class ListHandler
             // Output results sequentially to preserve order
             long totalSize = 0;
             int fileCount = 0;
+            List<Json.FileEntry> files = [];
             foreach (var (jsonEntry, line, size) in results)
             {
                 totalSize += size;
@@ -138,12 +138,16 @@ public static class ListHandler
                     Console.WriteLine(line);
             }
 
-            result = result with
+            Json.ListResult result = new()
             {
-                Success = errorMessages.Count == 0,
+                Success = scanErrors.Count == 0,
+                RpfFile = options.RpfPath,
                 TotalFiles = fileCount,
                 TotalSize = totalSize,
                 TotalSizeFormatted = options.SizeFormat.ToFormattedString(totalSize),
+                NestedRpfCount = nestedRpfCount,
+                Files = files.ToArray(),
+                ErrorMessages = scanErrors.ToArray(),
             };
 
             if (options.Json)
@@ -167,7 +171,7 @@ public static class ListHandler
             return RpfService.ReportError(
                 ex.Message,
                 options.Json,
-                result,
+                ErrorResult([]),
                 options.Verbose ? ex.StackTrace : null
             );
         }

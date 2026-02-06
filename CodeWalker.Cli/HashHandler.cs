@@ -63,16 +63,13 @@ public static class HashHandler
 
     public static int Execute(HashOptions options)
     {
-        List<Json.HashEntry> hashes = [];
-
-        List<string> errorMessages = [];
-
-        Json.HashResult result = new()
-        {
-            Success = false,
-            Hashes = hashes,
-            ErrorMessages = errorMessages,
-        };
+        Json.HashResult ErrorResult(string[] errorMessages) =>
+            new()
+            {
+                Success = false,
+                Hashes = [],
+                ErrorMessages = errorMessages,
+            };
 
         // Validate encoding
         JenkHashInputEncoding encoding;
@@ -91,12 +88,14 @@ public static class HashHandler
                 return RpfService.ReportError(
                     $"Unknown encoding: {options.Encoding}. Use 'utf-8' or 'ascii'.",
                     options.Json,
-                    result
+                    ErrorResult([])
                 );
         }
 
         try
         {
+            List<Json.HashEntry> hashes = [];
+
             foreach (string input in options.Inputs)
             {
                 JenkHash jenkHash = new(input, encoding);
@@ -121,10 +120,14 @@ public static class HashHandler
                 }
             }
 
-            result = result with { Success = true };
-
             if (options.Json)
             {
+                Json.HashResult result = new()
+                {
+                    Success = true,
+                    Hashes = hashes.ToArray(),
+                    ErrorMessages = [],
+                };
                 Console.WriteLine(
                     JsonSerializer.Serialize(result, RpfService.JsonSerializerOptions)
                 );
@@ -134,7 +137,7 @@ public static class HashHandler
         }
         catch (Exception ex)
         {
-            return RpfService.ReportError(ex.Message, options.Json, result);
+            return RpfService.ReportError(ex.Message, options.Json, ErrorResult([]));
         }
     }
 }
