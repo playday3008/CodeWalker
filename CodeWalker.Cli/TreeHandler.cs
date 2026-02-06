@@ -27,6 +27,12 @@ public static class TreeHandler
         };
         // csharpier-ignore-end
 
+        depthOption.Validators.Add(result =>
+        {
+            if (result.GetValue(depthOption) < -1)
+                result.AddError("--depth must be -1 (unlimited) or a non-negative integer.");
+        });
+
         Command command = new("tree", "Display a visual tree of the RPF directory structure")
         {
             depthOption,

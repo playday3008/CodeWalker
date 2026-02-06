@@ -34,7 +34,8 @@ public static class ExportTexturesHandler
     private static (Json.ExportFileEntry? entry, string? error) ProcessFile(
         RpfFileEntry fileEntry,
         byte[] data,
-        string fileOutputDir
+        string fileOutputDir,
+        bool noOverwrite
     )
     {
         YtdFile ytd = RpfFile.GetFile<YtdFile>(fileEntry, data);
@@ -65,6 +66,9 @@ public static class ExportTexturesHandler
         {
             string texName = (tex.Name ?? "unknown") + ".dds";
             string outputPath = Path.Combine(fileOutputDir, texName);
+
+            if (noOverwrite && File.Exists(outputPath))
+                continue;
 
             byte[] dds = DDSIO.GetDDSFile(tex);
             File.WriteAllBytes(outputPath, dds);

@@ -9,6 +9,7 @@ public record ExportOptions
     public required RpfOptions Rpf { get; init; }
     public required string OutputPath { get; init; }
     public required bool DryRun { get; init; }
+    public required bool NoOverwrite { get; init; }
     public required bool Progress { get; init; }
 }
 
@@ -28,6 +29,11 @@ public sealed class ExportCommandOptions
         Description = "Show what would be exported without writing files",
     };
 
+    public Option<bool> NoOverwrite { get; } = new("--no-overwrite")
+    {
+        Description = "Skip existing output files instead of overwriting",
+    };
+
     public Option<bool> Progress { get; } = new("--progress", "-P")
     {
         Description = "Show progress bar during export",
@@ -39,6 +45,7 @@ public sealed class ExportCommandOptions
         _rpfOpts.AddTo(command);
         command.Add(Output);
         command.Add(DryRun);
+        command.Add(NoOverwrite);
         command.Add(Progress);
     }
 
@@ -49,6 +56,7 @@ public sealed class ExportCommandOptions
             Rpf = _rpfOpts.Parse(parseResult),
             OutputPath = parseResult.GetValue(Output)?.FullName ?? Directory.GetCurrentDirectory(),
             DryRun = parseResult.GetValue(DryRun),
+            NoOverwrite = parseResult.GetValue(NoOverwrite),
             Progress = parseResult.GetValue(Progress),
         };
     }

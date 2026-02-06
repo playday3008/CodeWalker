@@ -19,7 +19,8 @@ namespace CodeWalker.Cli;
 public delegate (Json.ExportFileEntry? entry, string? error) ExportFileProcessor(
     RpfFileEntry fileEntry,
     byte[] data,
-    string fileOutputDir
+    string fileOutputDir,
+    bool noOverwrite
 );
 
 public static class ExportService
@@ -107,10 +108,7 @@ public static class ExportService
                 Parallel.For(
                     0,
                     filesToExport.Count,
-                    new ParallelOptions
-                    {
-                        MaxDegreeOfParallelism = Math.Max(1, options.Rpf.Threads),
-                    },
+                    new ParallelOptions { MaxDegreeOfParallelism = options.Rpf.Threads },
                     i =>
                     {
                         (RpfFile sourceRpf, RpfFileEntry fileEntry) = filesToExport[i];
@@ -158,7 +156,8 @@ public static class ExportService
                             (Json.ExportFileEntry? entry, string? error) = processor(
                                 fileEntry,
                                 data,
-                                fileOutputDir
+                                fileOutputDir,
+                                options.NoOverwrite
                             );
 
                             if (error != null)

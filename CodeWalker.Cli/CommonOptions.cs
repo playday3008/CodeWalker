@@ -50,6 +50,15 @@ public sealed class CommonCommandOptions
     };
     // csharpier-ignore-end
 
+    public CommonCommandOptions()
+    {
+        Threads.Validators.Add(result =>
+        {
+            if (result.GetValue(Threads) < 1)
+                result.AddError("--threads must be at least 1.");
+        });
+    }
+
     public void AddTo(Command command)
     {
         command.Add(Exe);

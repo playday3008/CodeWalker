@@ -183,10 +183,7 @@ public static class DiffHandler
             Parallel.For(
                 0,
                 commonPaths.Length,
-                new ParallelOptions
-                {
-                    MaxDegreeOfParallelism = Math.Max(1, options.Common.Threads),
-                },
+                new ParallelOptions { MaxDegreeOfParallelism = options.Common.Threads },
                 i =>
                 {
                     string path = commonPaths[i];

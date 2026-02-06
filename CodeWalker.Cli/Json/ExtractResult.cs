@@ -12,7 +12,7 @@ public record ExtractResult : BaseResult
     public required string OutputDir { get; init; }
 
     [JsonPropertyName("totalFiles")]
-    public required uint TotalFiles { get; init; }
+    public required int TotalFiles { get; init; }
 
     [JsonPropertyName("extracted")]
     public required int Extracted { get; init; }
