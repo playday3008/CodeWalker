@@ -16,6 +16,7 @@ public static class ExportTexturesHandler
         Command command = new("textures", "Export .ytd texture dictionaries to DDS files");
         exportOpts.AddTo(command);
         command.Aliases.Add("t");
+        command.Aliases.Add("ytd");
 
         command.SetAction(parseResult =>
         {

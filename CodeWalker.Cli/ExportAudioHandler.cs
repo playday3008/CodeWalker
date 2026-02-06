@@ -15,6 +15,7 @@ public static class ExportAudioHandler
         Command command = new("audio", "Export .awc audio containers to WAV/MIDI files");
         exportOpts.AddTo(command);
         command.Aliases.Add("a");
+        command.Aliases.Add("awc");
 
         command.SetAction(parseResult =>
         {

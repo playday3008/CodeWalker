@@ -16,6 +16,7 @@ public static class ExportTextHandler
         Command command = new("text", "Export .gxt2 localization files to plain text");
         exportOpts.AddTo(command);
         command.Aliases.Add("g");
+        command.Aliases.Add("gxt2");
 
         command.SetAction(parseResult =>
         {
