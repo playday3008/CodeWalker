@@ -217,7 +217,7 @@ internal static class SearchHandler
                 );
             }
 
-            return 0;
+            return scanErrors.Count > 0 ? 1 : 0;
         }
         catch (Exception ex)
         {

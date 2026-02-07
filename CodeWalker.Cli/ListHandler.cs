@@ -60,7 +60,7 @@ internal static class ListHandler
                 scanErrors
             );
 
-            int nestedRpfCount = (int)rpf.GrandTotalRpfCount;
+            long nestedRpfCount = rpf.GrandTotalRpfCount;
 
             if (!options.Json)
             {
@@ -134,7 +134,7 @@ internal static class ListHandler
                 );
             }
 
-            return 0;
+            return scanErrors.Count > 0 ? 1 : 0;
         }
         catch (Exception ex)
         {

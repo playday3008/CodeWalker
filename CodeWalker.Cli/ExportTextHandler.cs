@@ -70,11 +70,6 @@ internal static class ExportTextHandler
             );
         }
 
-        if (!Directory.Exists(fileOutputDir))
-        {
-            Directory.CreateDirectory(fileOutputDir);
-        }
-
         string outputFileName = Path.GetFileNameWithoutExtension(fileEntry.Name) + ".txt";
         string outputPath = Path.Combine(fileOutputDir, outputFileName);
 
@@ -90,6 +85,11 @@ internal static class ExportTextHandler
                 },
                 null
             );
+        }
+
+        if (!Directory.Exists(fileOutputDir))
+        {
+            Directory.CreateDirectory(fileOutputDir);
         }
 
         File.WriteAllText(outputPath, text, Encoding.UTF8);

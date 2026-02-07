@@ -372,7 +372,7 @@ internal static class DiffHandler
                 );
             }
 
-            return 0;
+            return errorMessages.Count > 0 ? 1 : 0;
         }
         catch (Exception ex)
         {

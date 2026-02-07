@@ -135,7 +135,7 @@ internal static class InspectHandler
                 GraphicsSize = graphicsSize,
                 UncompressedSize = uncompressedSize,
                 EncryptionType = encryptionType,
-                Details = GetDetails(found, ext),
+                Details = GetDetails(found, ext, options.Verbose),
                 ErrorMessages = [.. scanErrors],
             };
 
@@ -150,7 +150,7 @@ internal static class InspectHandler
                 PrintTextResult(result, options);
             }
 
-            return 0;
+            return scanErrors.Count > 0 ? 1 : 0;
         }
         catch (Exception ex)
         {
@@ -192,7 +192,7 @@ internal static class InspectHandler
         return null;
     }
 
-    private static object? GetDetails(RpfFileEntry entry, string ext)
+    private static object? GetDetails(RpfFileEntry entry, string ext, bool verbose)
     {
         try
         {
@@ -210,8 +210,12 @@ internal static class InspectHandler
                 _ => null,
             };
         }
-        catch
+        catch (Exception ex)
         {
+            if (verbose)
+            {
+                Console.Error.WriteLine($"Warning: Failed to read details for {entry.Path}: {ex.Message}");
+            }
             return null;
         }
     }

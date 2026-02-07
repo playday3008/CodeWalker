@@ -77,9 +77,9 @@ internal static class Filter
         if (!pattern.Contains('*', StringComparison.Ordinal) && !pattern.Contains('?', StringComparison.Ordinal))
         {
             if (pattern.StartsWith('.'))
-                return input.EndsWith(pattern, System.StringComparison.Ordinal);
+                return input.EndsWith(pattern, StringComparison.Ordinal);
             else
-                return input.EndsWith($".{pattern}", System.StringComparison.Ordinal);
+                return input.EndsWith($".{pattern}", StringComparison.Ordinal);
         }
 
         Regex regex = RegexCache.GetOrAdd(

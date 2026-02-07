@@ -18,7 +18,7 @@ internal sealed record ListResult : BaseResult
     public required string TotalSizeFormatted { get; init; }
 
     [JsonPropertyName("nestedRpfCount")]
-    public required int NestedRpfCount { get; init; }
+    public required long NestedRpfCount { get; init; }
 
     [JsonPropertyName("files")]
     public required IReadOnlyList<FileEntry> Files { get; init; }

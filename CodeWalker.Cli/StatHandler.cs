@@ -76,6 +76,7 @@ internal static class StatHandler
                 options.Recursive
             );
 
+            long totalSize = 0;
             int resourceCount = 0;
             int binaryCount = 0;
             long compressedSize = 0;
@@ -86,6 +87,7 @@ internal static class StatHandler
             foreach ((RpfFile _, RpfFileEntry fileEntry) in entries)
             {
                 long size = fileEntry.GetFileSize();
+                totalSize += size;
                 string ext = Path.GetExtension(fileEntry.Name).ToLowerInvariant();
                 if (string.IsNullOrEmpty(ext))
                     ext = "(none)";
@@ -117,8 +119,6 @@ internal static class StatHandler
                     uncompressedSize += bfe.FileUncompressedSize;
                 }
             }
-
-            long totalSize = entries.Sum(e => e.entry.GetFileSize());
             double compressionRatio =
                 uncompressedSize > 0 ? (double)compressedSize / uncompressedSize : 0;
 
@@ -189,7 +189,7 @@ internal static class StatHandler
                 }
             }
 
-            return 0;
+            return scanErrors.Count > 0 ? 1 : 0;
         }
         catch (Exception ex)
         {
