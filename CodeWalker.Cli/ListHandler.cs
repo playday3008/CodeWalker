@@ -4,6 +4,7 @@ using System.CommandLine;
 using System.IO;
 using System.Text.Json;
 using System.Threading.Tasks;
+
 using CodeWalker.Cli.Helpers;
 using CodeWalker.GameFiles;
 

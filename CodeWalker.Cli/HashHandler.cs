@@ -2,11 +2,12 @@ using System;
 using System.Collections.Generic;
 using System.CommandLine;
 using System.Text.Json;
+
 using CodeWalker.GameFiles;
 
 namespace CodeWalker.Cli;
 
-public record HashOptions
+public sealed record HashOptions
 {
     public required string[] Inputs { get; init; }
     public required string Encoding { get; init; }
@@ -20,7 +21,6 @@ public static class HashHandler
 {
     public static Command CreateCommand()
     {
-        // csharpier-ignore-start
         Option<string[]> inputOption = new("--input", "-i")
         {
             Description = "Text string(s) to hash",
@@ -34,10 +34,10 @@ public static class HashHandler
             DefaultValueFactory = _ => HashOptions.DefaultEncoding,
         };
 
-        Option<bool> jsonOption = new("--json") {
+        Option<bool> jsonOption = new("--json")
+        {
             Description = "Output results in JSON format",
         };
-        // csharpier-ignore-end
 
         Command command = new("hash", "Generate Jenkins hashes for GTA V game identifiers")
         {
@@ -63,7 +63,7 @@ public static class HashHandler
 
     public static int Execute(HashOptions options)
     {
-        Json.HashResult ErrorResult(string[] errorMessages) =>
+        static Json.HashResult ErrorResult(string[] errorMessages) =>
             new()
             {
                 Success = false,

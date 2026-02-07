@@ -3,12 +3,13 @@ using System.Collections.Generic;
 using System.CommandLine;
 using System.IO;
 using System.Text.Json;
+
 using CodeWalker.Cli.Helpers;
 using CodeWalker.GameFiles;
 
 namespace CodeWalker.Cli;
 
-public record PackOptions
+public sealed record PackOptions
 {
     public required string InputPath { get; init; }
     public required string OutputPath { get; init; }
@@ -23,7 +24,6 @@ public static class PackHandler
     public static Command CreateCommand()
     {
         CommonCommandOptions commonOpts = new();
-        // csharpier-ignore-start
         Option<DirectoryInfo> inputOption = new("--input", "-i")
         {
             Description = "Source directory of loose files to pack",
@@ -50,7 +50,6 @@ public static class PackHandler
         {
             Description = "Show progress bar",
         };
-        // csharpier-ignore-end
 
         Command command = new("pack", "Create an RPF archive from a directory of loose files")
         {

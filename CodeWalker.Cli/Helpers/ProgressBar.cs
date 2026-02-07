@@ -7,7 +7,7 @@ namespace CodeWalker.Cli.Helpers;
 /// <summary>
 /// Displays a console progress bar on stderr to keep stdout clean for data/JSON output.
 /// </summary>
-public class ProgressBar : IDisposable
+public sealed class ProgressBar : IDisposable
 {
     private readonly int _total;
     private int _current;
@@ -98,7 +98,7 @@ public class ProgressBar : IDisposable
                 Err.Write(">");
                 Err.Write(new string(' ', _barWidth - filled - 1));
             }
-            Err.Write($"] {percent, 6:P0} ({_current}/{_total})");
+            Err.Write($"] {percent,6:P0} ({_current}/{_total})");
 
             if (!string.IsNullOrEmpty(currentFile))
             {
@@ -137,7 +137,8 @@ public class ProgressBar : IDisposable
                 Console.CursorVisible = true;
             }
             catch (Exception ex)
-                when (ex is IOException or InvalidOperationException or SecurityException) { }
+                when (ex is IOException or InvalidOperationException or SecurityException)
+            { }
         }
     }
 }

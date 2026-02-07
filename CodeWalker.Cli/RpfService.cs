@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.IO;
 using System.Text.Json;
 using System.Text.Json.Serialization;
+
 using CodeWalker.Cli.Helpers;
 using CodeWalker.GameFiles;
 
@@ -102,7 +103,7 @@ public static class RpfService
         {
             if (entry is RpfFileEntry fileEntry)
             {
-                if (entry.NameLower.EndsWith(".rpf"))
+                if (entry.NameLower.EndsWith(".rpf", StringComparison.Ordinal))
                     continue;
 
                 if (!Filter.Matches(entry.Path, filters))
@@ -135,7 +136,7 @@ public static class RpfService
     {
         foreach (RpfEntry entry in rpf.AllEntries)
         {
-            if (entry is RpfFileEntry && !entry.NameLower.EndsWith(".rpf"))
+            if (entry is RpfFileEntry && !entry.NameLower.EndsWith(".rpf", StringComparison.Ordinal))
             {
                 count++;
             }

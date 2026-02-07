@@ -8,10 +8,10 @@ namespace CodeWalker.Cli.Helpers;
 public enum SizeFormat
 {
     /// <summary>IEC format: 1024-based (KiB, MiB, GiB)</summary>
-    IEC,
+    IEC = 0,
 
     /// <summary>SI format: 1000-based (KB, MB, GB)</summary>
-    SI,
+    SI = 1,
 }
 
 /// <summary>

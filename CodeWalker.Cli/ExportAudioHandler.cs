@@ -1,5 +1,6 @@
 using System.CommandLine;
 using System.IO;
+
 using CodeWalker.GameFiles;
 
 namespace CodeWalker.Cli;

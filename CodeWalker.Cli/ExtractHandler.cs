@@ -5,12 +5,13 @@ using System.IO;
 using System.Text.Json;
 using System.Threading;
 using System.Threading.Tasks;
+
 using CodeWalker.Cli.Helpers;
 using CodeWalker.GameFiles;
 
 namespace CodeWalker.Cli;
 
-public record ExtractOptions
+public sealed record ExtractOptions
 {
     public required RpfOptions Rpf { get; init; }
     public required string? OutputPath { get; init; }
@@ -24,7 +25,6 @@ public static class ExtractHandler
     public static Command CreateCommand()
     {
         RpfCommandOptions rpfOpts = new();
-        // csharpier-ignore-start
         Option<DirectoryInfo> outputOption = new("--output", "-o")
         {
             Description = "Output directory",
@@ -45,7 +45,6 @@ public static class ExtractHandler
         {
             Description = "Show progress bar during extraction",
         };
-        // csharpier-ignore-end
 
         Command command = new("extract", "Extract files from an RPF archive")
         {

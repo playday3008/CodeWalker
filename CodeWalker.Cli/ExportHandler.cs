@@ -3,7 +3,7 @@ using System.IO;
 
 namespace CodeWalker.Cli;
 
-public record ExportOptions
+public sealed record ExportOptions
 {
     public required RpfOptions Rpf { get; init; }
     public required string OutputPath { get; init; }
@@ -16,7 +16,6 @@ public sealed class ExportCommandOptions
 {
     private readonly RpfCommandOptions _rpfOpts = new();
 
-    // csharpier-ignore-start
     public Option<DirectoryInfo> Output { get; } = new("--output", "-o")
     {
         Description = "Output directory",
@@ -37,7 +36,6 @@ public sealed class ExportCommandOptions
     {
         Description = "Show progress bar during export",
     };
-    // csharpier-ignore-end
 
     public void AddTo(Command command)
     {

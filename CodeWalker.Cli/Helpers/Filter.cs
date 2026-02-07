@@ -1,6 +1,7 @@
 using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Text.RegularExpressions;
+
 #if !NETCOREAPP
 using CodeWalker.Cli.Polyfills;
 #endif
@@ -75,9 +76,9 @@ public static class Filter
         if (!pattern.Contains('*') && !pattern.Contains('?'))
         {
             if (pattern.StartsWith('.'))
-                return input.EndsWith(pattern);
+                return input.EndsWith(pattern, System.StringComparison.Ordinal);
             else
-                return input.EndsWith($".{pattern}");
+                return input.EndsWith($".{pattern}", System.StringComparison.Ordinal);
         }
 
         Regex regex = RegexCache.GetOrAdd(

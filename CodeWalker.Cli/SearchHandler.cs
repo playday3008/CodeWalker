@@ -4,6 +4,7 @@ using System.CommandLine;
 using System.IO;
 using System.Text.Json;
 using System.Threading.Tasks;
+
 using CodeWalker.Cli.Helpers;
 using CodeWalker.GameFiles;
 #if !NETCOREAPP
@@ -90,7 +91,7 @@ public static class SearchHandler
                 patternType = "hash_hex";
                 if (
                     !uint.TryParse(
-                        pattern.Substring(2),
+                        pattern[2..],
                         System.Globalization.NumberStyles.HexNumber,
                         null,
                         out uint hash
@@ -128,8 +129,7 @@ public static class SearchHandler
                 patternType = "substring";
                 string lowerPattern = pattern.ToLowerInvariant();
                 matcher = entry =>
-                    entry.Path != null
-                    && entry.Path.Replace('\\', '/').ToLowerInvariant().Contains(lowerPattern);
+                    entry.Path?.Replace('\\', '/').Contains(lowerPattern, StringComparison.OrdinalIgnoreCase) == true;
             }
 
             // Match in parallel

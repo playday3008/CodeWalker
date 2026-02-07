@@ -4,13 +4,14 @@ using System.CommandLine;
 using System.IO;
 using System.Text.Json;
 using System.Threading.Tasks;
+
 using CodeWalker.Cli.Helpers;
 using CodeWalker.Core.Utils;
 using CodeWalker.GameFiles;
 
 namespace CodeWalker.Cli;
 
-public record Gen9Options
+public sealed record Gen9Options
 {
     public required string InputPath { get; init; }
     public required string OutputPath { get; init; }
@@ -26,7 +27,6 @@ public static class Gen9Handler
     public static Command CreateCommand()
     {
         CommonCommandOptions commonOpts = new();
-        // csharpier-ignore-start
         Option<DirectoryInfo> inputOption = new("--input", "-i")
         {
             Description = "Input folder containing files to convert",
@@ -58,7 +58,6 @@ public static class Gen9Handler
         {
             Description = "Show progress bar",
         };
-        // csharpier-ignore-end
 
         Command command = new("gen9", "Convert files between standard and enhanced (Gen9) formats")
         {
@@ -154,7 +153,7 @@ public static class Gen9Handler
                 }
 
                 string inputFolder = options.InputPath;
-                if (!inputFolder.EndsWith(Path.DirectorySeparatorChar.ToString()))
+                if (!inputFolder.EndsWith(Path.DirectorySeparatorChar.ToString(), StringComparison.Ordinal))
                 {
                     inputFolder += Path.DirectorySeparatorChar;
                 }

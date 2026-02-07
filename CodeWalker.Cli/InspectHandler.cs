@@ -3,8 +3,10 @@ using System.Collections.Generic;
 using System.CommandLine;
 using System.IO;
 using System.Text.Json;
+
 using CodeWalker.Cli.Helpers;
 using CodeWalker.GameFiles;
+
 using SharpDX;
 
 namespace CodeWalker.Cli;
@@ -153,8 +155,7 @@ public static class InspectHandler
             {
                 if (
                     entry is RpfFileEntry fileEntry
-                    && entry.Path != null
-                    && entry.Path.Replace('\\', '/').ToLowerInvariant() == normalizedPath
+                    && entry.Path?.Replace('\\', '/').Equals(normalizedPath, StringComparison.OrdinalIgnoreCase) == true
                 )
                 {
                     return fileEntry;
@@ -442,7 +443,7 @@ public static class InspectHandler
             var e = file.TextEntries[i];
             string text = e.Text ?? "";
             if (text.Length > 100)
-                text = text.Substring(0, 100) + "...";
+                text = text[..100] + "...";
 
             infos.Add(new Json.Gxt2EntryInfo { Hash = $"0x{e.Hash:X8}", Text = text });
         }

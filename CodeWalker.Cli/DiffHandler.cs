@@ -4,12 +4,13 @@ using System.CommandLine;
 using System.IO;
 using System.Text.Json;
 using System.Threading.Tasks;
+
 using CodeWalker.Cli.Helpers;
 using CodeWalker.GameFiles;
 
 namespace CodeWalker.Cli;
 
-public record DiffOptions
+public sealed record DiffOptions
 {
     public required string LeftPath { get; init; }
     public required string RightPath { get; init; }
@@ -23,7 +24,6 @@ public static class DiffHandler
     public static Command CreateCommand()
     {
         CommonCommandOptions commonOpts = new();
-        // csharpier-ignore-start
         Option<FileInfo> leftOption = new("--left", "-l")
         {
             Description = "First RPF archive to compare",
@@ -45,7 +45,6 @@ public static class DiffHandler
         {
             Description = "Include nested RPFs in comparison",
         };
-        // csharpier-ignore-end
 
         Command command = new("diff", "Compare two RPF archives")
         {

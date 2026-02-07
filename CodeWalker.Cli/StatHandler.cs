@@ -4,6 +4,7 @@ using System.CommandLine;
 using System.IO;
 using System.Linq;
 using System.Text.Json;
+
 using CodeWalker.Cli.Helpers;
 using CodeWalker.GameFiles;
 
@@ -163,14 +164,14 @@ public static class StatHandler
             {
                 // Table header
                 Console.WriteLine(
-                    $"{"Extension", -12} {"Count", 8} {"Total", 14} {"Avg", 14} {"Min", 14} {"Max", 14}"
+                    $"{"Extension",-12} {"Count",8} {"Total",14} {"Avg",14} {"Min",14} {"Max",14}"
                 );
                 Console.WriteLine(new string('-', 78));
 
                 foreach (Json.ExtensionStat ext in extensionStats)
                 {
                     Console.WriteLine(
-                        $"{ext.Extension, -12} {ext.Count, 8} {options.SizeFormat.ToFormattedString(ext.TotalSize), 14} {options.SizeFormat.ToFormattedString(ext.AvgSize), 14} {options.SizeFormat.ToFormattedString(ext.MinSize), 14} {options.SizeFormat.ToFormattedString(ext.MaxSize), 14}"
+                        $"{ext.Extension,-12} {ext.Count,8} {options.SizeFormat.ToFormattedString(ext.TotalSize),14} {options.SizeFormat.ToFormattedString(ext.AvgSize),14} {options.SizeFormat.ToFormattedString(ext.MinSize),14} {options.SizeFormat.ToFormattedString(ext.MaxSize),14}"
                     );
                 }
 

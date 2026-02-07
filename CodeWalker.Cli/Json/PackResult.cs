@@ -2,7 +2,7 @@ using System.Text.Json.Serialization;
 
 namespace CodeWalker.Cli.Json;
 
-public record PackResult : BaseResult
+public sealed record PackResult : BaseResult
 {
     [JsonPropertyName("inputDir")]
     public required string InputDir { get; init; }

@@ -4,12 +4,13 @@ using System.CommandLine;
 using System.IO;
 using System.Text.Json;
 using System.Threading.Tasks;
+
 using CodeWalker.Cli.Helpers;
 using CodeWalker.GameFiles;
 
 namespace CodeWalker.Cli;
 
-public record ValidateOptions
+public sealed record ValidateOptions
 {
     public required RpfOptions Rpf { get; init; }
     public required bool Progress { get; init; }
@@ -20,12 +21,10 @@ public static class ValidateHandler
     public static Command CreateCommand()
     {
         RpfCommandOptions rpfOpts = new();
-        // csharpier-ignore-start
         Option<bool> progressOption = new("--progress", "-P")
         {
             Description = "Show progress bar during validation",
         };
-        // csharpier-ignore-end
 
         Command command = new("validate", "Validate game file integrity by parsing RPF contents")
         {
@@ -249,89 +248,89 @@ public static class ValidateHandler
         switch (ext)
         {
             case ".ytd":
-            {
-                YtdFile file = RpfFile.GetFile<YtdFile>(fileEntry);
-                if (file == null)
-                    return ("error", "Failed to load YTD file");
-                if (
-                    file.TextureDict?.Textures?.data_items == null
-                    || file.TextureDict.Textures.data_items.Length == 0
-                )
-                    return ("warning", "Texture dictionary is empty");
-                return ("valid", null);
-            }
+                {
+                    YtdFile file = RpfFile.GetFile<YtdFile>(fileEntry);
+                    if (file == null)
+                        return ("error", "Failed to load YTD file");
+                    if (
+                        file.TextureDict?.Textures?.data_items == null
+                        || file.TextureDict.Textures.data_items.Length == 0
+                    )
+                        return ("warning", "Texture dictionary is empty");
+                    return ("valid", null);
+                }
             case ".ydr":
-            {
-                YdrFile file = RpfFile.GetFile<YdrFile>(fileEntry);
-                if (file == null)
-                    return ("error", "Failed to load YDR file");
-                if (file.Drawable == null)
-                    return ("error", "Drawable is null");
-                return ("valid", null);
-            }
+                {
+                    YdrFile file = RpfFile.GetFile<YdrFile>(fileEntry);
+                    if (file == null)
+                        return ("error", "Failed to load YDR file");
+                    if (file.Drawable == null)
+                        return ("error", "Drawable is null");
+                    return ("valid", null);
+                }
             case ".ydd":
-            {
-                YddFile file = RpfFile.GetFile<YddFile>(fileEntry);
-                if (file == null)
-                    return ("error", "Failed to load YDD file");
-                if (file.DrawableDict == null)
-                    return ("error", "DrawableDict is null");
-                return ("valid", null);
-            }
+                {
+                    YddFile file = RpfFile.GetFile<YddFile>(fileEntry);
+                    if (file == null)
+                        return ("error", "Failed to load YDD file");
+                    if (file.DrawableDict == null)
+                        return ("error", "DrawableDict is null");
+                    return ("valid", null);
+                }
             case ".yft":
-            {
-                YftFile file = RpfFile.GetFile<YftFile>(fileEntry);
-                if (file == null)
-                    return ("error", "Failed to load YFT file");
-                if (file.Fragment == null)
-                    return ("error", "Fragment is null");
-                return ("valid", null);
-            }
+                {
+                    YftFile file = RpfFile.GetFile<YftFile>(fileEntry);
+                    if (file == null)
+                        return ("error", "Failed to load YFT file");
+                    if (file.Fragment == null)
+                        return ("error", "Fragment is null");
+                    return ("valid", null);
+                }
             case ".ymap":
-            {
-                YmapFile file = RpfFile.GetFile<YmapFile>(fileEntry);
-                if (file == null)
-                    return ("error", "Failed to load YMAP file");
-                if (file.AllEntities == null || file.AllEntities.Length == 0)
-                    return ("warning", "No entities found");
-                return ("valid", null);
-            }
+                {
+                    YmapFile file = RpfFile.GetFile<YmapFile>(fileEntry);
+                    if (file == null)
+                        return ("error", "Failed to load YMAP file");
+                    if (file.AllEntities == null || file.AllEntities.Length == 0)
+                        return ("warning", "No entities found");
+                    return ("valid", null);
+                }
             case ".ytyp":
-            {
-                YtypFile file = RpfFile.GetFile<YtypFile>(fileEntry);
-                if (file == null)
-                    return ("error", "Failed to load YTYP file");
-                if (file.AllArchetypes == null || file.AllArchetypes.Length == 0)
-                    return ("warning", "No archetypes found");
-                return ("valid", null);
-            }
+                {
+                    YtypFile file = RpfFile.GetFile<YtypFile>(fileEntry);
+                    if (file == null)
+                        return ("error", "Failed to load YTYP file");
+                    if (file.AllArchetypes == null || file.AllArchetypes.Length == 0)
+                        return ("warning", "No archetypes found");
+                    return ("valid", null);
+                }
             case ".ybn":
-            {
-                YbnFile file = RpfFile.GetFile<YbnFile>(fileEntry);
-                if (file == null)
-                    return ("error", "Failed to load YBN file");
-                if (file.Bounds == null)
-                    return ("error", "Bounds is null");
-                return ("valid", null);
-            }
+                {
+                    YbnFile file = RpfFile.GetFile<YbnFile>(fileEntry);
+                    if (file == null)
+                        return ("error", "Failed to load YBN file");
+                    if (file.Bounds == null)
+                        return ("error", "Bounds is null");
+                    return ("valid", null);
+                }
             case ".awc":
-            {
-                AwcFile file = RpfFile.GetFile<AwcFile>(fileEntry);
-                if (file == null)
-                    return ("error", "Failed to load AWC file");
-                if (file.Streams == null || file.Streams.Length == 0)
-                    return ("warning", "No audio streams found");
-                return ("valid", null);
-            }
+                {
+                    AwcFile file = RpfFile.GetFile<AwcFile>(fileEntry);
+                    if (file == null)
+                        return ("error", "Failed to load AWC file");
+                    if (file.Streams == null || file.Streams.Length == 0)
+                        return ("warning", "No audio streams found");
+                    return ("valid", null);
+                }
             case ".gxt2":
-            {
-                Gxt2File file = RpfFile.GetFile<Gxt2File>(fileEntry);
-                if (file == null)
-                    return ("error", "Failed to load GXT2 file");
-                if (file.TextEntries == null || file.TextEntries.Length == 0)
-                    return ("warning", "No text entries found");
-                return ("valid", null);
-            }
+                {
+                    Gxt2File file = RpfFile.GetFile<Gxt2File>(fileEntry);
+                    if (file == null)
+                        return ("error", "Failed to load GXT2 file");
+                    if (file.TextEntries == null || file.TextEntries.Length == 0)
+                        return ("warning", "No text entries found");
+                    return ("valid", null);
+                }
             default:
                 return ("skipped", null);
         }
