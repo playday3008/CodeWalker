@@ -1,3 +1,4 @@
+using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Text.RegularExpressions;
@@ -62,7 +63,7 @@ internal static class Filter
         input = input.Replace('\\', '/');
         pattern = pattern.Replace('\\', '/');
 
-        bool hasPathSep = pattern.Contains('/');
+        bool hasPathSep = pattern.Contains('/', StringComparison.Ordinal);
 
         // For patterns without path separators, match against filename only
         if (!hasPathSep)
@@ -73,7 +74,7 @@ internal static class Filter
         }
 
         // Handle extension-only patterns (e.g., ".ydr" or "ydr" without wildcards)
-        if (!pattern.Contains('*') && !pattern.Contains('?'))
+        if (!pattern.Contains('*', StringComparison.Ordinal) && !pattern.Contains('?', StringComparison.Ordinal))
         {
             if (pattern.StartsWith('.'))
                 return input.EndsWith(pattern, System.StringComparison.Ordinal);
@@ -91,17 +92,17 @@ internal static class Filter
 
                 // Handle ** (globstar) before * — order matters
                 // **/ matches zero or more directory segments
-                regexPattern = regexPattern.Replace("\\*\\*/", "(.*/)?");
+                regexPattern = regexPattern.Replace("\\*\\*/", "(.*/)?", StringComparison.Ordinal);
                 // standalone ** matches any characters including /
-                regexPattern = regexPattern.Replace("\\*\\*", ".*");
+                regexPattern = regexPattern.Replace("\\*\\*", ".*", StringComparison.Ordinal);
                 // * matches any characters except / (single path segment)
-                regexPattern = regexPattern.Replace("\\*", "[^/]*");
+                regexPattern = regexPattern.Replace("\\*", "[^/]*", StringComparison.Ordinal);
                 // ? matches any single character except /
-                regexPattern = regexPattern.Replace("\\?", "[^/]");
+                regexPattern = regexPattern.Replace("\\?", "[^/]", StringComparison.Ordinal);
 
                 // Patterns with path separators match at any path boundary;
                 // filename-only patterns are anchored to the full filename.
-                if (p.Contains('/'))
+                if (p.Contains('/', StringComparison.Ordinal))
                     regexPattern = $"(?:^|/){regexPattern}$";
                 else
                     regexPattern = $"^{regexPattern}$";

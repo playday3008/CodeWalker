@@ -201,7 +201,7 @@ dotnet_analyzer_diagnostic.category-Usage.severity = warning
 # Noisy or inapplicable — suppress/downgrade
 dotnet_diagnostic.CA1031.severity = suggestion    # Do not catch general exception types (intentional in CLI)
 dotnet_diagnostic.CA1303.severity = suggestion    # Don't pass literals as localized params (no i18n needed)
-dotnet_diagnostic.CA1308.severity = warning       # Normalize strings to uppercase (ToLowerInvariant is fine)
+dotnet_diagnostic.CA1308.severity = suggestion    # Normalize strings to uppercase (ToLowerInvariant is fine)
 
 #### IDE Code Style Rules ####
 [*.cs]

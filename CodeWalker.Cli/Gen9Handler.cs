@@ -399,7 +399,6 @@ internal static class Gen9Handler
                                 files,
                                 errorMessages,
                                 ref converted,
-                                ref skipped,
                                 ref errors
                             );
 
@@ -481,7 +480,6 @@ internal static class Gen9Handler
         List<Json.Gen9FileEntry> files,
         List<string> errorMessages,
         ref int converted,
-        ref int skipped,
         ref int errors
     )
     {

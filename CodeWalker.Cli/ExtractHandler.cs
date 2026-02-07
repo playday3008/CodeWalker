@@ -9,6 +9,10 @@ using System.Threading.Tasks;
 using CodeWalker.Cli.Helpers;
 using CodeWalker.GameFiles;
 
+#if !NETCOREAPP
+using CodeWalker.Cli.Polyfills;
+#endif
+
 namespace CodeWalker.Cli;
 
 internal sealed record ExtractOptions
@@ -164,7 +168,7 @@ internal static class ExtractHandler
                             string relativePath = fileEntry.Path;
                             string outputPath = Path.Combine(
                                 outputDir,
-                                relativePath.Replace("\\", Path.DirectorySeparatorChar.ToString())
+                                relativePath.Replace("\\", Path.DirectorySeparatorChar.ToString(), StringComparison.Ordinal)
                             );
                             string? fileDir = Path.GetDirectoryName(outputPath);
 

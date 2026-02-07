@@ -17,6 +17,7 @@ namespace CodeWalker.Cli;
 /// <param name="fileEntry">The RPF file entry to process.</param>
 /// <param name="data">The raw file data extracted from the RPF.</param>
 /// <param name="fileOutputDir">The output directory for this file (includes relative path).</param>
+/// <param name="noOverwrite">When true, skip files that already exist at the output path.</param>
 internal delegate (Json.ExportFileEntry? entry, string? error) ExportFileProcessor(
     RpfFileEntry fileEntry,
     byte[] data,

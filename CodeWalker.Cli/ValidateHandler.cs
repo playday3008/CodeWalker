@@ -111,7 +111,6 @@ internal static class ValidateHandler
                         try
                         {
                             (string status, string? message) = ValidateFile(
-                                sourceRpf,
                                 fileEntry,
                                 ext
                             );
@@ -240,7 +239,6 @@ internal static class ValidateHandler
     }
 
     private static (string status, string? message) ValidateFile(
-        RpfFile sourceRpf,
         RpfFileEntry fileEntry,
         string ext
     )

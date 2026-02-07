@@ -7,6 +7,7 @@ using System.Threading.Tasks;
 
 using CodeWalker.Cli.Helpers;
 using CodeWalker.GameFiles;
+
 #if !NETCOREAPP
 using CodeWalker.Cli.Polyfills;
 #endif
@@ -232,7 +233,7 @@ internal static class SearchHandler
 
     private static bool HasGlobChars(string s)
     {
-        return s.Contains('*') || s.Contains('?') || s.Contains('[');
+        return s.Contains('*', StringComparison.Ordinal) || s.Contains('?', StringComparison.Ordinal) || s.Contains('[', StringComparison.Ordinal);
     }
 
     private static void CollectAllEntries(RpfFile rpf, bool recursive, List<RpfEntry> entries)
