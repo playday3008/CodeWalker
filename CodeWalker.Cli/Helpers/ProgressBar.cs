@@ -88,7 +88,7 @@ internal sealed class ProgressBar : IDisposable
         try
         {
             double percent = _total > 0 ? (double)_current / _total : 0;
-            int filled = (int)(percent * _barWidth);
+            int filled = Math.Min((int)(percent * _barWidth), _barWidth);
 
             Console.SetCursorPosition(0, Console.CursorTop);
             Err.Write("[");

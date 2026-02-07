@@ -61,6 +61,7 @@ internal static class TreeHandler
                 RpfFile = options.Rpf.RpfPath,
                 TotalFiles = 0,
                 TotalDirs = 0,
+                Root = null,
                 ErrorMessages = errorMessages,
             };
 

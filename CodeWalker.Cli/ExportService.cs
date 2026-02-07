@@ -221,7 +221,7 @@ internal static class ExportService
 
             foreach (var (success, jsonEntry, errorMessage) in results)
             {
-                if (success && jsonEntry?.Status == "exported")
+                if (success && jsonEntry?.Status is "exported" or "dry_run")
                     exported++;
 
                 if (jsonEntry?.Status is "unsupported" or "skipped")

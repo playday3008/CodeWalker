@@ -105,7 +105,7 @@ internal static class ValidateHandler
                     new ParallelOptions { MaxDegreeOfParallelism = options.Rpf.Threads },
                     i =>
                     {
-                        (RpfFile sourceRpf, RpfFileEntry fileEntry) = entries[i];
+                        (_, RpfFileEntry fileEntry) = entries[i];
                         string ext = Path.GetExtension(fileEntry.Name).ToLowerInvariant();
 
                         try

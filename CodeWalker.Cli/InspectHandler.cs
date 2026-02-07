@@ -99,7 +99,25 @@ internal static class InspectHandler
             string ext = Path.GetExtension(found.Name).ToLowerInvariant();
             string fileType = RpfService.GetFileType(found);
 
-            // Build base result
+            // Extract type-specific metadata
+            int? resourceVersion = null;
+            long? systemSize = null;
+            long? graphicsSize = null;
+            long? uncompressedSize = null;
+            uint? encryptionType = null;
+
+            if (found is RpfResourceFileEntry rfe)
+            {
+                resourceVersion = rfe.Version;
+                systemSize = rfe.SystemSize;
+                graphicsSize = rfe.GraphicsSize;
+            }
+            else if (found is RpfBinaryFileEntry bfe)
+            {
+                uncompressedSize = bfe.FileUncompressedSize;
+                encryptionType = bfe.EncryptionType;
+            }
+
             Json.InspectResult result = new()
             {
                 Success = scanErrors.Count == 0,
@@ -112,13 +130,11 @@ internal static class InspectHandler
                 Extension = ext,
                 NameHash = found.NameHash,
                 ShortNameHash = found.ShortNameHash,
-                ResourceVersion = found is RpfResourceFileEntry rfe1 ? rfe1.Version : null,
-                SystemSize = found is RpfResourceFileEntry rfe2 ? rfe2.SystemSize : null,
-                GraphicsSize = found is RpfResourceFileEntry rfe3 ? rfe3.GraphicsSize : null,
-                UncompressedSize = found is RpfBinaryFileEntry bfe1
-                    ? bfe1.FileUncompressedSize
-                    : null,
-                EncryptionType = found is RpfBinaryFileEntry bfe2 ? bfe2.EncryptionType : null,
+                ResourceVersion = resourceVersion,
+                SystemSize = systemSize,
+                GraphicsSize = graphicsSize,
+                UncompressedSize = uncompressedSize,
+                EncryptionType = encryptionType,
                 Details = GetDetails(found, ext),
                 ErrorMessages = [.. scanErrors],
             };

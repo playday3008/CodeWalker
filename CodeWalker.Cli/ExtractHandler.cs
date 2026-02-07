@@ -114,8 +114,6 @@ internal static class ExtractHandler
                 scanErrors
             );
 
-            int grandTotalFileCount = (int)rpf.GrandTotalFileCount;
-
             if (!options.Rpf.Json && options.DryRun)
             {
                 Console.Error.WriteLine("Dry run mode - no files will be extracted");
@@ -309,7 +307,7 @@ internal static class ExtractHandler
                 Success = errors == 0,
                 RpfFile = options.Rpf.RpfPath,
                 OutputDir = options.OutputPath ?? Directory.GetCurrentDirectory(),
-                TotalFiles = grandTotalFileCount,
+                TotalFiles = totalNonRpfFiles,
                 Extracted = extracted,
                 Skipped = skipped,
                 Errors = errors,

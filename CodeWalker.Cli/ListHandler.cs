@@ -123,12 +123,10 @@ internal static class ListHandler
 
             // Output results sequentially to preserve order
             long totalSize = 0;
-            int fileCount = 0;
             List<Json.FileEntry> files = [];
             foreach (var (jsonEntry, line, size) in results)
             {
                 totalSize += size;
-                fileCount++;
 
                 if (jsonEntry != null)
                     files.Add(jsonEntry);
@@ -140,7 +138,7 @@ internal static class ListHandler
             {
                 Success = scanErrors.Count == 0,
                 RpfFile = options.RpfPath,
-                TotalFiles = fileCount,
+                TotalFiles = entries.Count,
                 TotalSize = totalSize,
                 TotalSizeFormatted = options.SizeFormat.ToFormattedString(totalSize),
                 NestedRpfCount = nestedRpfCount,
@@ -158,7 +156,7 @@ internal static class ListHandler
             {
                 Console.Error.WriteLine();
                 Console.Error.WriteLine(
-                    $"Total: {fileCount} files, {options.SizeFormat.ToFormattedString(totalSize)}"
+                    $"Total: {entries.Count} files, {options.SizeFormat.ToFormattedString(totalSize)}"
                 );
             }
 

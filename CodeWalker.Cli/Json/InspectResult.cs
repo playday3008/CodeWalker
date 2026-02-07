@@ -38,15 +38,15 @@ internal sealed record InspectResult : BaseResult
 
     [JsonPropertyName("systemSize")]
     [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
-    public int? SystemSize { get; init; }
+    public long? SystemSize { get; init; }
 
     [JsonPropertyName("graphicsSize")]
     [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
-    public int? GraphicsSize { get; init; }
+    public long? GraphicsSize { get; init; }
 
     [JsonPropertyName("uncompressedSize")]
     [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
-    public uint? UncompressedSize { get; init; }
+    public long? UncompressedSize { get; init; }
 
     [JsonPropertyName("encryptionType")]
     [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
