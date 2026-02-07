@@ -48,7 +48,7 @@ internal static class ExportTextHandler
                     Path = fileEntry.Path,
                     Name = fileEntry.Name,
                     OutputFiles = 0,
-                    Status = "skipped",
+                    Status = "unsupported",
                 },
                 null
             );
@@ -64,7 +64,7 @@ internal static class ExportTextHandler
                     Path = fileEntry.Path,
                     Name = fileEntry.Name,
                     OutputFiles = 0,
-                    Status = "skipped",
+                    Status = "unsupported",
                 },
                 null
             );

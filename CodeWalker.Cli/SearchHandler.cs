@@ -232,7 +232,7 @@ internal static class SearchHandler
 
     private static bool HasGlobChars(string s)
     {
-        return s.Contains('*', StringComparison.Ordinal) || s.Contains('?', StringComparison.Ordinal) || s.Contains('[', StringComparison.Ordinal);
+        return s.Contains('*', StringComparison.Ordinal) || s.Contains('?', StringComparison.Ordinal);
     }
 
     private static void CollectAllEntries(RpfFile rpf, bool recursive, List<RpfEntry> entries)

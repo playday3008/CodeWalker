@@ -50,9 +50,17 @@ internal sealed record DiffEntry
     [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
     public long? LeftSize { get; init; }
 
+    [JsonPropertyName("leftSizeFormatted")]
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+    public string? LeftSizeFormatted { get; init; }
+
     [JsonPropertyName("rightSize")]
     [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
     public long? RightSize { get; init; }
+
+    [JsonPropertyName("rightSizeFormatted")]
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+    public string? RightSizeFormatted { get; init; }
 }
 
 internal sealed record DiffSummary

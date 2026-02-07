@@ -51,17 +51,13 @@ internal static class ExportTexturesHandler
                     Path = fileEntry.Path,
                     Name = fileEntry.Name,
                     OutputFiles = 0,
-                    Status = "skipped",
+                    Status = "unsupported",
                 },
                 null
             );
         }
 
-        if (!Directory.Exists(fileOutputDir))
-        {
-            Directory.CreateDirectory(fileOutputDir);
-        }
-
+        bool dirCreated = false;
         int texCount = 0;
         foreach (Texture tex in ytd.TextureDict.Textures.data_items)
         {
@@ -70,6 +66,13 @@ internal static class ExportTexturesHandler
 
             if (noOverwrite && File.Exists(outputPath))
                 continue;
+
+            if (!dirCreated)
+            {
+                if (!Directory.Exists(fileOutputDir))
+                    Directory.CreateDirectory(fileOutputDir);
+                dirCreated = true;
+            }
 
             byte[] dds = DDSIO.GetDDSFile(tex);
             File.WriteAllBytes(outputPath, dds);
@@ -81,9 +84,9 @@ internal static class ExportTexturesHandler
             {
                 Path = fileEntry.Path,
                 Name = fileEntry.Name,
-                OutputPath = fileOutputDir,
+                OutputPath = texCount > 0 ? fileOutputDir : null,
                 OutputFiles = texCount,
-                Status = "exported",
+                Status = texCount > 0 ? "exported" : "skipped",
             },
             null
         );

@@ -83,7 +83,7 @@ internal static class InspectHandler
             }
 
             // Find entry by normalized path
-            string normalizedPath = filePath.Replace('\\', '/').ToLowerInvariant();
+            string normalizedPath = filePath.Replace('\\', '/');
             RpfFileEntry? found = FindEntry(rpf, normalizedPath, options.Recursive);
 
             if (found == null)
