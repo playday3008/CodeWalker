@@ -304,7 +304,7 @@ internal static class DiffHandler
 
             Json.DiffResult result = new()
             {
-                Success = true,
+                Success = errorMessages.Count == 0,
                 LeftRpf = options.LeftPath,
                 RightRpf = options.RightPath,
                 Added = [.. added],

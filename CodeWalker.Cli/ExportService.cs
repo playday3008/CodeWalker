@@ -245,7 +245,7 @@ internal static class ExportService
                 RpfFile = options.Rpf.RpfPath,
                 OutputDir = options.OutputPath,
                 Format = format,
-                TotalFiles = filesToExport.Count,
+                TotalFiles = totalNonRpfFiles,
                 Exported = exported,
                 Skipped = skipped,
                 Errors = errors,

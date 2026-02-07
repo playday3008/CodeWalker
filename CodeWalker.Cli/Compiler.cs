@@ -87,7 +87,7 @@ namespace CodeWalker.Cli.Polyfills
             StringComparison comparisonType
         )
         {
-            StringBuilder? sb = new();
+            StringBuilder sb = new();
             int start = 0;
             int index;
             while ((index = s.IndexOf(oldValue, start, comparisonType)) >= 0)

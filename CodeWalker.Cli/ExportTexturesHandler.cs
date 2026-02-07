@@ -32,7 +32,7 @@ internal static class ExportTexturesHandler
         return command;
     }
 
-    private static (Json.ExportFileEntry? entry, string? error) ProcessFile(
+    private static (Json.ExportFileEntry entry, string? _) ProcessFile(
         RpfFileEntry fileEntry,
         byte[] data,
         string fileOutputDir,
