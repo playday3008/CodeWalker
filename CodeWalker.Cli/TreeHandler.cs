@@ -102,7 +102,7 @@ internal static class TreeHandler
 
                 Json.TreeResult result = new()
                 {
-                    Success = true,
+                    Success = scanErrors.Count == 0,
                     RpfFile = options.Rpf.RpfPath,
                     TotalFiles = totalFiles,
                     TotalDirs = totalDirs,

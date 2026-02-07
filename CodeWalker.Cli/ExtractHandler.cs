@@ -304,7 +304,7 @@ internal static class ExtractHandler
 
             Json.ExtractResult result = new()
             {
-                Success = errors == 0,
+                Success = errors == 0 && scanErrors.Count == 0,
                 RpfFile = options.Rpf.RpfPath,
                 OutputDir = options.OutputPath ?? Directory.GetCurrentDirectory(),
                 TotalFiles = totalNonRpfFiles,
@@ -331,7 +331,7 @@ internal static class ExtractHandler
                 );
             }
 
-            return errors > 0 ? 1 : 0;
+            return (errors > 0 || scanErrors.Count > 0) ? 1 : 0;
         }
         catch (Exception ex)
         {

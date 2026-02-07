@@ -241,7 +241,7 @@ internal static class ExportService
 
             Json.ExportResult result = new()
             {
-                Success = errors == 0,
+                Success = errors == 0 && scanErrors.Count == 0,
                 RpfFile = options.Rpf.RpfPath,
                 OutputDir = options.OutputPath,
                 Format = format,
@@ -269,7 +269,7 @@ internal static class ExportService
                 );
             }
 
-            return errors > 0 ? 1 : 0;
+            return (errors > 0 || scanErrors.Count > 0) ? 1 : 0;
         }
         catch (Exception ex)
         {

@@ -225,7 +225,7 @@ internal static class ValidateHandler
                 );
             }
 
-            return errors > 0 ? 1 : 0;
+            return (errors > 0 || scanErrors.Count > 0) ? 1 : 0;
         }
         catch (Exception ex)
         {
