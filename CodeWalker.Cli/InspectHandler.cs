@@ -11,7 +11,7 @@ using SharpDX;
 
 namespace CodeWalker.Cli;
 
-public static class InspectHandler
+internal static class InspectHandler
 {
     public static Command CreateCommand()
     {
@@ -180,29 +180,19 @@ public static class InspectHandler
     {
         try
         {
-            switch (ext)
+            return ext switch
             {
-                case ".ytd":
-                    return GetYtdDetails(entry);
-                case ".ydr":
-                    return GetYdrDetails(entry);
-                case ".ydd":
-                    return GetYddDetails(entry);
-                case ".yft":
-                    return GetYftDetails(entry);
-                case ".ymap":
-                    return GetYmapDetails(entry);
-                case ".ytyp":
-                    return GetYtypDetails(entry);
-                case ".ybn":
-                    return GetYbnDetails(entry);
-                case ".awc":
-                    return GetAwcDetails(entry);
-                case ".gxt2":
-                    return GetGxt2Details(entry);
-                default:
-                    return null;
-            }
+                ".ytd" => GetYtdDetails(entry),
+                ".ydr" => GetYdrDetails(entry),
+                ".ydd" => GetYddDetails(entry),
+                ".yft" => GetYftDetails(entry),
+                ".ymap" => GetYmapDetails(entry),
+                ".ytyp" => GetYtypDetails(entry),
+                ".ybn" => GetYbnDetails(entry),
+                ".awc" => GetAwcDetails(entry),
+                ".gxt2" => GetGxt2Details(entry),
+                _ => null,
+            };
         }
         catch
         {

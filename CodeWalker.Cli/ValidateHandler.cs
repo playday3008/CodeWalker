@@ -10,13 +10,13 @@ using CodeWalker.GameFiles;
 
 namespace CodeWalker.Cli;
 
-public sealed record ValidateOptions
+internal sealed record ValidateOptions
 {
     public required RpfOptions Rpf { get; init; }
     public required bool Progress { get; init; }
 }
 
-public static class ValidateHandler
+internal static class ValidateHandler
 {
     public static Command CreateCommand()
     {

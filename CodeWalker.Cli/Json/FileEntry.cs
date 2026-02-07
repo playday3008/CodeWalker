@@ -2,7 +2,7 @@ using System.Text.Json.Serialization;
 
 namespace CodeWalker.Cli.Json;
 
-public sealed record FileEntry
+internal sealed record FileEntry
 {
     [JsonPropertyName("path")]
     public required string Path { get; init; }

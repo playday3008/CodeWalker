@@ -7,7 +7,7 @@ using CodeWalker.GameFiles;
 
 namespace CodeWalker.Cli;
 
-public sealed record HashOptions
+internal sealed record HashOptions
 {
     public required string[] Inputs { get; init; }
     public required string Encoding { get; init; }
@@ -17,7 +17,7 @@ public sealed record HashOptions
     public const JenkHashInputEncoding DefaultJenkHashEncoding = JenkHashInputEncoding.UTF8;
 }
 
-public static class HashHandler
+internal static class HashHandler
 {
     public static Command CreateCommand()
     {

@@ -3,13 +3,13 @@ using System.Text.Json.Serialization;
 
 namespace CodeWalker.Cli.Json;
 
-public sealed record HashResult : BaseResult
+internal sealed record HashResult : BaseResult
 {
     [JsonPropertyName("hashes")]
     public required IReadOnlyList<HashEntry> Hashes { get; init; }
 }
 
-public sealed record HashEntry
+internal sealed record HashEntry
 {
     [JsonPropertyName("input")]
     public required string Input { get; init; }

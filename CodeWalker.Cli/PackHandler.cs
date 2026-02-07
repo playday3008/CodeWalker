@@ -9,7 +9,7 @@ using CodeWalker.GameFiles;
 
 namespace CodeWalker.Cli;
 
-public sealed record PackOptions
+internal sealed record PackOptions
 {
     public required string InputPath { get; init; }
     public required string OutputPath { get; init; }
@@ -19,7 +19,7 @@ public sealed record PackOptions
     public required bool Progress { get; init; }
 }
 
-public static class PackHandler
+internal static class PackHandler
 {
     public static Command CreateCommand()
     {

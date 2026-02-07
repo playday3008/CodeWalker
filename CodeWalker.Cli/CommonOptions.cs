@@ -6,7 +6,7 @@ using CodeWalker.Cli.Helpers;
 
 namespace CodeWalker.Cli;
 
-public sealed record CommonOptions
+internal sealed record CommonOptions
 {
     public required string ExePath { get; init; }
     public required bool Verbose { get; init; }
@@ -20,7 +20,7 @@ public sealed record CommonOptions
 /// Create an instance, call <see cref="AddTo"/> to register options on a command,
 /// then call <see cref="Parse"/> inside the action to build a <see cref="CommonOptions"/>.
 /// </summary>
-public sealed class CommonCommandOptions
+internal sealed class CommonCommandOptions
 {
     public Option<DirectoryInfo> Exe { get; } = new("--exe", "-e")
     {

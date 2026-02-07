@@ -11,7 +11,7 @@ using CodeWalker.GameFiles;
 
 namespace CodeWalker.Cli;
 
-public sealed record Gen9Options
+internal sealed record Gen9Options
 {
     public required string InputPath { get; init; }
     public required string OutputPath { get; init; }
@@ -22,7 +22,7 @@ public sealed record Gen9Options
     public required bool Progress { get; init; }
 }
 
-public static class Gen9Handler
+internal static class Gen9Handler
 {
     public static Command CreateCommand()
     {
@@ -218,7 +218,7 @@ public static class Gen9Handler
                         i =>
                         {
                             string path = filePaths[i];
-                            string relPath = path.Substring(inputFolder.Length);
+                            string relPath = path[inputFolder.Length..];
                             string outPath = Path.Combine(options.OutputPath, relPath);
 
                             try
@@ -361,7 +361,7 @@ public static class Gen9Handler
                     // Process RPF files sequentially (unsafe to parallelize)
                     foreach (string path in rpfPaths)
                     {
-                        string relPath = path.Substring(inputFolder.Length);
+                        string relPath = path[inputFolder.Length..];
                         string outPath = Path.Combine(options.OutputPath, relPath);
 
                         try

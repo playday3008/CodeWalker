@@ -7,7 +7,7 @@ namespace CodeWalker.Cli.Helpers;
 /// <summary>
 /// Displays a console progress bar on stderr to keep stdout clean for data/JSON output.
 /// </summary>
-public sealed class ProgressBar : IDisposable
+internal sealed class ProgressBar : IDisposable
 {
     private readonly int _total;
     private int _current;

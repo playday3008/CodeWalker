@@ -10,7 +10,7 @@ using CodeWalker.GameFiles;
 
 namespace CodeWalker.Cli;
 
-public sealed record DiffOptions
+internal sealed record DiffOptions
 {
     public required string LeftPath { get; init; }
     public required string RightPath { get; init; }
@@ -19,7 +19,7 @@ public sealed record DiffOptions
     public required bool Recursive { get; init; }
 }
 
-public static class DiffHandler
+internal static class DiffHandler
 {
     public static Command CreateCommand()
     {

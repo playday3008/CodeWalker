@@ -6,7 +6,7 @@ using CodeWalker.GameFiles;
 
 namespace CodeWalker.Cli;
 
-public static class ExportXmlHandler
+internal static class ExportXmlHandler
 {
     public static Command CreateCommand()
     {

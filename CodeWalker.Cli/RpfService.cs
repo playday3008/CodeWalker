@@ -9,7 +9,7 @@ using CodeWalker.GameFiles;
 
 namespace CodeWalker.Cli;
 
-public abstract record BaseResult
+internal abstract record BaseResult
 {
     [JsonPropertyName("success")]
     [JsonPropertyOrder(-1)]
@@ -20,7 +20,7 @@ public abstract record BaseResult
     public required IReadOnlyList<string> ErrorMessages { get; init; }
 }
 
-public static class RpfService
+internal static class RpfService
 {
     public static readonly JsonSerializerOptions JsonSerializerOptions = new()
     {

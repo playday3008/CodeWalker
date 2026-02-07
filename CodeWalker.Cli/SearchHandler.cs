@@ -13,7 +13,7 @@ using CodeWalker.Cli.Polyfills;
 
 namespace CodeWalker.Cli;
 
-public static class SearchHandler
+internal static class SearchHandler
 {
     public static Command CreateCommand()
     {

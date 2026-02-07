@@ -9,13 +9,13 @@ using CodeWalker.GameFiles;
 
 namespace CodeWalker.Cli;
 
-public sealed record TreeOptions
+internal sealed record TreeOptions
 {
     public required RpfOptions Rpf { get; init; }
     public required int Depth { get; init; }
 }
 
-public static class TreeHandler
+internal static class TreeHandler
 {
     public static Command CreateCommand()
     {

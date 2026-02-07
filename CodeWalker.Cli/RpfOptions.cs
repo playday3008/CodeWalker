@@ -5,7 +5,7 @@ using CodeWalker.Cli.Helpers;
 
 namespace CodeWalker.Cli;
 
-public sealed record RpfOptions
+internal sealed record RpfOptions
 {
     public required string RpfPath { get; init; }
     public required string ExePath { get; init; }
@@ -23,7 +23,7 @@ public sealed record RpfOptions
 /// Create an instance, call <see cref="AddTo"/> to register options on a command,
 /// then call <see cref="Parse"/> inside the action to build an <see cref="RpfOptions"/>.
 /// </summary>
-public sealed class RpfCommandOptions
+internal sealed class RpfCommandOptions
 {
     private readonly CommonCommandOptions _commonOpts = new();
 

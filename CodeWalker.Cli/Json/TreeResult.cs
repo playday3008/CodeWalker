@@ -3,7 +3,7 @@ using System.Text.Json.Serialization;
 
 namespace CodeWalker.Cli.Json;
 
-public sealed record TreeResult : BaseResult
+internal sealed record TreeResult : BaseResult
 {
     [JsonPropertyName("rpfFile")]
     public required string RpfFile { get; init; }
@@ -18,7 +18,7 @@ public sealed record TreeResult : BaseResult
     public TreeNode? Root { get; init; }
 }
 
-public sealed record TreeNode
+internal sealed record TreeNode
 {
     [JsonPropertyName("name")]
     public required string Name { get; init; }

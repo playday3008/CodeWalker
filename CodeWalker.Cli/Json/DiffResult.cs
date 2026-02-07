@@ -3,7 +3,7 @@ using System.Text.Json.Serialization;
 
 namespace CodeWalker.Cli.Json;
 
-public sealed record DiffResult : BaseResult
+internal sealed record DiffResult : BaseResult
 {
     [JsonPropertyName("leftRpf")]
     public required string LeftRpf { get; init; }
@@ -27,7 +27,7 @@ public sealed record DiffResult : BaseResult
     public required DiffSummary Summary { get; init; }
 }
 
-public sealed record DiffEntry
+internal sealed record DiffEntry
 {
     [JsonPropertyName("path")]
     public required string Path { get; init; }
@@ -55,7 +55,7 @@ public sealed record DiffEntry
     public long? RightSize { get; init; }
 }
 
-public sealed record DiffSummary
+internal sealed record DiffSummary
 {
     [JsonPropertyName("addedCount")]
     public required int AddedCount { get; init; }

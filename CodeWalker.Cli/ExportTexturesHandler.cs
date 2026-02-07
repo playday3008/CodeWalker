@@ -6,7 +6,7 @@ using CodeWalker.Utils;
 
 namespace CodeWalker.Cli;
 
-public static class ExportTexturesHandler
+internal static class ExportTexturesHandler
 {
     private static readonly string[] DefaultFilters = ["*.ytd"];
 

@@ -11,7 +11,7 @@ using CodeWalker.GameFiles;
 
 namespace CodeWalker.Cli;
 
-public sealed record ExtractOptions
+internal sealed record ExtractOptions
 {
     public required RpfOptions Rpf { get; init; }
     public required string? OutputPath { get; init; }
@@ -20,7 +20,7 @@ public sealed record ExtractOptions
     public required bool Progress { get; init; }
 }
 
-public static class ExtractHandler
+internal static class ExtractHandler
 {
     public static Command CreateCommand()
     {

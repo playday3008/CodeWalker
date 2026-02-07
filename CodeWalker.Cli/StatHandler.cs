@@ -10,7 +10,7 @@ using CodeWalker.GameFiles;
 
 namespace CodeWalker.Cli;
 
-public static class StatHandler
+internal static class StatHandler
 {
     public static Command CreateCommand()
     {

@@ -3,7 +3,7 @@ using System.Text.Json.Serialization;
 
 namespace CodeWalker.Cli.Json;
 
-public sealed record SearchMatch
+internal sealed record SearchMatch
 {
     [JsonPropertyName("path")]
     public required string Path { get; init; }
@@ -27,7 +27,7 @@ public sealed record SearchMatch
     public required uint ShortNameHash { get; init; }
 }
 
-public sealed record SearchResult : BaseResult
+internal sealed record SearchResult : BaseResult
 {
     [JsonPropertyName("rpfFile")]
     public required string RpfFile { get; init; }

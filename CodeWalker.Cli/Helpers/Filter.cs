@@ -11,7 +11,7 @@ namespace CodeWalker.Cli.Helpers;
 /// <summary>
 /// Provides methods for filtering file paths based on glob patterns.
 /// </summary>
-public static class Filter
+internal static class Filter
 {
     private static readonly ConcurrentDictionary<string, Regex> RegexCache = new();
 

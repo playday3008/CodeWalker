@@ -3,7 +3,7 @@ using System.IO;
 
 namespace CodeWalker.Cli;
 
-public sealed record ExportOptions
+internal sealed record ExportOptions
 {
     public required RpfOptions Rpf { get; init; }
     public required string OutputPath { get; init; }
@@ -12,7 +12,7 @@ public sealed record ExportOptions
     public required bool Progress { get; init; }
 }
 
-public sealed class ExportCommandOptions
+internal sealed class ExportCommandOptions
 {
     private readonly RpfCommandOptions _rpfOpts = new();
 
@@ -59,7 +59,7 @@ public sealed class ExportCommandOptions
     }
 }
 
-public static class ExportHandler
+internal static class ExportHandler
 {
     public static Command CreateCommand()
     {

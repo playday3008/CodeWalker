@@ -3,7 +3,7 @@ using System.Text.Json.Serialization;
 
 namespace CodeWalker.Cli.Json;
 
-public sealed record ValidateFileEntry
+internal sealed record ValidateFileEntry
 {
     [JsonPropertyName("path")]
     public required string Path { get; init; }
@@ -19,7 +19,7 @@ public sealed record ValidateFileEntry
     public string? Message { get; init; }
 }
 
-public sealed record ValidateResult : BaseResult
+internal sealed record ValidateResult : BaseResult
 {
     [JsonPropertyName("rpfFile")]
     public required string RpfFile { get; init; }
