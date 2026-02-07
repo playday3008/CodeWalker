@@ -58,13 +58,14 @@ internal sealed class CommonCommandOptions
         });
     }
 
-    public void AddTo(Command command)
+    public void AddTo(Command command, bool includeThreads = true)
     {
         command.Add(Exe);
         command.Add(Verbose);
         command.Add(Json);
         command.Add(Si);
-        command.Add(Threads);
+        if (includeThreads)
+            command.Add(Threads);
     }
 
     public CommonOptions Parse(ParseResult parseResult)

@@ -59,7 +59,7 @@ internal static class PackHandler
             forceOption,
             progressOption,
         };
-        commonOpts.AddTo(command);
+        commonOpts.AddTo(command, includeThreads: false);
         command.Aliases.Add("p");
 
         command.SetAction(parseResult =>

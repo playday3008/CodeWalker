@@ -128,8 +128,9 @@ internal static class SearchHandler
             {
                 // Substring match
                 patternType = "substring";
+                string normalizedPattern = pattern.Replace('\\', '/');
                 matcher = entry =>
-                    entry.Path?.Replace('\\', '/').Contains(pattern, StringComparison.OrdinalIgnoreCase) == true;
+                    entry.Path?.Replace('\\', '/').Contains(normalizedPattern, StringComparison.OrdinalIgnoreCase) == true;
             }
 
             // Match in parallel

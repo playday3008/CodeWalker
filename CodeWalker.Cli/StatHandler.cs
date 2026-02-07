@@ -184,7 +184,7 @@ internal static class StatHandler
                 if (uncompressedSize > 0)
                 {
                     Console.Error.WriteLine(
-                        $"Compression: {options.SizeFormat.ToFormattedString(compressedSize)} / {options.SizeFormat.ToFormattedString(uncompressedSize)} ({compressionRatio:P1})"
+                        $"Compression: {options.SizeFormat.ToFormattedString(compressedSize)} / {options.SizeFormat.ToFormattedString(uncompressedSize)} ({compressionRatio:P1} of original)"
                     );
                 }
             }
