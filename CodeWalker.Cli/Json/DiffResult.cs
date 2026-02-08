@@ -1,8 +1,10 @@
 using System.Collections.Generic;
+using System.Diagnostics.CodeAnalysis;
 using System.Text.Json.Serialization;
 
 namespace CodeWalker.Cli.Json;
 
+[ExcludeFromCodeCoverage]
 internal sealed record DiffResult : BaseResult
 {
     [JsonPropertyName("leftRpf")]
@@ -27,6 +29,7 @@ internal sealed record DiffResult : BaseResult
     public required DiffSummary Summary { get; init; }
 }
 
+[ExcludeFromCodeCoverage]
 internal sealed record DiffEntry
 {
     [JsonPropertyName("path")]
@@ -63,6 +66,7 @@ internal sealed record DiffEntry
     public string? RightSizeFormatted { get; init; }
 }
 
+[ExcludeFromCodeCoverage]
 internal sealed record DiffSummary
 {
     [JsonPropertyName("addedCount")]

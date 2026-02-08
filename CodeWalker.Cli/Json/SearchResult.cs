@@ -1,8 +1,10 @@
 using System.Collections.Generic;
+using System.Diagnostics.CodeAnalysis;
 using System.Text.Json.Serialization;
 
 namespace CodeWalker.Cli.Json;
 
+[ExcludeFromCodeCoverage]
 internal sealed record SearchMatch
 {
     [JsonPropertyName("path")]
@@ -27,6 +29,7 @@ internal sealed record SearchMatch
     public required uint ShortNameHash { get; init; }
 }
 
+[ExcludeFromCodeCoverage]
 internal sealed record SearchResult : BaseResult
 {
     [JsonPropertyName("rpfFile")]

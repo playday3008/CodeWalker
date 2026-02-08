@@ -1,8 +1,10 @@
 using System.Collections.Generic;
+using System.Diagnostics.CodeAnalysis;
 using System.Text.Json.Serialization;
 
 namespace CodeWalker.Cli.Json;
 
+[ExcludeFromCodeCoverage]
 internal sealed record ExportFileEntry
 {
     [JsonPropertyName("path")]
@@ -22,6 +24,7 @@ internal sealed record ExportFileEntry
     public required string Status { get; init; }
 }
 
+[ExcludeFromCodeCoverage]
 internal sealed record ExportResult : BaseResult
 {
     [JsonPropertyName("rpfFile")]

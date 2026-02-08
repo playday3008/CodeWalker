@@ -1,8 +1,10 @@
 using System.Collections.Generic;
+using System.Diagnostics.CodeAnalysis;
 using System.Text.Json.Serialization;
 
 namespace CodeWalker.Cli.Json;
 
+[ExcludeFromCodeCoverage]
 internal sealed record TreeResult : BaseResult
 {
     [JsonPropertyName("rpfFile")]
@@ -18,6 +20,7 @@ internal sealed record TreeResult : BaseResult
     public required TreeNode? Root { get; init; }
 }
 
+[ExcludeFromCodeCoverage]
 internal sealed record TreeNode
 {
     [JsonPropertyName("name")]
