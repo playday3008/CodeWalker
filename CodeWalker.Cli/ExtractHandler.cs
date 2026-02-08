@@ -9,10 +9,6 @@ using System.Threading.Tasks;
 using CodeWalker.Cli.Helpers;
 using CodeWalker.GameFiles;
 
-#if !NETCOREAPP
-using CodeWalker.Cli.Polyfills;
-#endif
-
 namespace CodeWalker.Cli;
 
 internal sealed record ExtractOptions

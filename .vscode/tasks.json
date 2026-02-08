@@ -43,6 +43,17 @@
       "args": ["format", "CodeWalker.Cli/"],
       "group": "build",
       "problemMatcher": []
+    },
+    {
+      "label": "test-cli",
+      "type": "process",
+      "command": "dotnet",
+      "args": ["test", "CodeWalker.Cli/CodeWalker.Cli.Tests.csproj"],
+      "group": {
+        "kind": "test",
+        "isDefault": true
+      },
+      "problemMatcher": "$msCompile"
     }
   ]
 }

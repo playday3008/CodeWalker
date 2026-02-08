@@ -1,0 +1,21 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <RootNamespace>CodeWalker.Cli</RootNamespace>
+    <IsTestProject>true</IsTestProject>
+    <DefineConstants>$(DefineConstants);TESTING</DefineConstants>
+    <!-- CA1707: underscores in test names; CS1591: missing docs on public test classes -->
+    <NoWarn>$(NoWarn);CA1707;CS1591</NoWarn>
+    <!-- Enable Microsoft Testing Platform for 'dotnet test' integration -->
+    <TestingPlatformDotnetTestSupport>true</TestingPlatformDotnetTestSupport>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="xunit.v3" Version="3.2.2" />
+    <PackageReference Include="xunit.runner.visualstudio" Version="3.1.0">
+      <PrivateAssets>all</PrivateAssets>
+      <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
+    </PackageReference>
+  </ItemGroup>
+
+</Project>
