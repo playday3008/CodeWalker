@@ -135,11 +135,8 @@ internal static class ExtractHandler
             int overwriteSkipped = 0;
 
             // Process files in parallel, storing results by index to preserve order
-            (bool success, Json.FileEntry? jsonEntry, string? errorMessage)[] results = new (
-                bool,
-                Json.FileEntry?,
-                string?
-            )[filesToExtract.Count];
+            (Json.FileEntry? jsonEntry, string? errorMessage)[] results =
+                new (Json.FileEntry?, string?)[filesToExtract.Count];
 
             object consoleLock = new();
 
@@ -188,7 +185,7 @@ internal static class ExtractHandler
                                         Console.WriteLine($"Would extract: {fileEntry.Path}");
                                     }
                                 }
-                                results[i] = (true, jsonEntry with { Status = "dry_run" }, null);
+                                results[i] = (jsonEntry with { Status = "dry_run" }, null);
                             }
                             else if (options.NoOverwrite && File.Exists(outputPath))
                             {
@@ -202,7 +199,7 @@ internal static class ExtractHandler
                                         );
                                     }
                                 }
-                                results[i] = (false, jsonEntry with { Status = "skipped" }, null);
+                                results[i] = (jsonEntry with { Status = "skipped" }, null);
                             }
                             else
                             {
@@ -224,11 +221,7 @@ internal static class ExtractHandler
                                 {
                                     File.WriteAllBytes(outputPath, data);
                                     results[i] = (
-                                        true,
-                                        jsonEntry with
-                                        {
-                                            Status = "extracted",
-                                        },
+                                        jsonEntry with { Status = "extracted" },
                                         null
                                     );
                                 }
@@ -244,7 +237,6 @@ internal static class ExtractHandler
                                         }
                                     }
                                     results[i] = (
-                                        false,
                                         null,
                                         $"Failed to extract: {fileEntry.Path}"
                                     );
@@ -265,7 +257,6 @@ internal static class ExtractHandler
                                 }
                             }
                             results[i] = (
-                                false,
                                 null,
                                 $"Error extracting {fileEntry.Path}: {ex.Message}"
                             );
@@ -279,17 +270,17 @@ internal static class ExtractHandler
             int extracted = 0;
             int errors = 0;
             List<Json.FileEntry> files = [];
-            List<string> errorMessages = new(scanErrors);
+            List<string> errorMessages = [.. scanErrors];
 
-            foreach (var (success, jsonEntry, errorMessage) in results)
+            foreach ((Json.FileEntry? jsonEntry, string? errorMessage) in results)
             {
-                if (success)
+                if (jsonEntry?.Status is "extracted" or "dry_run")
                     extracted++;
 
                 if (jsonEntry != null)
                     files.Add(jsonEntry);
 
-                if (!success && errorMessage != null)
+                if (errorMessage != null)
                 {
                     errors++;
                     errorMessages.Add(errorMessage);

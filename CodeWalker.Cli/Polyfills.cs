@@ -11,6 +11,8 @@ using Xunit;
 
 namespace CodeWalker.Cli;
 
+#pragma warning disable IDE0079 // Remove unnecessary suppression
+
 #if (!NETCOREAPP2_1_OR_GREATER && !NETSTANDARD2_1_OR_GREATER) || TESTING
 
 internal static class StringExtensions
@@ -139,6 +141,8 @@ internal static class StringExtensions
 }
 
 #endif
+
+#pragma warning restore IDE0079 // Remove unnecessary suppression
 
 #if TESTING
 
