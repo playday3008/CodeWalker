@@ -1,4 +1,4 @@
-#if !NETSTANDARD2_1_OR_GREATER
+#if (!NETCOREAPP2_1_OR_GREATER && !NETSTANDARD2_1_OR_GREATER) || TESTING
 using System;
 using System.Diagnostics;
 using System.Globalization;
@@ -11,7 +11,7 @@ using Xunit;
 
 namespace CodeWalker.Cli;
 
-#if !NETSTANDARD2_1_OR_GREATER
+#if (!NETCOREAPP2_1_OR_GREATER && !NETSTANDARD2_1_OR_GREATER) || TESTING
 
 internal static class StringExtensions
 {
