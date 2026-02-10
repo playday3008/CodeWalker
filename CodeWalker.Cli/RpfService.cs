@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.IO;
+using System.Linq;
 using System.Text.Json;
 using System.Text.Json.Serialization;
 
@@ -99,19 +100,13 @@ internal static class RpfService
     {
         if (rpf.AllEntries != null)
         {
-            foreach (RpfEntry entry in rpf.AllEntries)
-            {
-                if (entry is RpfFileEntry fileEntry)
-                {
-                    if (entry.NameLower.EndsWith(".rpf", StringComparison.Ordinal))
-                        continue;
-
-                    if (!Filter.Matches(entry.Path, filters))
-                        continue;
-
-                    files.Add((rpf, fileEntry));
-                }
-            }
+            files.AddRange(
+                rpf.AllEntries
+                    .OfType<RpfFileEntry>()
+                    .Where(fe => !fe.NameLower.EndsWith(".rpf", StringComparison.Ordinal)
+                        && Filter.Matches(fe.Path, filters))
+                    .Select(fe => (rpf, fe))
+            );
         }
 
         if (recursive && rpf.Children != null)

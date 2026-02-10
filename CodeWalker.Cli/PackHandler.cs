@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.CommandLine;
 using System.IO;
 using System.Text.Json;
+using System.Threading;
 
 using CodeWalker.Cli.Helpers;
 using CodeWalker.GameFiles;
@@ -21,7 +22,7 @@ internal sealed record PackOptions
 
 internal static class PackHandler
 {
-    public static Command CreateCommand()
+    public static Command CreateCommand(CancellationToken cancellationToken = default)
     {
         CommonCommandOptions commonOpts = new();
         Option<DirectoryInfo> inputOption = new("--input", "-i")
@@ -73,13 +74,13 @@ internal static class PackHandler
                 Force = parseResult.GetValue(forceOption),
                 Progress = parseResult.GetValue(progressOption),
             };
-            return Execute(options);
+            return Execute(options, cancellationToken);
         });
 
         return command;
     }
 
-    public static int Execute(PackOptions options)
+    public static int Execute(PackOptions options, CancellationToken cancellationToken = default)
     {
         Json.PackResult ErrorResult(string[] errorMessages) =>
             new()
@@ -184,7 +185,8 @@ internal static class PackHandler
                     ref totalFiles,
                     ref totalDirs,
                     ref totalSize,
-                    ref errors
+                    ref errors,
+                    cancellationToken
                 );
             }
 
@@ -225,6 +227,7 @@ internal static class PackHandler
 
             return errors > 0 ? 1 : 0;
         }
+        catch (OperationCanceledException) { throw; }
         catch (Exception ex)
         {
             return RpfService.ReportError(
@@ -249,12 +252,14 @@ internal static class PackHandler
         ref int totalFiles,
         ref int totalDirs,
         ref long totalSize,
-        ref int errors
+        ref int errors,
+        CancellationToken cancellationToken
     )
     {
         // Add subdirectories first
         foreach (string subDirPath in Directory.GetDirectories(fsDir))
         {
+            cancellationToken.ThrowIfCancellationRequested();
             string dirName = Path.GetFileName(subDirPath);
             try
             {
@@ -275,7 +280,8 @@ internal static class PackHandler
                     ref totalFiles,
                     ref totalDirs,
                     ref totalSize,
-                    ref errors
+                    ref errors,
+                    cancellationToken
                 );
             }
             catch (Exception ex)
@@ -293,6 +299,7 @@ internal static class PackHandler
         // Add files
         foreach (string filePath in Directory.GetFiles(fsDir))
         {
+            cancellationToken.ThrowIfCancellationRequested();
             string fileName = Path.GetFileName(filePath);
             try
             {

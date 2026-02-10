@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.CommandLine;
 using System.Text.Json;
+using System.Threading;
 
 using CodeWalker.GameFiles;
 
@@ -19,7 +20,7 @@ internal sealed record HashOptions
 
 internal static class HashHandler
 {
-    public static Command CreateCommand()
+    public static Command CreateCommand(CancellationToken cancellationToken = default)
     {
         Option<string[]> inputOption = new("--input", "-i")
         {
@@ -55,13 +56,13 @@ internal static class HashHandler
                 Encoding = parseResult.GetValue(encodingOption) ?? HashOptions.DefaultEncoding,
                 Json = parseResult.GetValue(jsonOption),
             };
-            return Execute(options);
+            return Execute(options, cancellationToken);
         });
 
         return command;
     }
 
-    public static int Execute(HashOptions options)
+    public static int Execute(HashOptions options, CancellationToken cancellationToken = default)
     {
         static Json.HashResult ErrorResult(string[] errorMessages) =>
             new()
@@ -98,6 +99,7 @@ internal static class HashHandler
 
             foreach (string input in options.Inputs)
             {
+                cancellationToken.ThrowIfCancellationRequested();
                 JenkHash jenkHash = new(input, encoding);
 
                 Json.HashEntry entry = new()
@@ -135,6 +137,7 @@ internal static class HashHandler
 
             return 0;
         }
+        catch (OperationCanceledException) { throw; }
         catch (Exception ex)
         {
             return RpfService.ReportError(ex.Message, options.Json, ErrorResult([]));

@@ -2,7 +2,9 @@ using System;
 using System.Collections.Generic;
 using System.CommandLine;
 using System.IO;
+using System.Linq;
 using System.Text.Json;
+using System.Threading;
 
 using CodeWalker.Cli.Helpers;
 using CodeWalker.GameFiles;
@@ -13,7 +15,7 @@ namespace CodeWalker.Cli;
 
 internal static class InspectHandler
 {
-    public static Command CreateCommand()
+    public static Command CreateCommand(CancellationToken cancellationToken = default)
     {
         RpfCommandOptions rpfOpts = new();
         Argument<string> pathArg = new("path")
@@ -32,14 +34,16 @@ internal static class InspectHandler
         command.Aliases.Add("i");
 
         command.SetAction(parseResult =>
-            Execute(rpfOpts.Parse(parseResult), parseResult.GetRequiredValue(pathArg))
+            Execute(rpfOpts.Parse(parseResult), parseResult.GetRequiredValue(pathArg), cancellationToken)
         );
 
         return command;
     }
 
-    public static int Execute(RpfOptions options, string filePath)
+    public static int Execute(RpfOptions options, string filePath, CancellationToken cancellationToken = default)
     {
+        cancellationToken.ThrowIfCancellationRequested();
+
         Json.InspectResult ErrorResult(string[] errorMessages) =>
             new()
             {
@@ -152,6 +156,7 @@ internal static class InspectHandler
 
             return scanErrors.Count > 0 ? 1 : 0;
         }
+        catch (OperationCanceledException) { throw; }
         catch (Exception ex)
         {
             return RpfService.ReportError(
@@ -165,25 +170,19 @@ internal static class InspectHandler
 
     private static RpfFileEntry? FindEntry(RpfFile rpf, string normalizedPath, bool recursive)
     {
-        if (rpf.AllEntries != null)
-        {
-            foreach (RpfEntry entry in rpf.AllEntries)
-            {
-                if (
-                    entry is RpfFileEntry fileEntry
-                    && entry.Path?.Replace('\\', '/').Equals(normalizedPath, StringComparison.OrdinalIgnoreCase) == true
-                )
-                {
-                    return fileEntry;
-                }
-            }
-        }
+        RpfFileEntry? found = rpf.AllEntries?
+            .OfType<RpfFileEntry>()
+            .FirstOrDefault(fe =>
+                fe.Path?.Replace('\\', '/').Equals(normalizedPath, StringComparison.OrdinalIgnoreCase) == true);
+
+        if (found != null)
+            return found;
 
         if (recursive && rpf.Children != null)
         {
             foreach (RpfFile child in rpf.Children)
             {
-                RpfFileEntry? found = FindEntry(child, normalizedPath, recursive);
+                found = FindEntry(child, normalizedPath, recursive);
                 if (found != null)
                     return found;
             }
@@ -227,23 +226,18 @@ internal static class InspectHandler
             return null;
 
         Texture[] textures = file.TextureDict.Textures.data_items;
-        List<Json.TextureInfo> infos = [];
-        foreach (Texture tex in textures)
-        {
-            if (tex == null)
-                continue;
-            infos.Add(
-                new Json.TextureInfo
-                {
-                    Name = tex.Name ?? "",
-                    Width = tex.Width,
-                    Height = tex.Height,
-                    Format = tex.Format.ToString(),
-                    MipLevels = tex.Levels,
-                    Stride = tex.Stride,
-                }
-            );
-        }
+        List<Json.TextureInfo> infos = textures
+            .Where(tex => tex != null)
+            .Select(tex => new Json.TextureInfo
+            {
+                Name = tex.Name ?? "",
+                Width = tex.Width,
+                Height = tex.Height,
+                Format = tex.Format.ToString(),
+                MipLevels = tex.Levels,
+                Stride = tex.Stride,
+            })
+            .ToList();
 
         return new Json.YtdDetails { TextureCount = infos.Count, Textures = infos };
     }
@@ -264,35 +258,22 @@ internal static class InspectHandler
             return null;
 
         Drawable?[] drawables = file.DrawableDict.Drawables.data_items;
-        List<Json.DrawableInfo> infos = [];
-        foreach (Drawable? d in drawables)
-        {
-            if (d == null)
-                continue;
-            long verts = 0;
-            long tris = 0;
-            if (d.AllModels != null)
+        List<Json.DrawableInfo> infos = drawables
+            .Where(d => d != null)
+            .Select(d =>
             {
-                foreach (DrawableModel? model in d.AllModels)
-                {
-                    if (model?.Geometries == null)
-                        continue;
-                    foreach (DrawableGeometry? geom in model.Geometries)
-                    {
-                        verts += geom.VerticesCount;
-                        tris += geom.TrianglesCount;
-                    }
-                }
-            }
-            infos.Add(
-                new Json.DrawableInfo
+                DrawableGeometry[] geoms = (d!.AllModels ?? [])
+                    .Where(m => m?.Geometries != null)
+                    .SelectMany(m => m.Geometries)
+                    .ToArray();
+                return new Json.DrawableInfo
                 {
                     Name = d.Name ?? "",
-                    TotalVertices = verts,
-                    TotalTriangles = tris,
-                }
-            );
-        }
+                    TotalVertices = geoms.Sum(g => (long)g.VerticesCount),
+                    TotalTriangles = geoms.Sum(g => (long)g.TrianglesCount),
+                };
+            })
+            .ToList();
 
         return new Json.YddDetails { DrawableCount = infos.Count, Drawables = infos };
     }
@@ -354,35 +335,20 @@ internal static class InspectHandler
         if (file?.AllArchetypes == null)
             return null;
 
-        int baseCount = 0;
-        int timeCount = 0;
-        int mloCount = 0;
-        List<Json.MloInfo> mloDetails = [];
+        List<Json.MloInfo> mloDetails = file.AllArchetypes
+            .OfType<MloArchetype>()
+            .Select(mlo => new Json.MloInfo
+            {
+                Name = mlo.Hash.ToString(),
+                EntityCount = mlo.entities?.Length ?? 0,
+                RoomCount = mlo.rooms?.Length ?? 0,
+                PortalCount = mlo.portals?.Length ?? 0,
+            })
+            .ToList();
 
-        foreach (Archetype? arch in file.AllArchetypes)
-        {
-            if (arch is MloArchetype mlo)
-            {
-                mloCount++;
-                mloDetails.Add(
-                    new Json.MloInfo
-                    {
-                        Name = mlo.Hash.ToString(),
-                        EntityCount = mlo.entities?.Length ?? 0,
-                        RoomCount = mlo.rooms?.Length ?? 0,
-                        PortalCount = mlo.portals?.Length ?? 0,
-                    }
-                );
-            }
-            else if (arch is TimeArchetype)
-            {
-                timeCount++;
-            }
-            else
-            {
-                baseCount++;
-            }
-        }
+        int mloCount = mloDetails.Count;
+        int timeCount = file.AllArchetypes.OfType<TimeArchetype>().Count();
+        int baseCount = file.AllArchetypes.Length - mloCount - timeCount;
 
         return new Json.YtypDetails
         {
@@ -419,23 +385,20 @@ internal static class InspectHandler
         if (file?.Streams == null)
             return null;
 
-        List<Json.AwcStreamInfo> infos = [];
-        foreach (AwcStream? stream in file.Streams)
-        {
-            if (stream?.StreamInfo == null)
-                continue;
-
-            AwcFormatChunk? fmt = stream.FormatChunk;
-            infos.Add(
-                new Json.AwcStreamInfo
+        List<Json.AwcStreamInfo> infos = file.Streams
+            .Where(s => s?.StreamInfo != null)
+            .Select(s =>
+            {
+                AwcFormatChunk? fmt = s.FormatChunk;
+                return new Json.AwcStreamInfo
                 {
-                    Id = stream.StreamInfo.Id,
+                    Id = s.StreamInfo.Id,
                     SamplesPerSecond = fmt?.SamplesPerSecond ?? 0,
                     Codec = fmt?.Codec.ToString() ?? "unknown",
                     Samples = fmt?.Samples ?? 0,
-                }
-            );
-        }
+                };
+            })
+            .ToList();
 
         return new Json.AwcDetails { StreamCount = infos.Count, Streams = infos };
     }
@@ -446,17 +409,16 @@ internal static class InspectHandler
         if (file?.TextEntries == null)
             return null;
 
-        List<Json.Gxt2EntryInfo> infos = [];
-        int limit = Math.Min(file.TextEntries.Length, 50);
-        for (int i = 0; i < limit; i++)
-        {
-            Gxt2Entry e = file.TextEntries[i];
-            string text = e.Text ?? "";
-            if (text.Length > 100)
-                text = text[..100] + "...";
-
-            infos.Add(new Json.Gxt2EntryInfo { Hash = $"0x{e.Hash:X8}", Text = text });
-        }
+        List<Json.Gxt2EntryInfo> infos = file.TextEntries
+            .Take(50)
+            .Select(e =>
+            {
+                string text = e.Text ?? "";
+                if (text.Length > 100)
+                    text = text[..100] + "...";
+                return new Json.Gxt2EntryInfo { Hash = $"0x{e.Hash:X8}", Text = text };
+            })
+            .ToList();
 
         return new Json.Gxt2Details { EntryCount = file.TextEntries.Length, Entries = infos };
     }
@@ -476,30 +438,19 @@ internal static class InspectHandler
         if (models == null || models.Length == 0)
             return;
 
-        int geomCount = 0;
-        long totalVerts = 0;
-        long totalTris = 0;
-
-        foreach (DrawableModel model in models)
-        {
-            if (model?.Geometries == null)
-                continue;
-            geomCount += model.Geometries.Length;
-            foreach (DrawableGeometry? geom in model.Geometries)
-            {
-                totalVerts += geom.VerticesCount;
-                totalTris += geom.TrianglesCount;
-            }
-        }
+        DrawableGeometry[] allGeoms = models
+            .Where(m => m?.Geometries != null)
+            .SelectMany(m => m.Geometries)
+            .ToArray();
 
         lods.Add(
             new Json.LodInfo
             {
                 Level = level,
                 ModelCount = models.Length,
-                GeometryCount = geomCount,
-                TotalVertices = totalVerts,
-                TotalTriangles = totalTris,
+                GeometryCount = allGeoms.Length,
+                TotalVertices = allGeoms.Sum(g => (long)g.VerticesCount),
+                TotalTriangles = allGeoms.Sum(g => (long)g.TrianglesCount),
             }
         );
     }

@@ -2,7 +2,9 @@ using System;
 using System.Collections.Generic;
 using System.CommandLine;
 using System.IO;
+using System.Linq;
 using System.Text.Json;
+using System.Threading;
 using System.Threading.Tasks;
 
 using CodeWalker.Cli.Helpers;
@@ -24,7 +26,7 @@ internal sealed record Gen9Options
 
 internal static class Gen9Handler
 {
-    public static Command CreateCommand()
+    public static Command CreateCommand(CancellationToken cancellationToken = default)
     {
         CommonCommandOptions commonOpts = new();
         Option<DirectoryInfo> inputOption = new("--input", "-i")
@@ -59,7 +61,7 @@ internal static class Gen9Handler
             Description = "Show progress bar",
         };
 
-        Command command = new("gen9", "Convert files between standard and enhanced (Gen9) formats")
+        Command command = new("gen9", "Convert files to enhanced (Gen9) format")
         {
             inputOption,
             outputOption,
@@ -83,13 +85,13 @@ internal static class Gen9Handler
                 SkipUnconverted = parseResult.GetValue(skipUnconvertedOption),
                 Progress = parseResult.GetValue(progressOption),
             };
-            return Execute(options);
+            return Execute(options, cancellationToken);
         });
 
         return command;
     }
 
-    public static int Execute(Gen9Options options)
+    public static int Execute(Gen9Options options, CancellationToken cancellationToken = default)
     {
         Json.Gen9Result ErrorResult(string[] errorMessages) =>
             new()
@@ -164,22 +166,11 @@ internal static class Gen9Handler
 
                 string[] allPaths = Directory.GetFileSystemEntries(inputFolder, "*", searchOption);
 
-                List<string> filePaths = [];
-                List<string> rpfPaths = [];
-                foreach (string p in allPaths)
-                {
-                    if (!File.Exists(p))
-                        continue;
-
-                    if (Path.GetExtension(p).Equals(".rpf", StringComparison.OrdinalIgnoreCase))
-                    {
-                        rpfPaths.Add(p);
-                    }
-                    else
-                    {
-                        filePaths.Add(p);
-                    }
-                }
+                ILookup<bool, string> pathsByType = allPaths
+                    .Where(File.Exists)
+                    .ToLookup(p => Path.GetExtension(p).Equals(".rpf", StringComparison.OrdinalIgnoreCase));
+                List<string> rpfPaths = [.. pathsByType[true]];
+                List<string> filePaths = [.. pathsByType[false]];
 
                 int totalFileCount = filePaths.Count + rpfPaths.Count;
 
@@ -214,9 +205,10 @@ internal static class Gen9Handler
                     _ = Parallel.For(
                         0,
                         filePaths.Count,
-                        new ParallelOptions { MaxDegreeOfParallelism = options.Common.Threads },
+                        new ParallelOptions { MaxDegreeOfParallelism = options.Common.Threads, CancellationToken = cancellationToken },
                         i =>
                         {
+                            cancellationToken.ThrowIfCancellationRequested();
                             string path = filePaths[i];
                             string relPath = path[inputFolder.Length..];
                             string outPath = Path.Combine(options.OutputPath, relPath);
@@ -361,6 +353,7 @@ internal static class Gen9Handler
                     // Process RPF files sequentially (unsafe to parallelize)
                     foreach (string path in rpfPaths)
                     {
+                        cancellationToken.ThrowIfCancellationRequested();
                         string relPath = path[inputFolder.Length..];
                         string outPath = Path.Combine(options.OutputPath, relPath);
 
@@ -461,6 +454,7 @@ internal static class Gen9Handler
                 RpfManager.IsGen9 = previousGen9;
             }
         }
+        catch (OperationCanceledException) { throw; }
         catch (Exception ex)
         {
             return RpfService.ReportError(
@@ -536,13 +530,10 @@ internal static class Gen9Handler
 
             bool changed = changedParents.Contains(currentRpf);
 
-            List<RpfResourceFileEntry> resourceEntries = [];
-            foreach (RpfEntry entry in currentRpf.AllEntries)
-            {
-                if (entry is RpfResourceFileEntry rfe)
-                    resourceEntries.Add(rfe);
-            }
-            resourceEntries.Sort((a, b) => a.FileOffset.CompareTo(b.FileOffset));
+            List<RpfResourceFileEntry> resourceEntries = currentRpf.AllEntries
+                .OfType<RpfResourceFileEntry>()
+                .OrderBy(rfe => rfe.FileOffset)
+                .ToList();
 
             foreach (RpfResourceFileEntry rfe in resourceEntries)
             {

@@ -1,5 +1,6 @@
 using System.CommandLine;
 using System.IO;
+using System.Threading;
 
 namespace CodeWalker.Cli;
 
@@ -58,17 +59,17 @@ internal sealed class ExportCommandOptions
 
 internal static class ExportHandler
 {
-    public static Command CreateCommand()
+    public static Command CreateCommand(CancellationToken cancellationToken = default)
     {
         Command command = new(
             "export",
             "Export game files to external formats (XML, DDS, WAV, text)"
         )
         {
-            ExportXmlHandler.CreateCommand(),
-            ExportTexturesHandler.CreateCommand(),
-            ExportAudioHandler.CreateCommand(),
-            ExportTextHandler.CreateCommand(),
+            ExportXmlHandler.CreateCommand(cancellationToken),
+            ExportTexturesHandler.CreateCommand(cancellationToken),
+            ExportAudioHandler.CreateCommand(cancellationToken),
+            ExportTextHandler.CreateCommand(cancellationToken),
         };
         command.Aliases.Add("e");
 

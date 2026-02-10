@@ -4,6 +4,7 @@ using System.CommandLine;
 using System.IO;
 using System.Linq;
 using System.Text.Json;
+using System.Threading;
 
 using CodeWalker.Cli.Helpers;
 using CodeWalker.GameFiles;
@@ -12,7 +13,7 @@ namespace CodeWalker.Cli;
 
 internal static class StatHandler
 {
-    public static Command CreateCommand()
+    public static Command CreateCommand(CancellationToken cancellationToken = default)
     {
         RpfCommandOptions rpfOpts = new();
 
@@ -20,12 +21,12 @@ internal static class StatHandler
         rpfOpts.AddTo(command);
         command.Aliases.Add("S");
 
-        command.SetAction(parseResult => Execute(rpfOpts.Parse(parseResult)));
+        command.SetAction(parseResult => Execute(rpfOpts.Parse(parseResult), cancellationToken));
 
         return command;
     }
 
-    public static int Execute(RpfOptions options)
+    public static int Execute(RpfOptions options, CancellationToken cancellationToken = default)
     {
         Json.StatResult ErrorResult(string[] errorMessages) =>
             new()
@@ -86,6 +87,7 @@ internal static class StatHandler
 
             foreach ((RpfFile _, RpfFileEntry fileEntry) in entries)
             {
+                cancellationToken.ThrowIfCancellationRequested();
                 long size = fileEntry.GetFileSize();
                 totalSize += size;
                 string ext = Path.GetExtension(fileEntry.Name).ToLowerInvariant();
@@ -191,6 +193,7 @@ internal static class StatHandler
 
             return scanErrors.Count > 0 ? 1 : 0;
         }
+        catch (OperationCanceledException) { throw; }
         catch (Exception ex)
         {
             return RpfService.ReportError(

@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Text.Json;
+using System.Threading;
 using System.Threading.Tasks;
 
 using CodeWalker.Cli.Helpers;
@@ -137,7 +138,8 @@ internal static class ExportService
         ExportOptions options,
         string format,
         string summaryLabel,
-        ExportFileProcessor processor
+        ExportFileProcessor processor,
+        CancellationToken cancellationToken = default
     )
     {
         Json.ExportResult ErrorResult(string[] errorMessages) =>
@@ -213,9 +215,10 @@ internal static class ExportService
                 _ = Parallel.For(
                     0,
                     filesToExport.Count,
-                    new ParallelOptions { MaxDegreeOfParallelism = options.Rpf.Threads },
+                    new ParallelOptions { MaxDegreeOfParallelism = options.Rpf.Threads, CancellationToken = cancellationToken },
                     i =>
                     {
+                        cancellationToken.ThrowIfCancellationRequested();
                         (RpfFile sourceRpf, RpfFileEntry fileEntry) = filesToExport[i];
                         try
                         {
@@ -318,6 +321,7 @@ internal static class ExportService
 
             return (agg.Errors > 0 || scanErrors.Count > 0) ? 1 : 0;
         }
+        catch (OperationCanceledException) { throw; }
         catch (Exception ex)
         {
             return RpfService.ReportError(

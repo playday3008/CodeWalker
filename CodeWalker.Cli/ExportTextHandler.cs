@@ -1,6 +1,7 @@
 using System.CommandLine;
 using System.IO;
 using System.Text;
+using System.Threading;
 
 using CodeWalker.GameFiles;
 
@@ -10,7 +11,7 @@ internal static class ExportTextHandler
 {
     private static readonly string[] DefaultFilters = ["*.gxt2"];
 
-    public static Command CreateCommand()
+    public static Command CreateCommand(CancellationToken cancellationToken = default)
     {
         ExportCommandOptions exportOpts = new();
 
@@ -26,7 +27,7 @@ internal static class ExportTextHandler
             {
                 options = options with { Rpf = options.Rpf with { Filters = DefaultFilters } };
             }
-            return ExportService.Execute(options, "txt", "Text", ProcessFile);
+            return ExportService.Execute(options, "txt", "Text", ProcessFile, cancellationToken);
         });
 
         return command;

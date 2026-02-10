@@ -1,6 +1,7 @@
 using System.CommandLine;
 using System.IO;
 using System.Text;
+using System.Threading;
 
 using CodeWalker.GameFiles;
 
@@ -8,7 +9,7 @@ namespace CodeWalker.Cli;
 
 internal static class ExportXmlHandler
 {
-    public static Command CreateCommand()
+    public static Command CreateCommand(CancellationToken cancellationToken = default)
     {
         ExportCommandOptions exportOpts = new();
 
@@ -19,7 +20,7 @@ internal static class ExportXmlHandler
         command.SetAction(parseResult =>
         {
             ExportOptions options = exportOpts.Parse(parseResult);
-            return ExportService.Execute(options, "xml", "XML", ProcessFile);
+            return ExportService.Execute(options, "xml", "XML", ProcessFile, cancellationToken);
         });
 
         return command;
