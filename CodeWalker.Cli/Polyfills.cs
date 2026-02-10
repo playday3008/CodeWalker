@@ -23,14 +23,14 @@ internal static class StringExtensions
     public static bool Contains(this string s, char value)
     {
 #pragma warning disable CA2249 // Consider using 'string.Contains' instead of 'string.IndexOf'... this is the implementation of Contains!
-        return s.IndexOf(value, StringComparison.Ordinal) >= 0;
+        return s.IndexOf(value.ToString(), StringComparison.Ordinal) >= 0;
 #pragma warning restore CA2249
     }
 
     public static bool Contains(this string s, char value, StringComparison comparisonType)
     {
 #pragma warning disable CA2249 // Consider using 'string.Contains' instead of 'string.IndexOf'... this is the implementation of Contains!
-        return s.IndexOf(value, comparisonType) >= 0;
+        return s.IndexOf(value.ToString(), comparisonType) >= 0;
 #pragma warning restore CA2249
     }
 
@@ -39,29 +39,19 @@ internal static class StringExtensions
         return s.Length > 0 && s[0] == value;
     }
 
-    public static bool StartsWith(this string s, char value, StringComparison comparisonType)
-    {
-        return s.StartsWith(value.ToString(), comparisonType);
-    }
-
     public static bool EndsWith(this string s, char value)
     {
         return s.Length > 0 && s[^1] == value;
     }
 
-    public static bool EndsWith(this string s, char value, StringComparison comparisonType)
-    {
-        return s.EndsWith(value.ToString(), comparisonType);
-    }
-
     private static string? ReplaceCore(
-        ReadOnlySpan<char> searchSpace,
-        ReadOnlySpan<char> oldValue,
-        ReadOnlySpan<char> newValue,
+        string searchSpace,
+        string oldValue,
+        string? newValue,
         CompareInfo compareInfo,
         CompareOptions options)
     {
-        Debug.Assert(!oldValue.IsEmpty);
+        Debug.Assert(!string.IsNullOrEmpty(oldValue));
         Debug.Assert(compareInfo != null);
 
         StringBuilder result = new();
@@ -70,7 +60,8 @@ internal static class StringExtensions
 
         while (true)
         {
-            int index = compareInfo.IndexOf(searchSpace, oldValue, options, out int matchLength);
+            int index = compareInfo!.IndexOf(searchSpace, oldValue, options);
+            int matchLength = FindMatchLength(compareInfo, searchSpace, index, oldValue, options);
 
             // There's the possibility that 'oldValue' has zero collation weight (empty string equivalent).
             // If this is the case, we behave as if there are no more substitutions to be made.
@@ -104,6 +95,35 @@ internal static class StringExtensions
 
         _ = result.Append(searchSpace);
         return result.ToString();
+    }
+
+    private static int FindMatchLength(
+        CompareInfo compareInfo,
+        string source,
+        int index,
+        string value,
+        CompareOptions options)
+    {
+        if (index < 0)
+            return 0;
+
+        // Fast path: most matches consume exactly value.Length characters
+        if (index + value.Length <= source.Length
+            && compareInfo.Compare(source, index, value.Length, value, 0, value.Length, options) == 0)
+        {
+            return value.Length;
+        }
+
+        // Slow path: cultural normalization means the matched span differs
+        // from value.Length (e.g. zero-weight characters like \0)
+        int maxLen = source.Length - index;
+        for (int len = 1; len <= maxLen; len++)
+        {
+            if (compareInfo.Compare(source, index, len, value, 0, value.Length, options) == 0)
+                return len;
+        }
+
+        return value.Length; // fallback (should be unreachable if IndexOf found a match)
     }
 
     public static string Replace(this string s, string oldValue, string? newValue, StringComparison comparisonType)

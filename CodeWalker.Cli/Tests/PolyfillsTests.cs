@@ -127,20 +127,6 @@ public sealed class StringExtensionsFuzzTests
                     $"StartsWith(\"{Esc(s)}\", '{c}')");
     }
 
-    // ─── StartsWith(char, StringComparison) ─────────────────────────
-
-    [Fact]
-    public void StartsWith_Char_Comparison_MatchesStringOverload()
-    {
-        foreach (string s in Corpus)
-            foreach (char c in Chars)
-                foreach (StringComparison cmp in AllComparisons)
-                    AssertBool(
-                        s.StartsWith(c.ToString(), cmp),
-                        StringExtensions.StartsWith(s, c, cmp),
-                        $"StartsWith(\"{Esc(s)}\", '{c}', {cmp})");
-    }
-
     // ─── EndsWith(char) ─────────────────────────────────────────────
     // Verify against string-based EndsWith with Ordinal comparison.
 
@@ -153,20 +139,6 @@ public sealed class StringExtensionsFuzzTests
                     s.EndsWith(c.ToString(), StringComparison.Ordinal),
                     StringExtensions.EndsWith(s, c),
                     $"EndsWith(\"{Esc(s)}\", '{c}')");
-    }
-
-    // ─── EndsWith(char, StringComparison) ───────────────────────────
-
-    [Fact]
-    public void EndsWith_Char_Comparison_MatchesStringOverload()
-    {
-        foreach (string s in Corpus)
-            foreach (char c in Chars)
-                foreach (StringComparison cmp in AllComparisons)
-                    AssertBool(
-                        s.EndsWith(c.ToString(), cmp),
-                        StringExtensions.EndsWith(s, c, cmp),
-                        $"EndsWith(\"{Esc(s)}\", '{c}', {cmp})");
     }
 
     // ─── Replace(string, string?, StringComparison) ─────────────────
@@ -213,13 +185,13 @@ public sealed class StringExtensionsUnitTests
     [Fact]
     public void Replace_NullOldValue_Throws()
     {
-        Assert.Throws<ArgumentNullException>(() => StringExtensions.Replace("input", null!, "new", StringComparison.Ordinal));
+        _ = Assert.Throws<ArgumentNullException>(() => StringExtensions.Replace("input", null!, "new", StringComparison.Ordinal));
     }
 
     [Fact]
     public void Replace_EmptyOldValue_Throws()
     {
-        Assert.Throws<ArgumentException>(() => StringExtensions.Replace("input", "", "new", StringComparison.Ordinal));
+        _ = Assert.Throws<ArgumentException>(() => StringExtensions.Replace("input", "", "new", StringComparison.Ordinal));
     }
 
     [Fact]
@@ -232,6 +204,6 @@ public sealed class StringExtensionsUnitTests
     [Fact]
     public void Replace_UnsupportedComparison_Throws()
     {
-        Assert.Throws<ArgumentException>(() => StringExtensions.Replace("input", "in", "new", (StringComparison)999));
+        _ = Assert.Throws<ArgumentException>(() => StringExtensions.Replace("input", "in", "new", (StringComparison)999));
     }
 }
