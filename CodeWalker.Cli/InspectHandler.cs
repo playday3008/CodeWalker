@@ -191,7 +191,7 @@ internal static class InspectHandler
         return null;
     }
 
-    private static object? GetDetails(RpfFileEntry entry, string ext, bool verbose)
+    private static Json.InspectDetailBase? GetDetails(RpfFileEntry entry, string ext, bool verbose)
     {
         try
         {

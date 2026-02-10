@@ -58,6 +58,7 @@ internal static class ExportAudioHandler
         int streamCount = 0;
         foreach (AwcStream stream in awc.Streams)
         {
+            // Hash 0 indicates a metadata-only stream with no playable audio data
             if (stream.Hash == 0)
                 continue;
 

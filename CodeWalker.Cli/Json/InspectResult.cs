@@ -56,10 +56,22 @@ internal sealed record InspectResult : BaseResult
 
     [JsonPropertyName("details")]
     [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
-    public object? Details { get; init; }
+    public InspectDetailBase? Details { get; init; }
 }
 
 // --- Detail records ---
+
+[JsonPolymorphic]
+[JsonDerivedType(typeof(YtdDetails))]
+[JsonDerivedType(typeof(YdrDetails))]
+[JsonDerivedType(typeof(YddDetails))]
+[JsonDerivedType(typeof(YftDetails))]
+[JsonDerivedType(typeof(YmapDetails))]
+[JsonDerivedType(typeof(YtypDetails))]
+[JsonDerivedType(typeof(YbnDetails))]
+[JsonDerivedType(typeof(AwcDetails))]
+[JsonDerivedType(typeof(Gxt2Details))]
+internal abstract record InspectDetailBase;
 
 [ExcludeFromCodeCoverage]
 internal sealed record TextureInfo
@@ -84,7 +96,7 @@ internal sealed record TextureInfo
 }
 
 [ExcludeFromCodeCoverage]
-internal sealed record YtdDetails
+internal sealed record YtdDetails : InspectDetailBase
 {
     [JsonPropertyName("textureCount")]
     public required int TextureCount { get; init; }
@@ -113,7 +125,7 @@ internal sealed record LodInfo
 }
 
 [ExcludeFromCodeCoverage]
-internal sealed record YdrDetails
+internal sealed record YdrDetails : InspectDetailBase
 {
     [JsonPropertyName("lods")]
     public required IReadOnlyList<LodInfo> Lods { get; init; }
@@ -133,7 +145,7 @@ internal sealed record DrawableInfo
 }
 
 [ExcludeFromCodeCoverage]
-internal sealed record YddDetails
+internal sealed record YddDetails : InspectDetailBase
 {
     [JsonPropertyName("drawableCount")]
     public required int DrawableCount { get; init; }
@@ -143,7 +155,7 @@ internal sealed record YddDetails
 }
 
 [ExcludeFromCodeCoverage]
-internal sealed record YftDetails
+internal sealed record YftDetails : InspectDetailBase
 {
     [JsonPropertyName("lods")]
     public required IReadOnlyList<LodInfo> Lods { get; init; }
@@ -153,7 +165,7 @@ internal sealed record YftDetails
 }
 
 [ExcludeFromCodeCoverage]
-internal sealed record YmapDetails
+internal sealed record YmapDetails : InspectDetailBase
 {
     [JsonPropertyName("entityCount")]
     public required int EntityCount { get; init; }
@@ -182,7 +194,7 @@ internal sealed record YmapDetails
 }
 
 [ExcludeFromCodeCoverage]
-internal sealed record YtypDetails
+internal sealed record YtypDetails : InspectDetailBase
 {
     [JsonPropertyName("archetypeCount")]
     public required int ArchetypeCount { get; init; }
@@ -218,7 +230,7 @@ internal sealed record MloInfo
 }
 
 [ExcludeFromCodeCoverage]
-internal sealed record YbnDetails
+internal sealed record YbnDetails : InspectDetailBase
 {
     [JsonPropertyName("boundsType")]
     public required string BoundsType { get; init; }
@@ -245,7 +257,7 @@ internal sealed record AwcStreamInfo
 }
 
 [ExcludeFromCodeCoverage]
-internal sealed record AwcDetails
+internal sealed record AwcDetails : InspectDetailBase
 {
     [JsonPropertyName("streamCount")]
     public required int StreamCount { get; init; }
@@ -265,7 +277,7 @@ internal sealed record Gxt2EntryInfo
 }
 
 [ExcludeFromCodeCoverage]
-internal sealed record Gxt2Details
+internal sealed record Gxt2Details : InspectDetailBase
 {
     [JsonPropertyName("entryCount")]
     public required int EntryCount { get; init; }

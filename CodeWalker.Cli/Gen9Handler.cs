@@ -482,11 +482,7 @@ internal static class Gen9Handler
             Console.Error.WriteLine($"{relPath} - Converting RPF contents...");
         }
 
-        if (File.Exists(outputPath))
-        {
-            File.Delete(outputPath);
-        }
-        File.Copy(inputPath, outputPath);
+        File.Copy(inputPath, outputPath, overwrite: true);
 
         RpfFile rpf = new(outputPath, relPath);
         rpf.ScanStructure(
