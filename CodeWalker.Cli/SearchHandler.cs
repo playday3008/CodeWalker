@@ -226,7 +226,7 @@ internal static class SearchHandler
         }
     }
 
-    private static bool HasGlobChars(string s) =>
+    internal static bool HasGlobChars(string s) =>
         s.Contains('*', StringComparison.Ordinal) ||
         s.Contains('?', StringComparison.Ordinal);
 

@@ -1,4 +1,3 @@
-#if !TESTING
 using System;
 using System.CommandLine;
 using System.Threading;
@@ -36,4 +35,3 @@ catch (OperationCanceledException)
 {
     return 130;
 }
-#endif

@@ -372,7 +372,7 @@ internal static class DiffHandler
         }
     }
 
-    private static bool ContentEquals(byte[]? a, byte[]? b)
+    internal static bool ContentEquals(byte[]? a, byte[]? b)
     {
         if (a == null && b == null)
             return true;
