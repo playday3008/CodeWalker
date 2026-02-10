@@ -50,7 +50,7 @@ internal static class ExportXmlHandler
 
         if (!string.IsNullOrEmpty(fileOutputDir) && !Directory.Exists(fileOutputDir))
         {
-            Directory.CreateDirectory(fileOutputDir);
+            _ = Directory.CreateDirectory(fileOutputDir);
         }
 
         string outputPath = Path.Combine(fileOutputDir, filename);

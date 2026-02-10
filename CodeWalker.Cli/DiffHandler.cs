@@ -179,7 +179,7 @@ internal static class DiffHandler
             // Result per common path: null = unchanged, non-null = modified entry
             bool[] isModifiedArr = new bool[commonPaths.Length];
 
-            Parallel.For(
+            _ = Parallel.For(
                 0,
                 commonPaths.Length,
                 new ParallelOptions { MaxDegreeOfParallelism = options.Common.Threads },

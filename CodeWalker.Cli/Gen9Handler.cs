@@ -149,7 +149,7 @@ internal static class Gen9Handler
             {
                 if (!Directory.Exists(options.OutputPath))
                 {
-                    Directory.CreateDirectory(options.OutputPath);
+                    _ = Directory.CreateDirectory(options.OutputPath);
                 }
 
                 string inputFolder = options.InputPath;
@@ -211,7 +211,7 @@ internal static class Gen9Handler
 
                     object consoleLock = new();
 
-                    Parallel.For(
+                    _ = Parallel.For(
                         0,
                         filePaths.Count,
                         new ParallelOptions { MaxDegreeOfParallelism = options.Common.Threads },
@@ -250,7 +250,7 @@ internal static class Gen9Handler
                                 string? outDir = Path.GetDirectoryName(outPath);
                                 if (!string.IsNullOrEmpty(outDir) && !Directory.Exists(outDir))
                                 {
-                                    Directory.CreateDirectory(outDir);
+                                    _ = Directory.CreateDirectory(outDir);
                                 }
 
                                 string ext = Path.GetExtension(path).ToLowerInvariant();
@@ -388,7 +388,7 @@ internal static class Gen9Handler
                             string? outDir = Path.GetDirectoryName(outPath);
                             if (!string.IsNullOrEmpty(outDir) && !Directory.Exists(outDir))
                             {
-                                Directory.CreateDirectory(outDir);
+                                _ = Directory.CreateDirectory(outDir);
                             }
 
                             ProcessRpfFile(
@@ -601,7 +601,7 @@ internal static class Gen9Handler
                     continue;
                 }
 
-                RpfFile.CreateFile(dir, name, dataOut, true);
+                _ = RpfFile.CreateFile(dir, name, dataOut, true);
                 converted++;
                 files.Add(new Json.Gen9FileEntry { Path = rfe.Path, Status = "converted" });
                 changed = true;
@@ -617,7 +617,7 @@ internal static class Gen9Handler
 
                 if (currentRpf.Parent != null)
                 {
-                    changedParents.Add(currentRpf.Parent);
+                    _ = changedParents.Add(currentRpf.Parent);
                 }
             }
         }

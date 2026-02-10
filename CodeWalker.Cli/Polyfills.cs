@@ -81,10 +81,10 @@ internal static class StringExtensions
             }
 
             // append the unmodified portion of search space
-            result.Append(searchSpace[..index]);
+            _ = result.Append(searchSpace[..index]);
 
             // append the replacement
-            result.Append(newValue);
+            _ = result.Append(newValue);
 
             searchSpace = searchSpace[(index + matchLength)..];
             hasDoneAnyReplacements = true;
@@ -102,7 +102,7 @@ internal static class StringExtensions
 
         // Append what remains of the search space, then allocate the new string.
 
-        result.Append(searchSpace);
+        _ = result.Append(searchSpace);
         return result.ToString();
     }
 

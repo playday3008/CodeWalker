@@ -70,7 +70,7 @@ internal static class ExportTexturesHandler
             if (!dirCreated)
             {
                 if (!Directory.Exists(fileOutputDir))
-                    Directory.CreateDirectory(fileOutputDir);
+                    _ = Directory.CreateDirectory(fileOutputDir);
                 dirCreated = true;
             }
 

@@ -186,7 +186,7 @@ internal static class ExportService
 
             if (!options.DryRun && !Directory.Exists(outputDir))
             {
-                Directory.CreateDirectory(outputDir);
+                _ = Directory.CreateDirectory(outputDir);
             }
 
             List<(RpfFile rpf, RpfFileEntry entry)> filesToExport = RpfService.CollectFiles(
@@ -210,7 +210,7 @@ internal static class ExportService
                 )
             )
             {
-                Parallel.For(
+                _ = Parallel.For(
                     0,
                     filesToExport.Count,
                     new ParallelOptions { MaxDegreeOfParallelism = options.Rpf.Threads },

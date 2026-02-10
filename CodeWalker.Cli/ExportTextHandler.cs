@@ -89,7 +89,7 @@ internal static class ExportTextHandler
 
         if (!Directory.Exists(fileOutputDir))
         {
-            Directory.CreateDirectory(fileOutputDir);
+            _ = Directory.CreateDirectory(fileOutputDir);
         }
 
         File.WriteAllText(outputPath, text, Encoding.UTF8);

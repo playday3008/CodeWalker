@@ -119,7 +119,7 @@ internal static class ExtractHandler
 
             if (!options.DryRun && !Directory.Exists(outputDir))
             {
-                Directory.CreateDirectory(outputDir);
+                _ = Directory.CreateDirectory(outputDir);
             }
 
             // Collect files first for progress bar
@@ -147,7 +147,7 @@ internal static class ExtractHandler
                 )
             )
             {
-                Parallel.For(
+                _ = Parallel.For(
                     0,
                     filesToExtract.Count,
                     new ParallelOptions { MaxDegreeOfParallelism = options.Rpf.Threads },
@@ -189,7 +189,7 @@ internal static class ExtractHandler
                             }
                             else if (options.NoOverwrite && File.Exists(outputPath))
                             {
-                                Interlocked.Increment(ref overwriteSkipped);
+                                _ = Interlocked.Increment(ref overwriteSkipped);
                                 if (options.Rpf.Verbose && !options.Rpf.Json && !options.Progress)
                                 {
                                     lock (consoleLock)
@@ -205,7 +205,7 @@ internal static class ExtractHandler
                             {
                                 if (!string.IsNullOrEmpty(fileDir) && !Directory.Exists(fileDir))
                                 {
-                                    Directory.CreateDirectory(fileDir);
+                                    _ = Directory.CreateDirectory(fileDir);
                                 }
 
                                 if (options.Rpf.Verbose && !options.Rpf.Json && !options.Progress)

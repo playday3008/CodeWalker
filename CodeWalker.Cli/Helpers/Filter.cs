@@ -72,10 +72,9 @@ internal static class Filter
         // Handle extension-only patterns (e.g., ".ydr" or "ydr" without wildcards)
         if (!pattern.Contains('*', StringComparison.Ordinal) && !pattern.Contains('?', StringComparison.Ordinal))
         {
-            if (pattern.StartsWith('.'))
-                return input.EndsWith(pattern, StringComparison.Ordinal);
-            else
-                return input.EndsWith($".{pattern}", StringComparison.Ordinal);
+            return pattern.StartsWith('.')
+                ? input.EndsWith(pattern, StringComparison.Ordinal)
+                : input.EndsWith($".{pattern}", StringComparison.Ordinal);
         }
 
         Regex regex = RegexCache.GetOrAdd(
