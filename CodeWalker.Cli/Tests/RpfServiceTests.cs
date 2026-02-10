@@ -1,0 +1,431 @@
+using System;
+using System.Collections.Generic;
+using System.IO;
+
+using CodeWalker.GameFiles;
+
+using Xunit;
+
+namespace CodeWalker.Cli.Tests;
+
+[Collection("ConsoleOutput")]
+public sealed class RpfServiceTests
+{
+    private static string CreateTempDir()
+    {
+        string dir = Path.Combine(Path.GetTempPath(), "cw_test_" + Guid.NewGuid().ToString("N"));
+        Directory.CreateDirectory(dir);
+        return dir;
+    }
+
+    // --- ValidateExe ---
+
+    [Fact]
+    public void ValidateExe_ReturnsNull_WhenExeExists()
+    {
+        string dir = CreateTempDir();
+        try
+        {
+            File.WriteAllBytes(Path.Combine(dir, "GTA5.exe"), []);
+            Assert.Null(RpfService.ValidateExe(dir, gen9: false));
+        }
+        finally { Directory.Delete(dir, true); }
+    }
+
+    [Fact]
+    public void ValidateExe_ReturnsError_WhenExeMissing()
+    {
+        string dir = CreateTempDir();
+        try
+        {
+            string? error = RpfService.ValidateExe(dir, gen9: false);
+            Assert.NotNull(error);
+            Assert.Contains("GTA5.exe", error);
+        }
+        finally { Directory.Delete(dir, true); }
+    }
+
+    [Fact]
+    public void ValidateExe_Gen9_ReturnsNull_WhenEnhancedExeExists()
+    {
+        string dir = CreateTempDir();
+        try
+        {
+            File.WriteAllBytes(Path.Combine(dir, "GTA5_Enhanced.exe"), []);
+            Assert.Null(RpfService.ValidateExe(dir, gen9: true));
+        }
+        finally { Directory.Delete(dir, true); }
+    }
+
+    [Fact]
+    public void ValidateExe_Gen9_ReturnsError_WhenEnhancedExeMissing()
+    {
+        string dir = CreateTempDir();
+        try
+        {
+            string? error = RpfService.ValidateExe(dir, gen9: true);
+            Assert.NotNull(error);
+            Assert.Contains("GTA5_Enhanced.exe", error);
+        }
+        finally { Directory.Delete(dir, true); }
+    }
+
+    // --- ValidateInputs ---
+
+    [Fact]
+    public void ValidateInputs_ReturnsNull_WhenBothExist()
+    {
+        string dir = CreateTempDir();
+        try
+        {
+            string rpf = Path.Combine(dir, "test.rpf");
+            File.WriteAllBytes(rpf, []);
+            File.WriteAllBytes(Path.Combine(dir, "GTA5.exe"), []);
+            Assert.Null(RpfService.ValidateInputs(rpf, dir, gen9: false));
+        }
+        finally { Directory.Delete(dir, true); }
+    }
+
+    [Fact]
+    public void ValidateInputs_ReturnsError_WhenRpfMissing()
+    {
+        string? error = RpfService.ValidateInputs("/nonexistent/test.rpf", "/tmp", gen9: false);
+        Assert.NotNull(error);
+        Assert.Contains("RPF file not found", error);
+    }
+
+    [Fact]
+    public void ValidateInputs_ReturnsError_WhenExeMissing()
+    {
+        string dir = CreateTempDir();
+        try
+        {
+            string rpf = Path.Combine(dir, "test.rpf");
+            File.WriteAllBytes(rpf, []);
+            string? error = RpfService.ValidateInputs(rpf, dir, gen9: false);
+            Assert.NotNull(error);
+            Assert.Contains("GTA5.exe", error);
+        }
+        finally { Directory.Delete(dir, true); }
+    }
+
+    // --- ValidateExeAndLoadKeys / ValidateAndLoadKeys early-return ---
+
+    [Fact]
+    public void ValidateExeAndLoadKeys_ReturnsError_WhenExeMissing()
+    {
+        string dir = CreateTempDir();
+        try
+        {
+            string? error = RpfService.ValidateExeAndLoadKeys(dir, gen9: false, json: true);
+            Assert.NotNull(error);
+            Assert.Contains("GTA5.exe", error);
+        }
+        finally { Directory.Delete(dir, true); }
+    }
+
+    [Fact]
+    public void ValidateAndLoadKeys_ReturnsError_WhenRpfMissing()
+    {
+        string? error = RpfService.ValidateAndLoadKeys(
+            "/nonexistent.rpf", "/tmp", gen9: false, json: true
+        );
+        Assert.NotNull(error);
+        Assert.Contains("RPF file not found", error);
+    }
+
+    // --- GetFileType ---
+
+    [Fact]
+    public void GetFileType_Resource() =>
+        Assert.Equal("resource", RpfService.GetFileType(new RpfResourceFileEntry()));
+
+    [Fact]
+    public void GetFileType_Binary() =>
+        Assert.Equal("binary", RpfService.GetFileType(new RpfBinaryFileEntry()));
+
+    // --- CollectFiles ---
+
+    private static RpfBinaryFileEntry MakeEntry(string name, string? path = null) =>
+        new() { Name = name, NameLower = name.ToLowerInvariant(), Path = path ?? name };
+
+    [Fact]
+    public void CollectFiles_NullEntries_ReturnsEmpty()
+    {
+        RpfFile rpf = new("test", "test.rpf", 0) { AllEntries = null };
+        Assert.Empty(RpfService.CollectFiles(rpf, null, recursive: false));
+    }
+
+    [Fact]
+    public void CollectFiles_ReturnsFileEntries()
+    {
+        RpfBinaryFileEntry entry = MakeEntry("test.ydr");
+        RpfFile rpf = new("test", "test.rpf", 0) { AllEntries = [entry] };
+        List<(RpfFile rpf, RpfFileEntry entry)> files =
+            RpfService.CollectFiles(rpf, null, recursive: false);
+        Assert.Single(files);
+        Assert.Same(entry, files[0].entry);
+    }
+
+    [Fact]
+    public void CollectFiles_SkipsRpfEntries()
+    {
+        RpfBinaryFileEntry rpfEntry = MakeEntry("nested.rpf");
+        RpfBinaryFileEntry fileEntry = MakeEntry("test.ydr");
+        RpfFile rpf = new("test", "test.rpf", 0) { AllEntries = [rpfEntry, fileEntry] };
+        List<(RpfFile rpf, RpfFileEntry entry)> files =
+            RpfService.CollectFiles(rpf, null, recursive: false);
+        Assert.Single(files);
+        Assert.Equal("test.ydr", files[0].entry.Name);
+    }
+
+    [Fact]
+    public void CollectFiles_SkipsDirectoryEntries()
+    {
+        RpfDirectoryEntry dirEntry = new() { Name = "subdir", NameLower = "subdir", Path = "subdir" };
+        RpfBinaryFileEntry fileEntry = MakeEntry("test.ydr");
+        RpfFile rpf = new("test", "test.rpf", 0)
+        {
+            AllEntries = [dirEntry, fileEntry],
+        };
+        List<(RpfFile rpf, RpfFileEntry entry)> files =
+            RpfService.CollectFiles(rpf, null, recursive: false);
+        Assert.Single(files);
+    }
+
+    [Fact]
+    public void CollectFiles_AppliesFilter()
+    {
+        RpfBinaryFileEntry e1 = MakeEntry("test.ydr");
+        RpfBinaryFileEntry e2 = MakeEntry("test.ytd");
+        RpfFile rpf = new("test", "test.rpf", 0) { AllEntries = [e1, e2] };
+        List<(RpfFile rpf, RpfFileEntry entry)> files =
+            RpfService.CollectFiles(rpf, ["*.ydr"], recursive: false);
+        Assert.Single(files);
+        Assert.Equal("test.ydr", files[0].entry.Name);
+    }
+
+    [Fact]
+    public void CollectFiles_Recursive_IncludesChildren()
+    {
+        RpfBinaryFileEntry parentEntry = MakeEntry("a.ydr");
+        RpfBinaryFileEntry childEntry = MakeEntry("b.ydr");
+        RpfFile child = new("child", "child.rpf", 0) { AllEntries = [childEntry] };
+        RpfFile parent = new("parent", "parent.rpf", 0)
+        {
+            AllEntries = [parentEntry],
+            Children = [child],
+        };
+        Assert.Equal(2, RpfService.CollectFiles(parent, null, recursive: true).Count);
+    }
+
+    [Fact]
+    public void CollectFiles_NonRecursive_ExcludesChildren()
+    {
+        RpfBinaryFileEntry parentEntry = MakeEntry("a.ydr");
+        RpfBinaryFileEntry childEntry = MakeEntry("b.ydr");
+        RpfFile child = new("child", "child.rpf", 0) { AllEntries = [childEntry] };
+        RpfFile parent = new("parent", "parent.rpf", 0)
+        {
+            AllEntries = [parentEntry],
+            Children = [child],
+        };
+        List<(RpfFile rpf, RpfFileEntry entry)> files =
+            RpfService.CollectFiles(parent, null, recursive: false);
+        Assert.Single(files);
+        Assert.Equal("a.ydr", files[0].entry.Name);
+    }
+
+    [Fact]
+    public void CollectFiles_Recursive_ReturnsCorrectRpfRef()
+    {
+        RpfBinaryFileEntry childEntry = MakeEntry("b.ydr");
+        RpfFile child = new("child", "child.rpf", 0) { AllEntries = [childEntry] };
+        RpfFile parent = new("parent", "parent.rpf", 0)
+        {
+            AllEntries = [],
+            Children = [child],
+        };
+        List<(RpfFile rpf, RpfFileEntry entry)> files =
+            RpfService.CollectFiles(parent, null, recursive: true);
+        Assert.Single(files);
+        Assert.Same(child, files[0].rpf);
+    }
+
+    // --- CountNonRpfFiles ---
+
+    [Fact]
+    public void CountNonRpfFiles_CountsCorrectly()
+    {
+        RpfFile rpf = new("test", "test.rpf", 0)
+        {
+            AllEntries = [MakeEntry("a.ydr"), MakeEntry("b.ytd")],
+        };
+        Assert.Equal(2, RpfService.CountNonRpfFiles(rpf, recursive: false));
+    }
+
+    [Fact]
+    public void CountNonRpfFiles_SkipsRpfFiles()
+    {
+        RpfFile rpf = new("test", "test.rpf", 0)
+        {
+            AllEntries = [MakeEntry("nested.rpf"), MakeEntry("test.ydr")],
+        };
+        Assert.Equal(1, RpfService.CountNonRpfFiles(rpf, recursive: false));
+    }
+
+    [Fact]
+    public void CountNonRpfFiles_Recursive()
+    {
+        RpfFile child = new("child", "child.rpf", 0) { AllEntries = [MakeEntry("b.ydr")] };
+        RpfFile parent = new("parent", "parent.rpf", 0)
+        {
+            AllEntries = [MakeEntry("a.ydr")],
+            Children = [child],
+        };
+        Assert.Equal(2, RpfService.CountNonRpfFiles(parent, recursive: true));
+    }
+
+    [Fact]
+    public void CountNonRpfFiles_NonRecursive_ExcludesChildren()
+    {
+        RpfFile child = new("child", "child.rpf", 0) { AllEntries = [MakeEntry("b.ydr")] };
+        RpfFile parent = new("parent", "parent.rpf", 0)
+        {
+            AllEntries = [MakeEntry("a.ydr")],
+            Children = [child],
+        };
+        Assert.Equal(1, RpfService.CountNonRpfFiles(parent, recursive: false));
+    }
+
+    [Fact]
+    public void CountNonRpfFiles_NullEntries_ReturnsZero()
+    {
+        RpfFile rpf = new("test", "test.rpf", 0) { AllEntries = null };
+        Assert.Equal(0, RpfService.CountNonRpfFiles(rpf, recursive: false));
+    }
+
+    // --- ReportError ---
+
+    private static Json.ExportResult MakeBaseResult(string[]? errors = null) =>
+        new()
+        {
+            Success = true,
+            RpfFile = "test.rpf",
+            OutputDir = "/tmp",
+            Format = "xml",
+            TotalFiles = 0,
+            Exported = 0,
+            Skipped = 0,
+            Errors = 0,
+            DryRun = false,
+            Files = [],
+            ErrorMessages = errors ?? [],
+        };
+
+    [Fact]
+    public void ReportError_ReturnsOne()
+    {
+        TextWriter origOut = Console.Out;
+        TextWriter origErr = Console.Error;
+        try
+        {
+            Console.SetOut(new StringWriter());
+            Console.SetError(new StringWriter());
+            Assert.Equal(1, RpfService.ReportError("err", json: false, MakeBaseResult()));
+        }
+        finally
+        {
+            Console.SetOut(origOut);
+            Console.SetError(origErr);
+        }
+    }
+
+    [Fact]
+    public void ReportError_Json_WritesToStdout()
+    {
+        TextWriter origOut = Console.Out;
+        TextWriter origErr = Console.Error;
+        try
+        {
+            StringWriter sw = new();
+            Console.SetOut(sw);
+            Console.SetError(new StringWriter());
+            RpfService.ReportError("test error", json: true, MakeBaseResult());
+            string output = sw.ToString();
+            Assert.Contains("\"success\": false", output);
+            Assert.Contains("test error", output);
+        }
+        finally
+        {
+            Console.SetOut(origOut);
+            Console.SetError(origErr);
+        }
+    }
+
+    [Fact]
+    public void ReportError_Json_PreservesExistingErrors()
+    {
+        TextWriter origOut = Console.Out;
+        try
+        {
+            StringWriter sw = new();
+            Console.SetOut(sw);
+            RpfService.ReportError("new error", json: true, MakeBaseResult(["old error"]));
+            string output = sw.ToString();
+            Assert.Contains("old error", output);
+            Assert.Contains("new error", output);
+        }
+        finally { Console.SetOut(origOut); }
+    }
+
+    [Fact]
+    public void ReportError_Text_WritesToStderr()
+    {
+        TextWriter origOut = Console.Out;
+        TextWriter origErr = Console.Error;
+        try
+        {
+            StringWriter stdout = new();
+            StringWriter stderr = new();
+            Console.SetOut(stdout);
+            Console.SetError(stderr);
+            RpfService.ReportError("test error", json: false, MakeBaseResult());
+            Assert.Contains("Error: test error", stderr.ToString());
+            Assert.Equal("", stdout.ToString());
+        }
+        finally
+        {
+            Console.SetOut(origOut);
+            Console.SetError(origErr);
+        }
+    }
+
+    [Fact]
+    public void ReportError_Text_IncludesStackTrace()
+    {
+        TextWriter origErr = Console.Error;
+        try
+        {
+            StringWriter stderr = new();
+            Console.SetError(stderr);
+            RpfService.ReportError("err", json: false, MakeBaseResult(), "at Foo.Bar()");
+            Assert.Contains("at Foo.Bar()", stderr.ToString());
+        }
+        finally { Console.SetError(origErr); }
+    }
+
+    [Fact]
+    public void ReportError_Text_OmitsStackTrace_WhenNull()
+    {
+        TextWriter origErr = Console.Error;
+        try
+        {
+            StringWriter stderr = new();
+            Console.SetError(stderr);
+            RpfService.ReportError("err", json: false, MakeBaseResult());
+            Assert.DoesNotContain("at ", stderr.ToString());
+        }
+        finally { Console.SetError(origErr); }
+    }
+}

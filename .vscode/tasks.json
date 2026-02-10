@@ -40,7 +40,15 @@
       "label": "format-cli",
       "type": "process",
       "command": "dotnet",
-      "args": ["format", "CodeWalker.Cli/"],
+      "args": ["format", "CodeWalker.Cli/CodeWalker.Cli.csproj"],
+      "group": "build",
+      "problemMatcher": []
+    },
+    {
+      "label": "format-cli-tests",
+      "type": "process",
+      "command": "dotnet",
+      "args": ["format", "CodeWalker.Cli/CodeWalker.Cli.Tests.csproj"],
       "group": "build",
       "problemMatcher": []
     },

@@ -11,11 +11,28 @@
   </PropertyGroup>
 
   <ItemGroup>
+    <!-- Only compile test files; production code comes via ProjectReference -->
+    <Compile Remove="**/*.cs" />
+    <Compile Include="Tests/**/*.cs" />
+    <!-- Polyfills compiled in test assembly on modern .NET so fuzz tests can verify behavior.
+         On net48 the polyfills already exist in the CLI assembly (via InternalsVisibleTo). -->
+    <Compile Include="Polyfills.cs" Condition="'$(TargetFramework)' != 'net48'" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="CodeWalker.Cli.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
     <PackageReference Include="xunit.v3" Version="3.2.2" />
     <PackageReference Include="xunit.runner.visualstudio" Version="3.1.5">
       <PrivateAssets>all</PrivateAssets>
       <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
     </PackageReference>
   </ItemGroup>
+
+  <PropertyGroup>
+    <WarningsAsErrors>$(WarningsAsErrors);CS8509</WarningsAsErrors>
+  </PropertyGroup>
 
 </Project>
