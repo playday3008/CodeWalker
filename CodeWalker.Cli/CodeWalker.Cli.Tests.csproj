@@ -3,8 +3,6 @@
   <PropertyGroup>
     <RootNamespace>CodeWalker.Cli</RootNamespace>
     <IsTestProject>true</IsTestProject>
-    <!-- net48 tests can only run on Windows (no .NET Framework runtime on Linux) -->
-    <TargetFrameworks Condition="'$(OS)' != 'Windows_NT'">$(ModernTargetFrameworks)</TargetFrameworks>
     <DefineConstants>$(DefineConstants);TESTING</DefineConstants>
     <!-- CA1707: underscores in test names; CS1591: missing docs on public test classes -->
     <NoWarn>$(NoWarn);CA1707;CS1591</NoWarn>
