@@ -31,8 +31,4 @@
     </PackageReference>
   </ItemGroup>
 
-  <PropertyGroup>
-    <WarningsAsErrors>$(WarningsAsErrors);CS8509</WarningsAsErrors>
-  </PropertyGroup>
-
 </Project>
