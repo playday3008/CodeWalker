@@ -4,6 +4,7 @@ using System.IO;
 using CodeWalker.Cli.Helpers;
 
 using Xunit;
+using Xunit.v3;
 
 namespace CodeWalker.Cli.Tests;
 
@@ -41,7 +42,7 @@ public sealed class ValidateHandlerTests
             Console.SetOut(new StringWriter());
             Console.SetError(stderr);
 
-            int exitCode = ValidateHandler.Execute(MakeOptions("/nonexistent/test.rpf", json: false));
+            int exitCode = ValidateHandler.Execute(MakeOptions("/nonexistent/test.rpf", json: false), TestContext.Current.CancellationToken);
 
             Assert.Equal(1, exitCode);
             Assert.Contains("Error:", stderr.ToString());
@@ -64,7 +65,7 @@ public sealed class ValidateHandlerTests
             Console.SetOut(stdout);
             Console.SetError(new StringWriter());
 
-            int exitCode = ValidateHandler.Execute(MakeOptions("/nonexistent/test.rpf", json: true));
+            int exitCode = ValidateHandler.Execute(MakeOptions("/nonexistent/test.rpf", json: true), TestContext.Current.CancellationToken);
 
             Assert.Equal(1, exitCode);
             string output = stdout.ToString();
@@ -87,7 +88,7 @@ public sealed class ValidateHandlerTests
             StringWriter stdout = new();
             Console.SetOut(stdout);
 
-            _ = ValidateHandler.Execute(MakeOptions("/nonexistent/test.rpf", json: true));
+            _ = ValidateHandler.Execute(MakeOptions("/nonexistent/test.rpf", json: true), TestContext.Current.CancellationToken);
 
             string output = stdout.ToString();
             Assert.Contains("\"rpfFile\":", output);
@@ -117,7 +118,7 @@ public sealed class ValidateHandlerTests
                 StringWriter stderr = new();
                 Console.SetError(stderr);
 
-                int exitCode = ValidateHandler.Execute(MakeOptions(rpf, json: false));
+                int exitCode = ValidateHandler.Execute(MakeOptions(rpf, json: false), TestContext.Current.CancellationToken);
 
                 Assert.Equal(1, exitCode);
                 Assert.Contains("Error:", stderr.ToString());

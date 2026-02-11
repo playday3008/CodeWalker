@@ -4,6 +4,7 @@ using System.IO;
 using CodeWalker.Cli.Helpers;
 
 using Xunit;
+using Xunit.v3;
 
 namespace CodeWalker.Cli.Tests;
 
@@ -110,7 +111,7 @@ public sealed class DiffHandlerExecuteTests
             Console.SetOut(new StringWriter());
             Console.SetError(stderr);
 
-            int exitCode = DiffHandler.Execute(MakeOptions("/nonexistent/left.rpf", "/nonexistent/right.rpf", json: false));
+            int exitCode = DiffHandler.Execute(MakeOptions("/nonexistent/left.rpf", "/nonexistent/right.rpf", json: false), TestContext.Current.CancellationToken);
 
             Assert.Equal(1, exitCode);
             Assert.Contains("Error:", stderr.ToString());
@@ -133,7 +134,7 @@ public sealed class DiffHandlerExecuteTests
             Console.SetOut(stdout);
             Console.SetError(new StringWriter());
 
-            int exitCode = DiffHandler.Execute(MakeOptions("/nonexistent/left.rpf", "/nonexistent/right.rpf", json: true));
+            int exitCode = DiffHandler.Execute(MakeOptions("/nonexistent/left.rpf", "/nonexistent/right.rpf", json: true), TestContext.Current.CancellationToken);
 
             Assert.Equal(1, exitCode);
             string output = stdout.ToString();
@@ -182,7 +183,7 @@ public sealed class DiffHandlerExecuteTests
                     Recursive = false,
                 };
 
-                int exitCode = DiffHandler.Execute(options);
+                int exitCode = DiffHandler.Execute(options, TestContext.Current.CancellationToken);
 
                 Assert.Equal(1, exitCode);
                 Assert.Contains("RPF file not found", stderr.ToString());
@@ -205,7 +206,7 @@ public sealed class DiffHandlerExecuteTests
             StringWriter stdout = new();
             Console.SetOut(stdout);
 
-            _ = DiffHandler.Execute(MakeOptions("/nonexistent/left.rpf", "/nonexistent/right.rpf", json: true));
+            _ = DiffHandler.Execute(MakeOptions("/nonexistent/left.rpf", "/nonexistent/right.rpf", json: true), TestContext.Current.CancellationToken);
 
             string output = stdout.ToString();
             Assert.Contains("\"leftRpf\":", output);

@@ -5,6 +5,7 @@ using CodeWalker.Cli.Helpers;
 using CodeWalker.GameFiles;
 
 using Xunit;
+using Xunit.v3;
 
 namespace CodeWalker.Cli.Tests;
 
@@ -44,7 +45,7 @@ public sealed class ExportServiceExecuteTests
             StringWriter stderr = new();
             Console.SetOut(new StringWriter());
             Console.SetError(stderr);
-            int exitCode = ExportService.Execute(MakeOptions(json: false), "xml", "XML", NoOpProcessor);
+            int exitCode = ExportService.Execute(MakeOptions(json: false), "xml", "XML", NoOpProcessor, TestContext.Current.CancellationToken);
             Assert.Equal(1, exitCode);
             Assert.Contains("Error:", stderr.ToString());
         }
@@ -65,7 +66,7 @@ public sealed class ExportServiceExecuteTests
             StringWriter stdout = new();
             Console.SetOut(stdout);
             Console.SetError(new StringWriter());
-            int exitCode = ExportService.Execute(MakeOptions(json: true), "xml", "XML", NoOpProcessor);
+            int exitCode = ExportService.Execute(MakeOptions(json: true), "xml", "XML", NoOpProcessor, TestContext.Current.CancellationToken);
             Assert.Equal(1, exitCode);
             string output = stdout.ToString();
             Assert.Contains("\"success\": false", output);
@@ -86,7 +87,7 @@ public sealed class ExportServiceExecuteTests
         {
             StringWriter stdout = new();
             Console.SetOut(stdout);
-            int exitCode = ExportService.Execute(MakeOptions(json: true), "textures", "Textures", NoOpProcessor);
+            int exitCode = ExportService.Execute(MakeOptions(json: true), "textures", "Textures", NoOpProcessor, TestContext.Current.CancellationToken);
             Assert.Equal(1, exitCode);
             string output = stdout.ToString();
             Assert.Contains("\"format\": \"textures\"", output);

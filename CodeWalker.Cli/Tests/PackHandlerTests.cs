@@ -4,6 +4,7 @@ using System.IO;
 using CodeWalker.Cli.Helpers;
 
 using Xunit;
+using Xunit.v3;
 
 namespace CodeWalker.Cli.Tests;
 
@@ -54,7 +55,7 @@ public sealed class PackHandlerTests
             Console.SetOut(new StringWriter());
             Console.SetError(stderr);
 
-            int exitCode = PackHandler.Execute(MakeOptions("/nonexistent/input", "/tmp/out.rpf", json: false));
+            int exitCode = PackHandler.Execute(MakeOptions("/nonexistent/input", "/tmp/out.rpf", json: false), TestContext.Current.CancellationToken);
 
             Assert.Equal(1, exitCode);
             Assert.Contains("Input directory not found", stderr.ToString());
@@ -77,7 +78,7 @@ public sealed class PackHandlerTests
             Console.SetOut(stdout);
             Console.SetError(new StringWriter());
 
-            int exitCode = PackHandler.Execute(MakeOptions("/nonexistent/input", "/tmp/out.rpf", json: true));
+            int exitCode = PackHandler.Execute(MakeOptions("/nonexistent/input", "/tmp/out.rpf", json: true), TestContext.Current.CancellationToken);
 
             Assert.Equal(1, exitCode);
             string output = stdout.ToString();
@@ -110,7 +111,8 @@ public sealed class PackHandlerTests
                 Console.SetError(stderr);
 
                 int exitCode = PackHandler.Execute(
-                    MakeOptions(inputDir, outputFile, json: false, force: false)
+                    MakeOptions(inputDir, outputFile, json: false, force: false),
+                    TestContext.Current.CancellationToken
                 );
 
                 Assert.Equal(1, exitCode);
@@ -141,7 +143,8 @@ public sealed class PackHandlerTests
                 Console.SetOut(stdout);
 
                 int exitCode = PackHandler.Execute(
-                    MakeOptions(inputDir, outputFile, json: true, force: false)
+                    MakeOptions(inputDir, outputFile, json: true, force: false),
+                    TestContext.Current.CancellationToken
                 );
 
                 Assert.Equal(1, exitCode);
@@ -171,7 +174,7 @@ public sealed class PackHandlerTests
                 Console.SetOut(new StringWriter());
                 Console.SetError(stderr);
 
-                int exitCode = PackHandler.Execute(MakeOptions(inputDir, outputFile, json: false));
+                int exitCode = PackHandler.Execute(MakeOptions(inputDir, outputFile, json: false), TestContext.Current.CancellationToken);
 
                 Assert.Equal(1, exitCode);
                 Assert.Contains("Error:", stderr.ToString());
@@ -201,7 +204,7 @@ public sealed class PackHandlerTests
             StringWriter stdout = new();
             Console.SetOut(stdout);
 
-            _ = PackHandler.Execute(MakeOptions("/nonexistent/input", "/tmp/out.rpf", json: true));
+            _ = PackHandler.Execute(MakeOptions("/nonexistent/input", "/tmp/out.rpf", json: true), TestContext.Current.CancellationToken);
 
             string output = stdout.ToString();
             Assert.Contains("\"inputDir\":", output);

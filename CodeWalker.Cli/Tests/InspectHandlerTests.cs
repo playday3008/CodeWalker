@@ -6,6 +6,7 @@ using CodeWalker.Cli.Helpers;
 using SharpDX;
 
 using Xunit;
+using Xunit.v3;
 
 namespace CodeWalker.Cli.Tests;
 
@@ -82,7 +83,7 @@ public sealed class InspectHandlerExecuteTests
             Console.SetOut(new StringWriter());
             Console.SetError(stderr);
 
-            int exitCode = InspectHandler.Execute(MakeOptions("/nonexistent/test.rpf", json: false), "some/file.ydr");
+            int exitCode = InspectHandler.Execute(MakeOptions("/nonexistent/test.rpf", json: false), "some/file.ydr", TestContext.Current.CancellationToken);
 
             Assert.Equal(1, exitCode);
             Assert.Contains("Error:", stderr.ToString());
@@ -105,7 +106,7 @@ public sealed class InspectHandlerExecuteTests
             Console.SetOut(stdout);
             Console.SetError(new StringWriter());
 
-            int exitCode = InspectHandler.Execute(MakeOptions("/nonexistent/test.rpf", json: true), "some/file.ydr");
+            int exitCode = InspectHandler.Execute(MakeOptions("/nonexistent/test.rpf", json: true), "some/file.ydr", TestContext.Current.CancellationToken);
 
             Assert.Equal(1, exitCode);
             string output = stdout.ToString();
@@ -128,7 +129,7 @@ public sealed class InspectHandlerExecuteTests
             StringWriter stdout = new();
             Console.SetOut(stdout);
 
-            _ = InspectHandler.Execute(MakeOptions("/nonexistent/test.rpf", json: true), "some/file.ydr");
+            _ = InspectHandler.Execute(MakeOptions("/nonexistent/test.rpf", json: true), "some/file.ydr", TestContext.Current.CancellationToken);
 
             string output = stdout.ToString();
             Assert.Contains("\"rpfFile\":", output);

@@ -2,6 +2,7 @@ using System;
 using System.IO;
 
 using Xunit;
+using Xunit.v3;
 
 namespace CodeWalker.Cli.Tests;
 
@@ -26,7 +27,7 @@ public sealed class HashHandlerTests
                 Inputs = ["test"],
                 Encoding = "unknown-codec",
                 Json = false,
-            });
+            }, TestContext.Current.CancellationToken);
 
             Assert.Equal(1, exitCode);
             Assert.Contains("Unknown encoding", stderr.ToString());
@@ -52,7 +53,7 @@ public sealed class HashHandlerTests
                 Inputs = ["test"],
                 Encoding = "bad",
                 Json = true,
-            });
+            }, TestContext.Current.CancellationToken);
 
             Assert.Equal(1, exitCode);
             string output = stdout.ToString();
@@ -78,7 +79,7 @@ public sealed class HashHandlerTests
                 Inputs = ["test"],
                 Encoding = "utf8",
                 Json = false,
-            });
+            }, TestContext.Current.CancellationToken);
 
             Assert.Equal(0, exitCode);
             string output = stdout.ToString();
@@ -102,7 +103,7 @@ public sealed class HashHandlerTests
                 Inputs = ["test"],
                 Encoding = "utf-8",
                 Json = false,
-            });
+            }, TestContext.Current.CancellationToken);
 
             Assert.Equal(0, exitCode);
         }
@@ -122,7 +123,7 @@ public sealed class HashHandlerTests
                 Inputs = ["hello"],
                 Encoding = "ascii",
                 Json = false,
-            });
+            }, TestContext.Current.CancellationToken);
 
             Assert.Equal(0, exitCode);
         }
@@ -142,7 +143,7 @@ public sealed class HashHandlerTests
                 Inputs = ["test"],
                 Encoding = "ASCII",
                 Json = false,
-            });
+            }, TestContext.Current.CancellationToken);
 
             Assert.Equal(0, exitCode);
         }
@@ -165,7 +166,7 @@ public sealed class HashHandlerTests
                 Inputs = ["alpha", "bravo", "charlie"],
                 Encoding = "utf8",
                 Json = false,
-            });
+            }, TestContext.Current.CancellationToken);
 
             Assert.Equal(0, exitCode);
             string output = stdout.ToString();
@@ -192,7 +193,7 @@ public sealed class HashHandlerTests
                 Inputs = ["vehicle"],
                 Encoding = "utf8",
                 Json = true,
-            });
+            }, TestContext.Current.CancellationToken);
 
             Assert.Equal(0, exitCode);
             string output = stdout.ToString();
@@ -219,7 +220,7 @@ public sealed class HashHandlerTests
                 Inputs = ["one", "two"],
                 Encoding = "utf8",
                 Json = true,
-            });
+            }, TestContext.Current.CancellationToken);
 
             Assert.Equal(0, exitCode);
             string output = stdout.ToString();
@@ -244,7 +245,7 @@ public sealed class HashHandlerTests
                 Inputs = ["deterministic"],
                 Encoding = "utf8",
                 Json = true,
-            });
+            }, TestContext.Current.CancellationToken);
 
             StringWriter stdout2 = new();
             Console.SetOut(stdout2);
@@ -253,7 +254,7 @@ public sealed class HashHandlerTests
                 Inputs = ["deterministic"],
                 Encoding = "utf8",
                 Json = true,
-            });
+            }, TestContext.Current.CancellationToken);
 
             Assert.Equal(stdout1.ToString(), stdout2.ToString());
         }
@@ -276,7 +277,7 @@ public sealed class HashHandlerTests
                 Inputs = [""],
                 Encoding = "utf8",
                 Json = false,
-            });
+            }, TestContext.Current.CancellationToken);
 
             Assert.Equal(0, exitCode);
             Assert.Contains("Input: ", stdout.ToString());
@@ -319,7 +320,7 @@ public sealed class HashHandlerTests
                 Inputs = ["alpha"],
                 Encoding = "utf8",
                 Json = true,
-            });
+            }, TestContext.Current.CancellationToken);
 
             StringWriter stdout2 = new();
             Console.SetOut(stdout2);
@@ -328,7 +329,7 @@ public sealed class HashHandlerTests
                 Inputs = ["beta"],
                 Encoding = "utf8",
                 Json = true,
-            });
+            }, TestContext.Current.CancellationToken);
 
             Assert.NotEqual(stdout1.ToString(), stdout2.ToString());
         }
@@ -349,7 +350,7 @@ public sealed class HashHandlerTests
                 Inputs = ["test"],
                 Encoding = "utf8",
                 Json = true,
-            });
+            }, TestContext.Current.CancellationToken);
 
             string output = stdout.ToString();
             Assert.Contains("\"hashSigned\":", output);
@@ -371,7 +372,7 @@ public sealed class HashHandlerTests
                 Inputs = ["test"],
                 Encoding = "utf8",
                 Json = false,
-            });
+            }, TestContext.Current.CancellationToken);
 
             string output = stdout.ToString();
             Assert.Contains("Hash (int):", output);
