@@ -9,7 +9,7 @@ using System.Threading;
 using CodeWalker.Cli.Helpers;
 using CodeWalker.GameFiles;
 
-namespace CodeWalker.Cli;
+namespace CodeWalker.Cli.Handlers;
 
 internal sealed record TreeOptions
 {

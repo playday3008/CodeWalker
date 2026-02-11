@@ -6,7 +6,7 @@ using System.Threading;
 
 using CodeWalker.GameFiles;
 
-namespace CodeWalker.Cli;
+namespace CodeWalker.Cli.Handlers;
 
 internal sealed record HashOptions
 {

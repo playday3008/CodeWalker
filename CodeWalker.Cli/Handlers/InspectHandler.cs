@@ -11,7 +11,7 @@ using CodeWalker.GameFiles;
 
 using SharpDX;
 
-namespace CodeWalker.Cli;
+namespace CodeWalker.Cli.Handlers;
 
 internal static class InspectHandler
 {

@@ -2,7 +2,7 @@ using System;
 using System.CommandLine;
 using System.Threading;
 
-using CodeWalker.Cli;
+using CodeWalker.Cli.Handlers;
 
 using CancellationTokenSource cts = new();
 Console.CancelKeyPress += (_, e) =>

@@ -1,11 +1,11 @@
 using System;
 using System.IO;
 
+using CodeWalker.Cli.Handlers;
 using CodeWalker.Cli.Helpers;
 using CodeWalker.GameFiles;
 
 using Xunit;
-using Xunit.v3;
 
 namespace CodeWalker.Cli.Tests;
 

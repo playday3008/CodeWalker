@@ -1,5 +1,6 @@
 using System.CommandLine;
 
+using CodeWalker.Cli.Handlers;
 using CodeWalker.Cli.Helpers;
 
 using Xunit;

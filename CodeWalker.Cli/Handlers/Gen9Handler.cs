@@ -11,7 +11,7 @@ using CodeWalker.Cli.Helpers;
 using CodeWalker.Core.Utils;
 using CodeWalker.GameFiles;
 
-namespace CodeWalker.Cli;
+namespace CodeWalker.Cli.Handlers;
 
 internal sealed record Gen9Options
 {

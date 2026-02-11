@@ -1,28 +1,32 @@
 using System;
 using System.IO;
 
+using CodeWalker.Cli.Handlers;
 using CodeWalker.Cli.Helpers;
 
 using Xunit;
-using Xunit.v3;
 
-namespace CodeWalker.Cli.Tests;
+namespace CodeWalker.Cli.Tests.Handlers;
 
 [Collection("ConsoleOutput")]
-public sealed class ListHandlerTests
+public sealed class TreeHandlerTests
 {
-    private static RpfOptions MakeOptions(string rpfPath, bool json) =>
+    private static TreeOptions MakeOptions(string rpfPath, bool json, int depth = -1) =>
         new()
         {
-            RpfPath = rpfPath,
-            ExePath = "/nonexistent",
-            Gen9 = false,
-            Filters = [],
-            Verbose = false,
-            Json = json,
-            Recursive = false,
-            Threads = 1,
-            SizeFormat = SizeFormat.IEC,
+            Rpf = new RpfOptions
+            {
+                RpfPath = rpfPath,
+                ExePath = "/nonexistent",
+                Gen9 = false,
+                Filters = [],
+                Verbose = false,
+                Json = json,
+                Recursive = false,
+                Threads = 1,
+                SizeFormat = SizeFormat.IEC,
+            },
+            Depth = depth,
         };
 
     // ── Validation failures ────────────────────────────────────────────
@@ -38,7 +42,7 @@ public sealed class ListHandlerTests
             Console.SetOut(new StringWriter());
             Console.SetError(stderr);
 
-            int exitCode = ListHandler.Execute(MakeOptions("/nonexistent/test.rpf", json: false), TestContext.Current.CancellationToken);
+            int exitCode = TreeHandler.Execute(MakeOptions("/nonexistent/test.rpf", json: false), TestContext.Current.CancellationToken);
 
             Assert.Equal(1, exitCode);
             Assert.Contains("Error:", stderr.ToString());
@@ -61,7 +65,7 @@ public sealed class ListHandlerTests
             Console.SetOut(stdout);
             Console.SetError(new StringWriter());
 
-            int exitCode = ListHandler.Execute(MakeOptions("/nonexistent/test.rpf", json: true), TestContext.Current.CancellationToken);
+            int exitCode = TreeHandler.Execute(MakeOptions("/nonexistent/test.rpf", json: true), TestContext.Current.CancellationToken);
 
             Assert.Equal(1, exitCode);
             string output = stdout.ToString();
@@ -84,14 +88,12 @@ public sealed class ListHandlerTests
             StringWriter stdout = new();
             Console.SetOut(stdout);
 
-            _ = ListHandler.Execute(MakeOptions("/nonexistent/test.rpf", json: true), TestContext.Current.CancellationToken);
+            _ = TreeHandler.Execute(MakeOptions("/nonexistent/test.rpf", json: true), TestContext.Current.CancellationToken);
 
             string output = stdout.ToString();
             Assert.Contains("\"rpfFile\":", output);
             Assert.Contains("\"totalFiles\": 0", output);
-            Assert.Contains("\"totalSize\": 0", output);
-            Assert.Contains("\"totalSizeFormatted\": \"0 B\"", output);
-            Assert.Contains("\"nestedRpfCount\": 0", output);
+            Assert.Contains("\"totalDirs\": 0", output);
         }
         finally { Console.SetOut(origOut); }
     }
@@ -99,7 +101,7 @@ public sealed class ListHandlerTests
     [Fact]
     public void Execute_MissingExe_WithExistingRpf_ReturnsOne()
     {
-        string dir = Path.Combine(Path.GetTempPath(), "cw_list_" + Guid.NewGuid().ToString("N"));
+        string dir = Path.Combine(Path.GetTempPath(), "cw_tree_" + Guid.NewGuid().ToString("N"));
         _ = Directory.CreateDirectory(dir);
         string rpf = Path.Combine(dir, "test.rpf");
         File.WriteAllBytes(rpf, []);
@@ -113,7 +115,8 @@ public sealed class ListHandlerTests
                 StringWriter stderr = new();
                 Console.SetError(stderr);
 
-                int exitCode = ListHandler.Execute(MakeOptions(rpf, json: false), TestContext.Current.CancellationToken);
+                TreeOptions options = MakeOptions(rpf, json: false);
+                int exitCode = TreeHandler.Execute(options, TestContext.Current.CancellationToken);
 
                 Assert.Equal(1, exitCode);
                 Assert.Contains("Error:", stderr.ToString());

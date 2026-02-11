@@ -5,22 +5,29 @@ using System.Threading;
 
 using CodeWalker.GameFiles;
 
-namespace CodeWalker.Cli;
+namespace CodeWalker.Cli.Handlers;
 
-internal static class ExportXmlHandler
+internal static class ExportTextHandler
 {
+    private static readonly string[] DefaultFilters = ["*.gxt2"];
+
     public static Command CreateCommand(CancellationToken cancellationToken = default)
     {
         ExportCommandOptions exportOpts = new();
 
-        Command command = new("xml", "Export binary game files to XML");
+        Command command = new("text", "Export .gxt2 localization files to plain text");
         exportOpts.AddTo(command);
-        command.Aliases.Add("x");
+        command.Aliases.Add("g");
+        command.Aliases.Add("gxt2");
 
         command.SetAction(parseResult =>
         {
             ExportOptions options = exportOpts.Parse(parseResult);
-            return ExportService.Execute(options, "xml", "XML", ProcessFile, cancellationToken);
+            if (options.Rpf.Filters.Length == 0)
+            {
+                options = options with { Rpf = options.Rpf with { Filters = DefaultFilters } };
+            }
+            return ExportService.Execute(options, "txt", "Text", ProcessFile, cancellationToken);
         });
 
         return command;
@@ -33,9 +40,8 @@ internal static class ExportXmlHandler
         bool noOverwrite
     )
     {
-        string xml = MetaXml.GetXml(fileEntry, data, out string filename, fileOutputDir);
-
-        if (string.IsNullOrEmpty(xml))
+        Gxt2File gxt = RpfFile.GetFile<Gxt2File>(fileEntry, data);
+        if (gxt == null)
         {
             return (
                 new Json.ExportFileEntry
@@ -49,12 +55,24 @@ internal static class ExportXmlHandler
             );
         }
 
-        if (!string.IsNullOrEmpty(fileOutputDir) && !Directory.Exists(fileOutputDir))
+        string text = gxt.ToText();
+
+        if (string.IsNullOrEmpty(text))
         {
-            _ = Directory.CreateDirectory(fileOutputDir);
+            return (
+                new Json.ExportFileEntry
+                {
+                    Path = fileEntry.Path,
+                    Name = fileEntry.Name,
+                    OutputFiles = 0,
+                    Status = "unsupported",
+                },
+                null
+            );
         }
 
-        string outputPath = Path.Combine(fileOutputDir, filename);
+        string outputFileName = Path.GetFileNameWithoutExtension(fileEntry.Name) + ".txt";
+        string outputPath = Path.Combine(fileOutputDir, outputFileName);
 
         if (noOverwrite && File.Exists(outputPath))
         {
@@ -70,7 +88,12 @@ internal static class ExportXmlHandler
             );
         }
 
-        File.WriteAllText(outputPath, xml, Encoding.UTF8);
+        if (!Directory.Exists(fileOutputDir))
+        {
+            _ = Directory.CreateDirectory(fileOutputDir);
+        }
+
+        File.WriteAllText(outputPath, text, Encoding.UTF8);
 
         return (
             new Json.ExportFileEntry

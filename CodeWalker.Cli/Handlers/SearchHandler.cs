@@ -10,7 +10,7 @@ using System.Threading.Tasks;
 using CodeWalker.Cli.Helpers;
 using CodeWalker.GameFiles;
 
-namespace CodeWalker.Cli;
+namespace CodeWalker.Cli.Handlers;
 
 internal static class SearchHandler
 {
