@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.CommandLine;
 using System.IO;
 using System.Linq;
+using System.Security.Cryptography;
 using System.Text.Json;
 using System.Threading;
 using System.Threading.Tasks;
@@ -158,27 +159,46 @@ internal static class DiffHandler
         List<string> errorMessages = [];
         try
         {
+            // Encryption keys are process-wide, so each archive is opened and read while its
+            // own installation's keys are loaded. Metadata comes first for both sides; only the
+            // entries that could still turn out identical are extracted and hashed.
             if (!options.Json)
-                Console.Error.WriteLine("Loading encryption keys...");
+                Console.Error.WriteLine("Loading left encryption keys...");
             RpfHelper.LoadKeys(options.LeftExePath, options.LeftGen9);
-            if (options.RightExePath != options.LeftExePath || options.RightGen9 != options.LeftGen9)
-                RpfHelper.LoadKeys(options.RightExePath, options.RightGen9);
-
             RpfFile leftRpf = RpfHelper.OpenRpf(
                 options.LeftPath,
                 options.Verbose,
                 options.Json,
                 errorMessages
             );
+            List<(RpfFile rpf, RpfFileEntry entry)> leftFiles =
+                RpfHelper.CollectFiles(leftRpf, null, options.Recursive);
+            Dictionary<string, SideEntry> left = BuildMetadata(leftFiles, leftRpf.Root.Path);
 
+            if (!options.Json)
+                Console.Error.WriteLine("Loading right encryption keys...");
+            RpfHelper.LoadKeys(options.RightExePath, options.RightGen9);
             RpfFile rightRpf = RpfHelper.OpenRpf(
                 options.RightPath,
                 options.Verbose,
                 options.Json,
                 errorMessages
             );
+            List<(RpfFile rpf, RpfFileEntry entry)> rightFiles =
+                RpfHelper.CollectFiles(rightRpf, null, options.Recursive);
+            Dictionary<string, SideEntry> right = BuildMetadata(rightFiles, rightRpf.Root.Path);
 
-            Json.DiffResult result = CollectDiff(leftRpf, rightRpf, errorMessages, options, cancellationToken);
+            HashSet<string> candidates = FindHashCandidates(left, right);
+
+            if (candidates.Count > 0)
+            {
+                HashEntries(rightFiles, right, candidates, rightRpf.Root.Path, "right", options, errorMessages, cancellationToken);
+
+                RpfHelper.LoadKeys(options.LeftExePath, options.LeftGen9);
+                HashEntries(leftFiles, left, candidates, leftRpf.Root.Path, "left", options, errorMessages, cancellationToken);
+            }
+
+            Json.DiffResult result = CompareSides(left, right, errorMessages, options);
 
             if (options.Json)
                 PrintJsonDiff(result);
@@ -219,180 +239,197 @@ internal static class DiffHandler
             ErrorMessages = errorMessages,
         };
 
-    internal static Json.DiffResult CollectDiff(
-        RpfFile leftRpf,
-        RpfFile rightRpf,
-        List<string> errorMessages,
-        DiffOptions options,
-        CancellationToken cancellationToken = default)
+    /// <summary>
+    /// One archive entry as seen from a single side, with its content hash filled in
+    /// only for entries that need a byte-level comparison.
+    /// </summary>
+    internal sealed record SideEntry
     {
-        // Collect files from both archives
-        List<(RpfFile rpf, RpfFileEntry entry)> leftFiles = RpfHelper.CollectFiles(
-            leftRpf,
-            null,
-            options.Recursive
+        public required string Name { get; init; }
+        public required long Size { get; init; }
+        public required string Type { get; init; }
+        public string? Hash { get; init; }
+    }
+
+    /// <summary>
+    /// Strips the containing archive's own name from an entry path, so two archives compare
+    /// by their contents rather than by what the files on disk happen to be called.
+    /// </summary>
+    internal static string RelativeKey(string entryPath, string rootPath)
+    {
+        if (rootPath.Length == 0 || !entryPath.StartsWith(rootPath, StringComparison.OrdinalIgnoreCase))
+            return entryPath;
+
+        string rest = entryPath[rootPath.Length..];
+        return rest.StartsWith('\\') ? rest[1..] : rest;
+    }
+
+    internal static Dictionary<string, SideEntry> BuildMetadata(
+        List<(RpfFile rpf, RpfFileEntry entry)> files,
+        string rootPath
+    ) =>
+        files.ToDictionary(
+            f => RelativeKey(f.entry.Path, rootPath),
+            f => new SideEntry
+            {
+                Name = f.entry.Name,
+                Size = f.entry.GetFileSize(),
+                Type = RpfHelper.GetFileType(f.entry),
+            }
         );
-        List<(RpfFile rpf, RpfFileEntry entry)> rightFiles = RpfHelper.CollectFiles(
-            rightRpf,
-            null,
-            options.Recursive
-        );
 
-        // Build dictionaries keyed by path
-        Dictionary<string, (RpfFile rpf, RpfFileEntry entry)> leftDict =
-            leftFiles.ToDictionary(f => f.entry.Path, f => f);
+    /// <summary>
+    /// Paths present on both sides with matching size and type. Anything else is already
+    /// decided by its metadata, so its content never has to be read.
+    /// </summary>
+    internal static HashSet<string> FindHashCandidates(
+        IReadOnlyDictionary<string, SideEntry> left,
+        IReadOnlyDictionary<string, SideEntry> right
+    )
+    {
+        HashSet<string> candidates = [];
+        foreach (KeyValuePair<string, SideEntry> kvp in left)
+        {
+            if (right.TryGetValue(kvp.Key, out SideEntry? other)
+                && other.Size == kvp.Value.Size
+                && other.Type == kvp.Value.Type)
+            {
+                _ = candidates.Add(kvp.Key);
+            }
+        }
+        return candidates;
+    }
 
-        Dictionary<string, (RpfFile rpf, RpfFileEntry entry)> rightDict =
-            rightFiles.ToDictionary(f => f.entry.Path, f => f);
+    private static void HashEntries(
+        List<(RpfFile rpf, RpfFileEntry entry)> files,
+        Dictionary<string, SideEntry> side,
+        HashSet<string> candidates,
+        string rootPath,
+        string label,
+        DiffOptions options,
+        List<string> errorMessages,
+        CancellationToken cancellationToken
+    )
+    {
+        (string key, RpfFile rpf, RpfFileEntry entry)[] targets =
+        [
+            .. files
+                .Select(f => (key: RelativeKey(f.entry.Path, rootPath), f.rpf, f.entry))
+                .Where(f => candidates.Contains(f.key)),
+        ];
 
-        SizeFormat sizeFormat = options.SizeFormat;
+        string?[] hashes = new string?[targets.Length];
+        string?[] failures = new string?[targets.Length];
 
-        // Find removed and modified/unchanged — entries in left that also appear in right
-        // need byte comparison, so parallelize this
-        string[] commonPaths = leftDict.Keys.Where(rightDict.ContainsKey).ToArray();
-
-        // Result per common path: false = unchanged, true = modified
-        bool[] isModifiedArr = new bool[commonPaths.Length];
-        object errorLock = new();
-
-        using (ProgressBar progress = new(commonPaths.Length, options.Progress && !options.Json))
+        using (ProgressBar progress = new(targets.Length, options.Progress && !options.Json))
         {
             _ = Parallel.For(
                 0,
-                commonPaths.Length,
+                targets.Length,
                 new ParallelOptions { MaxDegreeOfParallelism = options.Threads, CancellationToken = cancellationToken },
                 i =>
                 {
-                    string path = commonPaths[i];
-                    (RpfFile leftRpfRef, RpfFileEntry leftEntry) = leftDict[path];
-                    (RpfFile rightRpfRef, RpfFileEntry rightEntry) = rightDict[path];
-
-                    long leftSize = leftEntry.GetFileSize();
-                    long rightSize = rightEntry.GetFileSize();
-                    string leftType = RpfHelper.GetFileType(leftEntry);
-                    string rightType = RpfHelper.GetFileType(rightEntry);
-
-                    if (leftSize != rightSize || leftType != rightType)
-                    {
-                        isModifiedArr[i] = true;
-                    }
+                    (_, RpfFile rpf, RpfFileEntry entry) = targets[i];
+                    byte[]? data = rpf.ExtractFile(entry);
+                    if (data == null)
+                        failures[i] = $"Failed to extract {label} entry: {entry.Path}";
                     else
-                    {
-                        byte[]? leftData = leftRpfRef.ExtractFile(leftEntry);
-                        byte[]? rightData = rightRpfRef.ExtractFile(rightEntry);
+                        hashes[i] = ComputeHash(data);
 
-                        if (leftData == null || rightData == null)
-                        {
-                            string side = leftData == null ? "left" : "right";
-                            lock (errorLock)
-                                errorMessages.Add($"Failed to extract {side} entry: {path}");
-                            isModifiedArr[i] = true;
-                        }
-                        else
-                        {
-                            isModifiedArr[i] = !ContentEquals(leftData, rightData);
-                        }
-                    }
-
-                    progress.Increment(path);
+                    progress.Increment(entry.Path);
                 }
             );
         }
+
+        for (int i = 0; i < targets.Length; i++)
+        {
+            if (failures[i] != null)
+            {
+                errorMessages.Add(failures[i]!);
+                continue;
+            }
+            string key = targets[i].key;
+            side[key] = side[key] with { Hash = hashes[i] };
+        }
+    }
+
+    private static string ComputeHash(byte[] data)
+    {
+#if NET5_0_OR_GREATER
+        return Convert.ToHexString(SHA256.HashData(data));
+#else
+        using SHA256 sha = SHA256.Create();
+        return BitConverter.ToString(sha.ComputeHash(data)).Replace("-", string.Empty);
+#endif
+    }
+
+    internal static Json.DiffResult CompareSides(
+        IReadOnlyDictionary<string, SideEntry> left,
+        IReadOnlyDictionary<string, SideEntry> right,
+        List<string> errorMessages,
+        DiffOptions options
+    )
+    {
+        SizeFormat sizeFormat = options.SizeFormat;
+
+        Json.DiffEntry Single(string path, SideEntry entry) =>
+            new()
+            {
+                Path = path,
+                Name = entry.Name,
+                Type = entry.Type,
+                Size = entry.Size,
+                SizeFormatted = sizeFormat.ToFormattedString(entry.Size),
+            };
 
         List<Json.DiffEntry> added = [];
         List<Json.DiffEntry> removed = [];
         List<Json.DiffEntry> modified = [];
         List<Json.DiffEntry> unchanged = [];
 
-        // Aggregate common path results
-        for (int i = 0; i < commonPaths.Length; i++)
+        foreach (KeyValuePair<string, SideEntry> kvp in left)
         {
-            string path = commonPaths[i];
-            (_, RpfFileEntry leftEntry) = leftDict[path];
-            (_, RpfFileEntry rightEntry) = rightDict[path];
-
-            if (isModifiedArr[i])
+            if (!right.TryGetValue(kvp.Key, out SideEntry? other))
             {
-                long leftSize = leftEntry.GetFileSize();
-                long rightSize = rightEntry.GetFileSize();
-                modified.Add(
-                    new Json.DiffEntry
-                    {
-                        Path = path,
-                        Name = leftEntry.Name,
-                        Type = RpfHelper.GetFileType(leftEntry),
-                        LeftSize = leftSize,
-                        LeftSizeFormatted = sizeFormat.ToFormattedString(leftSize),
-                        RightSize = rightSize,
-                        RightSizeFormatted = sizeFormat.ToFormattedString(rightSize),
-                    }
-                );
+                removed.Add(Single(kvp.Key, kvp.Value));
+                continue;
+            }
+
+            // A missing hash means the entry was never a candidate, or extraction failed.
+            // Either way it cannot be proven identical.
+            bool same = kvp.Value.Hash != null
+                && other.Hash != null
+                && string.Equals(kvp.Value.Hash, other.Hash, StringComparison.Ordinal);
+
+            if (same)
+            {
+                unchanged.Add(Single(kvp.Key, kvp.Value));
             }
             else
             {
-                long size = leftEntry.GetFileSize();
-                unchanged.Add(
+                modified.Add(
                     new Json.DiffEntry
                     {
-                        Path = path,
-                        Name = leftEntry.Name,
-                        Type = RpfHelper.GetFileType(leftEntry),
-                        Size = size,
-                        SizeFormatted = sizeFormat.ToFormattedString(size),
+                        Path = kvp.Key,
+                        Name = kvp.Value.Name,
+                        Type = kvp.Value.Type,
+                        LeftSize = kvp.Value.Size,
+                        LeftSizeFormatted = sizeFormat.ToFormattedString(kvp.Value.Size),
+                        RightSize = other.Size,
+                        RightSizeFormatted = sizeFormat.ToFormattedString(other.Size),
                     }
                 );
             }
         }
 
-        // Find removed (left only)
-        removed.AddRange(
-            leftDict
-                .Where(kvp => !rightDict.ContainsKey(kvp.Key))
-                .Select(kvp =>
-                {
-                    long size = kvp.Value.entry.GetFileSize();
-                    return new Json.DiffEntry
-                    {
-                        Path = kvp.Key,
-                        Name = kvp.Value.entry.Name,
-                        Type = RpfHelper.GetFileType(kvp.Value.entry),
-                        Size = size,
-                        SizeFormatted = sizeFormat.ToFormattedString(size),
-                    };
-                })
-        );
-
-        // Find added (right only)
         added.AddRange(
-            rightDict
-                .Where(kvp => !leftDict.ContainsKey(kvp.Key))
-                .Select(kvp =>
-                {
-                    long size = kvp.Value.entry.GetFileSize();
-                    return new Json.DiffEntry
-                    {
-                        Path = kvp.Key,
-                        Name = kvp.Value.entry.Name,
-                        Type = RpfHelper.GetFileType(kvp.Value.entry),
-                        Size = size,
-                        SizeFormatted = sizeFormat.ToFormattedString(size),
-                    };
-                })
+            right.Where(kvp => !left.ContainsKey(kvp.Key)).Select(kvp => Single(kvp.Key, kvp.Value))
         );
 
-        // Sort alphabetically
         added.Sort((a, b) => string.CompareOrdinal(a.Path, b.Path));
         removed.Sort((a, b) => string.CompareOrdinal(a.Path, b.Path));
         modified.Sort((a, b) => string.CompareOrdinal(a.Path, b.Path));
         unchanged.Sort((a, b) => string.CompareOrdinal(a.Path, b.Path));
-
-        Json.DiffSummary summary = new()
-        {
-            AddedCount = added.Count,
-            RemovedCount = removed.Count,
-            ModifiedCount = modified.Count,
-            UnchangedCount = unchanged.Count,
-        };
 
         return new Json.DiffResult
         {
@@ -403,7 +440,13 @@ internal static class DiffHandler
             Removed = [.. removed],
             Modified = [.. modified],
             Unchanged = [.. unchanged],
-            Summary = summary,
+            Summary = new Json.DiffSummary
+            {
+                AddedCount = added.Count,
+                RemovedCount = removed.Count,
+                ModifiedCount = modified.Count,
+                UnchangedCount = unchanged.Count,
+            },
             ErrorMessages = [.. errorMessages],
         };
     }
@@ -458,25 +501,5 @@ internal static class DiffHandler
         Console.Error.WriteLine(
             $"Summary: {result.Summary.AddedCount} added, {result.Summary.RemovedCount} removed, {result.Summary.ModifiedCount} modified, {result.Summary.UnchangedCount} unchanged"
         );
-    }
-
-    internal static bool ContentEquals(byte[]? a, byte[]? b)
-    {
-        if (a == null && b == null)
-            return true;
-        if (a == null || b == null)
-            return false;
-        if (a.Length != b.Length)
-            return false;
-#if NET5_0_OR_GREATER
-        return a.AsSpan().SequenceEqual(b);
-#else
-        for (int i = 0; i < a.Length; i++)
-        {
-            if (a[i] != b[i])
-                return false;
-        }
-        return true;
-#endif
     }
 }
