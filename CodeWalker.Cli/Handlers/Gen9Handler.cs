@@ -341,7 +341,6 @@ internal static class Gen9Handler
                         }
                     );
 
-                    // Aggregate non-RPF results
                     foreach ((Json.Gen9FileEntry entry, string? error) in nonRpfResults)
                     {
                         files.Add(entry);

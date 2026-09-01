@@ -11,7 +11,7 @@ using Xunit;
 
 namespace CodeWalker.Cli.Tests.Handlers;
 
-// ── ParseEncoding ────────────────────────────────────────────────────
+// ParseEncoding
 
 public sealed class ParseEncodingTests
 {
@@ -53,7 +53,7 @@ public sealed class ParseEncodingTests
     }
 }
 
-// ── ErrorResult ──────────────────────────────────────────────────────
+// ErrorResult
 
 public sealed class ErrorResultTests
 {
@@ -74,7 +74,7 @@ public sealed class ErrorResultTests
     }
 }
 
-// ── PrintHashes ──────────────────────────────────────────────────────
+// PrintHashes
 
 [Collection("ConsoleOutput")]
 public sealed class PrintHashesTests
@@ -160,7 +160,7 @@ public sealed class PrintHashesTests
     }
 }
 
-// ── PrintJsonHashes ─────────────────────────────────────────────────
+// PrintJsonHashes
 
 [Collection("ConsoleOutput")]
 public sealed class PrintJsonHashesTests
@@ -235,7 +235,7 @@ public sealed class PrintJsonHashesTests
     }
 }
 
-// ── CollectHashes ────────────────────────────────────────────────────
+// CollectHashes
 
 public sealed class CollectHashesTests
 {
@@ -334,7 +334,7 @@ public sealed class CollectHashesTests
     }
 }
 
-// ── Execute (integration) ────────────────────────────────────────────
+// Execute (integration)
 
 [Collection("ConsoleOutput")]
 public sealed class HashExecuteTests

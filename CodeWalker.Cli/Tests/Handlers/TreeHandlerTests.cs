@@ -13,7 +13,7 @@ using Xunit;
 
 namespace CodeWalker.Cli.Tests.Handlers;
 
-// ── ErrorResult ──────────────────────────────────────────────────────
+// ErrorResult
 
 public sealed class TreeErrorResultTests
 {
@@ -69,7 +69,7 @@ public sealed class TreeErrorResultTests
     }
 }
 
-// ── PrintTree (text) ─────────────────────────────────────────────────
+// PrintTree (text)
 
 [Collection("ConsoleOutput")]
 public sealed class PrintTreeTests
@@ -230,7 +230,7 @@ public sealed class PrintTreeTests
             ])
         ]);
         (string stdout, _) = Capture(root, 1, 1);
-        // lastdir is last child → └──, its children use "    " (4 spaces) prefix
+        // lastdir is last child -> └──, its children use "    " (4 spaces) prefix
         Assert.Contains("\u2514\u2500\u2500 lastdir/", stdout);
         Assert.Contains("    \u2514\u2500\u2500 child.dat", stdout);
     }
@@ -337,7 +337,7 @@ public sealed class PrintTreeTests
     }
 }
 
-// ── PrintJsonTree ────────────────────────────────────────────────────
+// PrintJsonTree
 
 [Collection("ConsoleOutput")]
 public sealed class PrintJsonTreeTests
@@ -519,7 +519,7 @@ public sealed class PrintJsonTreeTests
     }
 }
 
-// ── PrintTreeChildren cancellation ───────────────────────────────────
+// PrintTreeChildren cancellation
 
 [Collection("ConsoleOutput")]
 public sealed class PrintTreeChildrenCancellationTests
@@ -601,7 +601,7 @@ public sealed class PrintTreeChildrenCancellationTests
     }
 }
 
-// ── Execute (integration) ────────────────────────────────────────────
+// Execute (integration)
 
 [Collection("ConsoleOutput")]
 public sealed class TreeExecuteTests
@@ -620,7 +620,7 @@ public sealed class TreeExecuteTests
             Depth = depth,
         };
 
-    // ── Validation failures ────────────────────────────────────────────
+    // Validation failures
 
     [Fact]
     public void Execute_MissingRpf_ReturnsOne()
@@ -732,7 +732,7 @@ public sealed class TreeExecuteTests
     }
 }
 
-// ── CollectChildren ─────────────────────────────────────────────────
+// CollectChildren
 
 public sealed class CollectChildrenTests
 {
@@ -961,7 +961,7 @@ public sealed class CollectChildrenTests
     }
 }
 
-// ── BuildTreeNode ───────────────────────────────────────────────────
+// BuildTreeNode
 
 public sealed class BuildTreeNodeTests
 {

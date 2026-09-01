@@ -135,11 +135,7 @@ internal static class SearchHandler
 
             return scanErrors.Count > 0 ? 1 : 0;
         }
-        catch (OperationCanceledException)
-        {
-            // Gracefully handle cancellation without printing an error message
-            throw;
-        }
+        catch (OperationCanceledException) { throw; }
         catch (Exception ex)
         {
             return Output.ReportError(
@@ -358,7 +354,6 @@ internal static class SearchHandler
 
     internal static string RelativePath(string basePath, string fullPath)
     {
-        // Normalize separators and ensure trailing separator on base
         string normalizedBase = basePath.Replace('\\', '/').TrimEnd('/') + "/";
         string normalizedFull = fullPath.Replace('\\', '/');
 

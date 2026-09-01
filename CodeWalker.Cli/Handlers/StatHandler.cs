@@ -70,11 +70,8 @@ internal static class StatHandler
     }
 
     /// <summary>
-    /// Executes the stat command by validating the RPF file, collecting file entries, calculating statistics, and printing the results in either JSON or human-readable format.
+    /// Validates the archive, collects statistics for the matching entries and prints them.
     /// </summary>
-    /// <param name="options">The options for the stat command, including the RPF file path, filters, and output format.</param>
-    /// <param name="cancellationToken">A cancellation token to observe while performing the operation.</param>
-    /// <returns>An integer exit code indicating success (0) or failure (1).</returns>
     public static int Execute(StatOptions options, CancellationToken cancellationToken = default)
     {
         string? initError = RpfHelper.ValidateAndLoadKeys(
@@ -120,11 +117,7 @@ internal static class StatHandler
 
             return scanErrors.Count > 0 ? 1 : 0;
         }
-        catch (OperationCanceledException)
-        {
-            // Gracefully handle cancellation without printing an error message
-            throw;
-        }
+        catch (OperationCanceledException) { throw; }
         catch (Exception ex)
         {
             return Output.ReportError(
@@ -137,11 +130,8 @@ internal static class StatHandler
     }
 
     /// <summary>
-    /// Creates a JSON result object representing an error, with the provided error messages and default values for all statistics fields.
+    /// A failed result carrying the given messages, with every statistic zeroed.
     /// </summary>
-    /// <param name="errorMessages">An array of error messages to include in the result.</param>
-    /// <param name="options">The options used to populate the RpfFile field in the result.</param>
-    /// <returns>A <see cref="Json.StatResult"/> object with success set to false, the RpfFile field set from options, and all statistics fields set to default values.</returns>
     internal static Json.StatResult ErrorResult(string[] errorMessages, StatOptions options) =>
         new()
         {
@@ -162,13 +152,8 @@ internal static class StatHandler
         };
 
     /// <summary>
-    /// Collects the statistics for the given list of RPF file entries, including total size, file counts, compression ratios, and extension-based statistics, and returns the results in a <see cref="Json.StatResult"/> object.
+    /// Totals, compression figures and per-extension breakdown for the given entries.
     /// </summary>
-    /// <param name="entries">A list of tuples containing the RPF file and its corresponding file entry to analyze for statistics.</param>
-    /// <param name="scanErrors">A list of error messages encountered during the scanning process, which will be included in the result.</param>
-    /// <param name="options">The options used to populate the RpfFile field in the result and format size values.</param>
-    /// <param name="cancellationToken">A cancellation token to observe while performing the statistics collection operation.</param>
-    /// <returns>A <see cref="Json.StatResult"/> object containing the collected statistics for the RPF file entries, including total size, file counts, compression ratios, extension-based statistics, and any error messages.</returns>
     internal static Json.StatResult CollectStats(
         List<(RpfFile rpf, RpfFileEntry entry)> entries,
         List<string> scanErrors,
@@ -274,18 +259,14 @@ internal static class StatHandler
     }
 
     /// <summary>
-    /// Prints the collected statistics to the console in JSON format.
+    /// Prints the statistics as JSON.
     /// </summary>
-    /// <param name="result">The collected statistics to serialize.</param>
     internal static void PrintJsonStats(Json.StatResult result) =>
         Console.WriteLine(JsonSerializer.Serialize(result, Output.JsonSerializerOptions));
 
     /// <summary>
-    /// Prints the collected statistics to the console in a human-readable format.
+    /// Prints the statistics as an aligned table.
     /// </summary>
-    /// <param name="result">The collected statistics to print.</param>
-    /// <param name="options">The options used to format size values in the output.</param>
-    /// <param name="cancellationToken">A cancellation token to observe while printing.</param>
     internal static void PrintStats(Json.StatResult result, StatOptions options, CancellationToken cancellationToken = default)
     {
         cancellationToken.ThrowIfCancellationRequested();
@@ -305,7 +286,6 @@ internal static class StatHandler
                 )
         ];
 
-        // Calculate column widths from headers and data
         int[] widths = new int[headers.Length];
         for (int i = 0; i < headers.Length; i++)
             widths[i] = headers[i].Length;
@@ -314,25 +294,22 @@ internal static class StatHandler
             for (int i = 0; i < row.Length; i++)
                 widths[i] = Math.Max(widths[i], row[i].Length);
 
-        // Top border
         Console.Write($"+{new string('-', widths[0] + 2)}");
         for (int i = 1; i < widths.Length; i++)
             Console.Write($"+{new string('-', widths[i] + 2)}");
         Console.WriteLine("+");
 
-        // Header — first column left-aligned, rest right-aligned
+        // First column left-aligned, the rest right-aligned
         Console.Write($"| {headers[0].PadRight(widths[0])} ");
         for (int i = 1; i < headers.Length; i++)
             Console.Write($"| {headers[i].PadLeft(widths[i])} ");
         Console.WriteLine("|");
 
-        // Separator
         Console.Write($"+{new string('-', widths[0] + 2)}");
         for (int i = 1; i < widths.Length; i++)
             Console.Write($"+{new string('-', widths[i] + 2)}");
         Console.WriteLine("+");
 
-        // Data rows
         foreach (string[] row in rows)
         {
             Console.Write($"| {row[0].PadRight(widths[0])} ");
@@ -341,7 +318,6 @@ internal static class StatHandler
             Console.WriteLine("|");
         }
 
-        // Bottom border
         Console.Write($"+{new string('-', widths[0] + 2)}");
         for (int i = 1; i < widths.Length; i++)
             Console.Write($"+{new string('-', widths[i] + 2)}");

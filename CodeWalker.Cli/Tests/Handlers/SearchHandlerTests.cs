@@ -11,7 +11,7 @@ using Xunit;
 
 namespace CodeWalker.Cli.Tests.Handlers;
 
-// ── ErrorResult ─────────────────────────────────────────────────────
+// ErrorResult
 
 public sealed class SearchErrorResultTests
 {
@@ -73,7 +73,7 @@ public sealed class SearchErrorResultTests
     }
 }
 
-// ── CollectSearch ───────────────────────────────────────────────────
+// CollectSearch
 
 public sealed class SearchCollectSearchTests
 {
@@ -367,7 +367,7 @@ public sealed class SearchCollectSearchTests
     }
 }
 
-// ── CollectAllEntries ───────────────────────────────────────────────
+// CollectAllEntries
 
 public sealed class SearchCollectAllEntriesTests
 {
@@ -483,7 +483,7 @@ public sealed class SearchCollectAllEntriesTests
     }
 }
 
-// ── Cancellation ────────────────────────────────────────────────────
+// Cancellation
 
 public sealed class SearchCancellationTests
 {
@@ -533,7 +533,7 @@ public sealed class SearchCancellationTests
     }
 }
 
-// ── PrintSearch / PrintJsonSearch ────────────────────────────────────
+// PrintSearch / PrintJsonSearch
 
 [Collection("ConsoleOutput")]
 public sealed class SearchPrintTests
@@ -587,7 +587,7 @@ public sealed class SearchPrintTests
             Extension = extension,
         };
 
-    // ── PrintSearch (text) ──────────────────────────────────────────
+    // PrintSearch (text)
 
     [Fact]
     public void PrintSearch_NonVerbose_PrintsPathsOnly()
@@ -752,7 +752,7 @@ public sealed class SearchPrintTests
         }
     }
 
-    // ── PrintJsonSearch ─────────────────────────────────────────────
+    // PrintJsonSearch
 
     [Fact]
     public void PrintJsonSearch_OutputsValidJson()
@@ -803,7 +803,7 @@ public sealed class SearchPrintTests
     }
 }
 
-// ── Execute (validation failures) ───────────────────────────────────
+// Execute (validation failures)
 
 [Collection("ConsoleOutput")]
 public sealed class SearchHandlerExecuteTests
@@ -943,7 +943,7 @@ public sealed class SearchHandlerExecuteTests
     }
 }
 
-// ── CollectSearch Archive field ─────────────────────────────────────
+// CollectSearch Archive field
 
 public sealed class SearchCollectSearchArchiveTests
 {
@@ -1019,7 +1019,7 @@ public sealed class SearchCollectSearchArchiveTests
     }
 }
 
-// ── ErrorResult RpfFiles ────────────────────────────────────────────
+// ErrorResult RpfFiles
 
 public sealed class SearchErrorResultRpfFilesTests
 {
@@ -1045,7 +1045,7 @@ public sealed class SearchErrorResultRpfFilesTests
     }
 }
 
-// ── PrintSearch multi-archive ───────────────────────────────────────
+// PrintSearch multi-archive
 
 [Collection("ConsoleOutput")]
 public sealed class SearchPrintMultiArchiveTests
@@ -1249,7 +1249,7 @@ public sealed class SearchPrintMultiArchiveTests
     }
 }
 
-// ── RelativePath ────────────────────────────────────────────────────
+// RelativePath
 
 public sealed class SearchRelativePathTests
 {
@@ -1303,7 +1303,7 @@ public sealed class SearchRelativePathTests
     }
 }
 
-// ── ExecuteDirectory ────────────────────────────────────────────────
+// ExecuteDirectory
 
 [Collection("ConsoleOutput")]
 public sealed class SearchExecuteDirectoryTests

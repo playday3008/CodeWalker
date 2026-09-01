@@ -65,8 +65,7 @@ internal sealed class HelpLayout : SynchronousCommandLineAction
     /// </summary>
     public static void Install(Command root)
     {
-        HelpOption? help = root.Options.OfType<HelpOption>().FirstOrDefault();
-        if (help != null)
+        foreach (HelpOption help in root.Options.OfType<HelpOption>())
             help.Action = new HelpLayout();
     }
 
@@ -79,7 +78,8 @@ internal sealed class HelpLayout : SynchronousCommandLineAction
         // MaxWidth is unbounded when stdout is not a terminal; keep prose readable anyway.
         int width = Math.Min(100, Math.Max(40, this.inner.MaxWidth));
 
-        if (command.Parents.Any() == false)
+        // Only worth stating once, on the root command.
+        if (!command.Parents.Any())
             WriteStreams(output);
 
         WriteJsonFields(output, command.Name, width);

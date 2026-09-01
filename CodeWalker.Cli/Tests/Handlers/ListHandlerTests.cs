@@ -56,7 +56,7 @@ public sealed class ListHandlerTests
     private static RpfFile MakeRpf(uint grandTotalRpfCount = 1) =>
         new("test.rpf", "test.rpf", 0) { GrandTotalRpfCount = grandTotalRpfCount };
 
-    // ── Validation failures ────────────────────────────────────────────
+    // Validation failures
 
     [Fact]
     public void Execute_MissingRpf_ReturnsOne()
@@ -164,7 +164,7 @@ public sealed class ListHandlerTests
         finally { Directory.Delete(dir, true); }
     }
 
-    // ── CollectList ────────────────────────────────────────────────────
+    // CollectList
 
     [Fact]
     public void CollectList_EmptyEntries_ReturnsZeroTotals()
@@ -328,7 +328,7 @@ public sealed class ListHandlerTests
         );
     }
 
-    // ── ErrorResult ────────────────────────────────────────────────────
+    // ErrorResult
 
     [Fact]
     public void ErrorResult_HasExpectedDefaults()
@@ -357,7 +357,7 @@ public sealed class ListHandlerTests
         Assert.Equal("err2", result.ErrorMessages[1]);
     }
 
-    // ── PrintList (text output) ────────────────────────────────────────
+    // PrintList (text output)
 
     [Fact]
     public void PrintList_NonVerbose_PrintsPathsOnly()
@@ -554,7 +554,7 @@ public sealed class ListHandlerTests
         }
     }
 
-    // ── PrintJsonList ──────────────────────────────────────────────────
+    // PrintJsonList
 
     [Fact]
     public void PrintJsonList_SerializesToStdout()

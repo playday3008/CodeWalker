@@ -134,11 +134,7 @@ internal static class TreeHandler
 
             return scanErrors.Count > 0 ? 1 : 0;
         }
-        catch (OperationCanceledException)
-        {
-            // Gracefully handle cancellation without printing an error message
-            throw;
-        }
+        catch (OperationCanceledException) { throw; }
         catch (Exception ex)
         {
             return Output.ReportError(
@@ -166,7 +162,6 @@ internal static class TreeHandler
         List<ChildItem> items = [];
         HashSet<string> expandedRpfs = new(StringComparer.Ordinal);
 
-        // Add subdirectories
         if (dir.Directories != null)
         {
             foreach (RpfDirectoryEntry subDir in dir.Directories)

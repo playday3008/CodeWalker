@@ -29,7 +29,7 @@ public sealed class ExtractHandlerTests
             Progress = false,
         };
 
-    // ── Validation failures ────────────────────────────────────────────
+    // Validation failures
 
     [Fact]
     public void Execute_MissingRpf_ReturnsOne()

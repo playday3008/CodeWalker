@@ -12,7 +12,7 @@ namespace CodeWalker.Cli.Tests.Handlers;
 
 public sealed class InspectHandlerTests
 {
-    // ── FormatVector3 ─────────────────────────────────────────────────
+    // FormatVector3
 
     [Fact]
     public void FormatVector3_Zero_ReturnsFormattedZeros() =>
@@ -44,7 +44,7 @@ public sealed class InspectHandlerTests
         Assert.Equal("0.01, 0.00, -0.01",
             InspectHandler.FormatVector3(new Vector3(0.01f, 0.001f, -0.01f)));
 
-    // ── Additional FormatVector3 edge cases ───────────────────────────
+    // Additional FormatVector3 edge cases
 
     [Fact]
     public void FormatVector3_OneComponent() =>

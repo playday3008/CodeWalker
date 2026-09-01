@@ -194,7 +194,6 @@ internal static class ValidateHandler
                 );
             }
 
-            // Aggregate results
             List<Json.ValidateFileEntry> nonNull = results.OfType<Json.ValidateFileEntry>().ToList();
             int valid = nonNull.Count(e => e.Status == "valid");
             int warnings = nonNull.Count(e => e.Status == "warning");

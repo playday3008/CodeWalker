@@ -12,7 +12,7 @@ using Xunit;
 
 namespace CodeWalker.Cli.Tests.Handlers;
 
-// ── ErrorResult ──────────────────────────────────────────────────────
+// ErrorResult
 
 public sealed class StatErrorResultTests
 {
@@ -81,7 +81,7 @@ public sealed class StatErrorResultTests
     }
 }
 
-// ── CollectStats ─────────────────────────────────────────────────────
+// CollectStats
 
 public sealed class CollectStatsTests
 {
@@ -167,7 +167,7 @@ public sealed class CollectStatsTests
     [Fact]
     public void SingleResource_CountsCorrectly()
     {
-        // 0x08000000 → SystemFlags.Size = 512, 0x04000000 → GraphicsFlags.Size = 1024
+        // 0x08000000 -> SystemFlags.Size = 512, 0x04000000 -> GraphicsFlags.Size = 1024
         RpfResourceFileEntry entry = MakeResource(
             "model.ydr",
             fileSize: 300,
@@ -256,7 +256,7 @@ public sealed class CollectStatsTests
     [Fact]
     public void CompressionRatio_ZeroWhenNoUncompressed()
     {
-        // Entry with FileSize=0 and FileUncompressedSize=0 → GetFileSize() returns 0
+        // Entry with FileSize=0 and FileUncompressedSize=0 -> GetFileSize() returns 0
         RpfBinaryFileEntry entry = MakeBinary(
             "empty.dat",
             fileSize: 0,
@@ -435,7 +435,7 @@ public sealed class CollectStatsTests
     [Fact]
     public void CompressionRatio_RoundedToFourDecimals()
     {
-        // 1 / 3 = 0.33333... → should round to 0.3333
+        // 1 / 3 = 0.33333... -> should round to 0.3333
         RpfBinaryFileEntry entry = MakeBinary(
             "data.dat",
             fileSize: 1,
@@ -459,7 +459,7 @@ public sealed class CollectStatsTests
     [Fact]
     public void AvgSize_TruncatedByIntegerDivision()
     {
-        // 3 files totalling 10 bytes → avg = 10 / 3 = 3 (integer truncation, not 3.33)
+        // 3 files totalling 10 bytes -> avg = 10 / 3 = 3 (integer truncation, not 3.33)
         RpfBinaryFileEntry a = MakeBinary(
             "a.dat",
             fileSize: 1,
@@ -519,7 +519,7 @@ public sealed class CollectStatsTests
     }
 }
 
-// ── PrintJsonStats ───────────────────────────────────────────────────
+// PrintJsonStats
 
 [Collection("ConsoleOutput")]
 public sealed class PrintJsonStatsTests
@@ -681,7 +681,7 @@ public sealed class PrintJsonStatsTests
     }
 }
 
-// ── PrintStats (text) ────────────────────────────────────────────────
+// PrintStats (text)
 
 [Collection("ConsoleOutput")]
 public sealed class PrintStatsTests
@@ -831,7 +831,7 @@ public sealed class PrintStatsTests
     }
 }
 
-// ── Execute (integration) ────────────────────────────────────────────
+// Execute (integration)
 
 [Collection("ConsoleOutput")]
 public sealed class StatExecuteTests
@@ -849,7 +849,7 @@ public sealed class StatExecuteTests
             SizeFormat = SizeFormat.IEC
         };
 
-    // ── Validation failures ────────────────────────────────────────────
+    // Validation failures
 
     [Fact]
     public void Execute_MissingRpf_ReturnsOne()

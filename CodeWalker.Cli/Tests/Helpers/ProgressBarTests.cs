@@ -9,7 +9,7 @@ namespace CodeWalker.Cli.Tests.Helpers;
 
 public sealed class ProgressBarTests
 {
-    // ── Helper ──────────────────────────────────────────────────────────
+    // Helper
 
     /// <summary>Increments the bar <paramref name="count"/> times, optionally passing a file on the last call.</summary>
     private static void IncrementTo(ProgressBar bar, int count, string? lastFile = null)
@@ -20,7 +20,7 @@ public sealed class ProgressBarTests
             bar.Increment(lastFile);
     }
 
-    // ── Disabled-state tests ──────────────────────────────────────────
+    // Disabled-state tests
 
     [Fact]
     public void Constructor_disabled_when_enabled_is_false()
@@ -47,7 +47,7 @@ public sealed class ProgressBarTests
         Assert.False(bar.Enabled);
     }
 
-    // ── Enabled-state tests ───────────────────────────────────────────
+    // Enabled-state tests
 
     [Fact]
     public void Constructor_enabled_with_custom_writer()
@@ -68,7 +68,7 @@ public sealed class ProgressBarTests
         Assert.Contains(">", output); // cursor indicator at start
     }
 
-    // ── Render format tests ───────────────────────────────────────────
+    // Render format tests
 
     [Fact]
     public void Render_at_50_percent_has_half_filled_bar()
@@ -99,7 +99,7 @@ public sealed class ProgressBarTests
         Assert.Contains("(10/10)", output);
     }
 
-    // ── File name tests ───────────────────────────────────────────────
+    // File name tests
 
     [Fact]
     public void Render_shows_current_file()
@@ -116,7 +116,7 @@ public sealed class ProgressBarTests
     public void Render_truncates_long_file_with_ellipsis()
     {
         StringWriter sw = new();
-        // windowWidth=80 → maxLen = Max(10, 80-40-30) = 10
+        // windowWidth=80 -> maxLen = Max(10, 80-40-30) = 10
         using ProgressBar bar = new(10, enabled: true, sw, windowWidth: 80);
         _ = sw.GetStringBuilder().Clear();
         IncrementTo(bar, 10, "very/long/path/to/some/deeply/nested/file.ytd");
@@ -153,7 +153,7 @@ public sealed class ProgressBarTests
         Assert.DoesNotContain("...", output);
     }
 
-    // ── State tracking tests ──────────────────────────────────────────
+    // State tracking tests
 
     [Fact]
     public void Increment_advances_by_one()
@@ -166,7 +166,7 @@ public sealed class ProgressBarTests
         Assert.Equal(3, bar.Current);
     }
 
-    // ── Throttle tests ────────────────────────────────────────────────
+    // Throttle tests
 
     [Fact]
     public void Throttle_skips_rapid_increments()
@@ -174,7 +174,7 @@ public sealed class ProgressBarTests
         StringWriter sw = new();
         using ProgressBar bar = new(100, enabled: true, sw, windowWidth: 80);
         _ = sw.GetStringBuilder().Clear();
-        // Rapid increments within the 50ms throttle window — none should render
+        // Rapid increments within the 50ms throttle window - none should render
         for (int i = 1; i <= 50; i++)
             bar.Increment();
         string output = sw.ToString();
@@ -203,7 +203,7 @@ public sealed class ProgressBarTests
         Assert.Contains("(1/100)", sw.ToString());
     }
 
-    // ── Dispose tests ─────────────────────────────────────────────────
+    // Dispose tests
 
     [Fact]
     public void Dispose_writes_newline_when_enabled()
@@ -229,7 +229,7 @@ public sealed class ProgressBarTests
         bar.Dispose();
     }
 
-    // ── Thread safety tests ───────────────────────────────────────────
+    // Thread safety tests
 
     [Fact]
     public void Concurrent_increments_are_thread_safe()
@@ -243,7 +243,7 @@ public sealed class ProgressBarTests
         Assert.Equal(total, bar.Current);
     }
 
-    // ── Disabled-state mutation tests ──────────────────────────────────
+    // Disabled-state mutation tests
 
     [Fact]
     public void Increment_on_disabled_bar_writes_nothing()
@@ -254,7 +254,7 @@ public sealed class ProgressBarTests
         Assert.Equal("", sw.ToString());
     }
 
-    // ── Clamping tests ──────────────────────────────────────────────
+    // Clamping tests
 
     [Fact]
     public void Increment_clamps_current_at_total()
@@ -266,7 +266,7 @@ public sealed class ProgressBarTests
         Assert.Equal(3, bar.Current);
     }
 
-    // ── Render exception handling tests ──────────────────────────────
+    // Render exception handling tests
 
     [Fact]
     public void Render_swallows_IOException_from_writer()
@@ -283,7 +283,7 @@ public sealed class ProgressBarTests
         public override void Write(string? value) => throw new IOException("simulated");
     }
 
-    // ── Dispose idempotency tests ───────────────────────────────────
+    // Dispose idempotency tests
 
     [Fact]
     public void Dispose_writes_exactly_one_newline()
@@ -298,7 +298,7 @@ public sealed class ProgressBarTests
         Assert.Equal(sw.NewLine, sw.ToString());
     }
 
-    // ── Full lifecycle test ───────────────────────────────────────────
+    // Full lifecycle test
 
     [Fact]
     public void Full_lifecycle_renders_progress_to_completion()
@@ -315,7 +315,7 @@ public sealed class ProgressBarTests
         Assert.Equal(5, bar.Current);
     }
 
-    // ── Edge case tests ──────────────────────────────────────────────
+    // Edge case tests
 
     [Fact]
     public void Increment_with_empty_file_name_does_not_display_file()
