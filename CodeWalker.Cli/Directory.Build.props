@@ -31,6 +31,12 @@
       Version="1.1.0"
       Condition="'$(TargetFramework)' == 'net48'"
     />
+    <!-- IndexRange 1.1.0 pulls Microsoft.Bcl.Memory 9.0.0, which carries GHSA-73j8-2gch-69rq. -->
+    <PackageReference
+      Include="Microsoft.Bcl.Memory"
+      Version="10.0.4"
+      Condition="'$(TargetFramework)' == 'net48'"
+    />
   </ItemGroup>
 
   <ItemGroup>
