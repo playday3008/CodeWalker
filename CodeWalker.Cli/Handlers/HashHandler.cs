@@ -5,6 +5,7 @@ using System.Diagnostics.CodeAnalysis;
 using System.Text.Json;
 using System.Threading;
 
+using CodeWalker.Cli.Helpers;
 using CodeWalker.GameFiles;
 
 namespace CodeWalker.Cli.Handlers;
@@ -90,7 +91,7 @@ internal static class HashHandler
         }
         catch (Exception ex)
         {
-            return RpfService.ReportError(
+            return Output.ReportError(
                 ex.Message,
                 options.Json,
                 ErrorResult([])
@@ -170,7 +171,7 @@ internal static class HashHandler
             Hashes = hashes,
             ErrorMessages = []
         };
-        Console.WriteLine(JsonSerializer.Serialize(result, RpfService.JsonSerializerOptions));
+        Console.WriteLine(JsonSerializer.Serialize(result, Output.JsonSerializerOptions));
     }
 
     /// <summary>

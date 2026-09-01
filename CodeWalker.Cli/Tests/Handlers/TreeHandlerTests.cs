@@ -20,19 +20,15 @@ public sealed class TreeErrorResultTests
     private static TreeOptions MakeOptions(string rpfPath = "/test.rpf") =>
         new()
         {
-            Rpf = new RpfOptions
-            {
-                RpfPath = rpfPath,
-                ExePath = "/nonexistent",
-                Gen9 = false,
-                Filters = [],
-                Verbose = false,
-                Json = false,
-                Recursive = false,
-                Threads = 1,
-                SizeFormat = SizeFormat.IEC
-            },
-            Depth = -1
+            RpfPath = rpfPath,
+            ExePath = "/nonexistent",
+            Gen9 = false,
+            Filters = [],
+            Verbose = false,
+            Json = false,
+            Recursive = false,
+            SizeFormat = SizeFormat.IEC,
+            Depth = -1,
         };
 
     [Fact]
@@ -82,19 +78,15 @@ public sealed class PrintTreeTests
     private static TreeOptions MakeOptions(bool verbose = false) =>
         new()
         {
-            Rpf = new RpfOptions
-            {
-                RpfPath = "/test.rpf",
-                ExePath = "/nonexistent",
-                Gen9 = false,
-                Filters = [],
-                Verbose = verbose,
-                Json = false,
-                Recursive = false,
-                Threads = 1,
-                SizeFormat = SizeFormat.IEC
-            },
-            Depth = -1
+            RpfPath = "/test.rpf",
+            ExePath = "/nonexistent",
+            Gen9 = false,
+            Filters = [],
+            Verbose = verbose,
+            Json = false,
+            Recursive = false,
+            SizeFormat = SizeFormat.IEC,
+            Depth = -1,
         };
 
     private static Json.TreeNode MakeFileNode(
@@ -353,19 +345,15 @@ public sealed class PrintJsonTreeTests
     private static TreeOptions MakeOptions(string rpfPath = "/test.rpf") =>
         new()
         {
-            Rpf = new RpfOptions
-            {
-                RpfPath = rpfPath,
-                ExePath = "/nonexistent",
-                Gen9 = false,
-                Filters = [],
-                Verbose = false,
-                Json = true,
-                Recursive = false,
-                Threads = 1,
-                SizeFormat = SizeFormat.IEC
-            },
-            Depth = -1
+            RpfPath = rpfPath,
+            ExePath = "/nonexistent",
+            Gen9 = false,
+            Filters = [],
+            Verbose = false,
+            Json = true,
+            Recursive = false,
+            SizeFormat = SizeFormat.IEC,
+            Depth = -1,
         };
 
     private static Json.TreeNode MakeFileNode(
@@ -425,7 +413,7 @@ public sealed class PrintJsonTreeTests
         string json = CaptureJson(root, 0, 0);
 
         Json.TreeResult? parsed = JsonSerializer.Deserialize<Json.TreeResult>(
-            json.Trim(), RpfService.JsonSerializerOptions
+            json.Trim(), Output.JsonSerializerOptions
         );
         Assert.NotNull(parsed);
     }
@@ -510,7 +498,7 @@ public sealed class PrintJsonTreeTests
         string json = CaptureJson(root, 2, 1);
 
         Json.TreeResult? parsed = JsonSerializer.Deserialize<Json.TreeResult>(
-            json.Trim(), RpfService.JsonSerializerOptions
+            json.Trim(), Output.JsonSerializerOptions
         );
         Assert.NotNull(parsed);
         Assert.True(parsed.Success);
@@ -539,19 +527,15 @@ public sealed class PrintTreeChildrenCancellationTests
     private static TreeOptions MakeOptions() =>
         new()
         {
-            Rpf = new RpfOptions
-            {
-                RpfPath = "/test.rpf",
-                ExePath = "/nonexistent",
-                Gen9 = false,
-                Filters = [],
-                Verbose = false,
-                Json = false,
-                Recursive = false,
-                Threads = 1,
-                SizeFormat = SizeFormat.IEC
-            },
-            Depth = -1
+            RpfPath = "/test.rpf",
+            ExePath = "/nonexistent",
+            Gen9 = false,
+            Filters = [],
+            Verbose = false,
+            Json = false,
+            Recursive = false,
+            SizeFormat = SizeFormat.IEC,
+            Depth = -1,
         };
 
     [Fact]
@@ -625,19 +609,15 @@ public sealed class TreeExecuteTests
     private static TreeOptions MakeOptions(string rpfPath, bool json, int depth = -1) =>
         new()
         {
-            Rpf = new RpfOptions
-            {
-                RpfPath = rpfPath,
-                ExePath = "/nonexistent",
-                Gen9 = false,
-                Filters = [],
-                Verbose = false,
-                Json = json,
-                Recursive = false,
-                Threads = 1,
-                SizeFormat = SizeFormat.IEC
-            },
-            Depth = depth
+            RpfPath = rpfPath,
+            ExePath = "/nonexistent",
+            Gen9 = false,
+            Filters = [],
+            Verbose = false,
+            Json = json,
+            Recursive = false,
+            SizeFormat = SizeFormat.IEC,
+            Depth = depth,
         };
 
     // ── Validation failures ────────────────────────────────────────────
@@ -761,19 +741,15 @@ public sealed class CollectChildrenTests
         string[]? filters = null) =>
         new()
         {
-            Rpf = new RpfOptions
-            {
-                RpfPath = "/test.rpf",
-                ExePath = "/nonexistent",
-                Gen9 = false,
-                Filters = filters ?? [],
-                Verbose = false,
-                Json = false,
-                Recursive = recursive,
-                Threads = 1,
-                SizeFormat = SizeFormat.IEC
-            },
-            Depth = -1
+            RpfPath = "/test.rpf",
+            ExePath = "/nonexistent",
+            Gen9 = false,
+            Filters = filters ?? [],
+            Verbose = false,
+            Json = false,
+            Recursive = recursive,
+            SizeFormat = SizeFormat.IEC,
+            Depth = -1,
         };
 
     private static RpfFile MakeRpf(List<RpfFile>? children = null)
@@ -994,19 +970,15 @@ public sealed class BuildTreeNodeTests
         string[]? filters = null) =>
         new()
         {
-            Rpf = new RpfOptions
-            {
-                RpfPath = "/test.rpf",
-                ExePath = "/nonexistent",
-                Gen9 = false,
-                Filters = filters ?? [],
-                Verbose = false,
-                Json = false,
-                Recursive = false,
-                Threads = 1,
-                SizeFormat = SizeFormat.IEC
-            },
-            Depth = depth
+            RpfPath = "/test.rpf",
+            ExePath = "/nonexistent",
+            Gen9 = false,
+            Filters = filters ?? [],
+            Verbose = false,
+            Json = false,
+            Recursive = false,
+            SizeFormat = SizeFormat.IEC,
+            Depth = depth,
         };
 
     private static RpfFile MakeRpf() => new("test.rpf", "/test.rpf", 0);

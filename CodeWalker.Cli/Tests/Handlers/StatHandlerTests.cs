@@ -16,7 +16,7 @@ namespace CodeWalker.Cli.Tests.Handlers;
 
 public sealed class StatErrorResultTests
 {
-    private static RpfOptions MakeOptions(string rpfPath = "/test.rpf") =>
+    private static StatOptions MakeOptions(string rpfPath = "/test.rpf") =>
         new()
         {
             RpfPath = rpfPath,
@@ -26,7 +26,6 @@ public sealed class StatErrorResultTests
             Verbose = false,
             Json = false,
             Recursive = false,
-            Threads = 1,
             SizeFormat = SizeFormat.IEC
         };
 
@@ -86,7 +85,7 @@ public sealed class StatErrorResultTests
 
 public sealed class CollectStatsTests
 {
-    private static RpfOptions MakeOptions(SizeFormat fmt = SizeFormat.IEC) =>
+    private static StatOptions MakeOptions(SizeFormat fmt = SizeFormat.IEC) =>
         new()
         {
             RpfPath = "/test.rpf",
@@ -96,7 +95,6 @@ public sealed class CollectStatsTests
             Verbose = false,
             Json = false,
             Recursive = false,
-            Threads = 1,
             SizeFormat = fmt
         };
 
@@ -580,7 +578,7 @@ public sealed class PrintJsonStatsTests
             StatHandler.PrintJsonStats(MakeResult());
 
             Json.StatResult? parsed = JsonSerializer.Deserialize<Json.StatResult>(
-                sw.ToString().Trim(), RpfService.JsonSerializerOptions
+                sw.ToString().Trim(), Output.JsonSerializerOptions
             );
             Assert.NotNull(parsed);
         }
@@ -667,7 +665,7 @@ public sealed class PrintJsonStatsTests
             StatHandler.PrintJsonStats(input);
 
             Json.StatResult? parsed = JsonSerializer.Deserialize<Json.StatResult>(
-                sw.ToString().Trim(), RpfService.JsonSerializerOptions
+                sw.ToString().Trim(), Output.JsonSerializerOptions
             );
             Assert.NotNull(parsed);
             Assert.Equal(input.TotalFiles, parsed.TotalFiles);
@@ -688,7 +686,7 @@ public sealed class PrintJsonStatsTests
 [Collection("ConsoleOutput")]
 public sealed class PrintStatsTests
 {
-    private static RpfOptions MakeOptions(SizeFormat fmt = SizeFormat.IEC) =>
+    private static StatOptions MakeOptions(SizeFormat fmt = SizeFormat.IEC) =>
         new()
         {
             RpfPath = "/test.rpf",
@@ -698,11 +696,10 @@ public sealed class PrintStatsTests
             Verbose = false,
             Json = false,
             Recursive = false,
-            Threads = 1,
             SizeFormat = fmt
         };
 
-    private static (string stdout, string stderr) Capture(Json.StatResult result, RpfOptions? options = null)
+    private static (string stdout, string stderr) Capture(Json.StatResult result, StatOptions? options = null)
     {
         options ??= MakeOptions();
         TextWriter origOut = Console.Out;
@@ -824,7 +821,7 @@ public sealed class PrintStatsTests
             TotalSize = 2000,
             TotalSizeFormatted = SizeFormat.SI.ToFormattedString(2000)
         };
-        RpfOptions options = MakeOptions(SizeFormat.SI);
+        StatOptions options = MakeOptions(SizeFormat.SI);
 
         (string stdout, string stderr) = Capture(result, options);
 
@@ -839,7 +836,7 @@ public sealed class PrintStatsTests
 [Collection("ConsoleOutput")]
 public sealed class StatExecuteTests
 {
-    private static RpfOptions MakeOptions(string rpfPath, bool json) =>
+    private static StatOptions MakeOptions(string rpfPath, bool json) =>
         new()
         {
             RpfPath = rpfPath,
@@ -849,7 +846,6 @@ public sealed class StatExecuteTests
             Verbose = false,
             Json = json,
             Recursive = false,
-            Threads = 1,
             SizeFormat = SizeFormat.IEC
         };
 

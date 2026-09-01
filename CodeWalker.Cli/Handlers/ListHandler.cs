@@ -10,24 +10,66 @@ using CodeWalker.GameFiles;
 
 namespace CodeWalker.Cli.Handlers;
 
+internal sealed record ListOptions
+{
+    public required string RpfPath { get; init; }
+    public required string ExePath { get; init; }
+    public required bool Gen9 { get; init; }
+    public required string[] Filters { get; init; }
+    public required bool Verbose { get; init; }
+    public required bool Json { get; init; }
+    public required bool Recursive { get; init; }
+    public required SizeFormat SizeFormat { get; init; }
+}
+
 internal static class ListHandler
 {
     public static Command CreateCommand(CancellationToken cancellationToken = default)
     {
-        RpfCommandOptions rpfOpts = new();
+        Option<FileInfo> rpfOpt = CliOptions.Rpf();
+        Option<DirectoryInfo> exeOpt = CliOptions.Exe();
+        Option<bool> gen9Opt = CliOptions.Gen9();
+        Option<string[]> filterOpt = CliOptions.Filter();
+        Option<bool> recursiveOpt = CliOptions.Recursive();
+        Option<bool> verboseOpt = CliOptions.Verbose();
+        Option<bool> jsonOpt = CliOptions.Json();
+        Option<bool> siOpt = CliOptions.Si();
 
-        Command command = new("list", "List contents of an RPF archive");
-        rpfOpts.AddTo(command, includeThreads: false);
+        Command command = new("list", "List contents of an RPF archive")
+        {
+            rpfOpt,
+            exeOpt,
+            gen9Opt,
+            filterOpt,
+            recursiveOpt,
+            verboseOpt,
+            jsonOpt,
+            siOpt,
+        };
         command.Aliases.Add("l");
 
-        command.SetAction(parseResult => Execute(rpfOpts.Parse(parseResult), cancellationToken));
+        command.SetAction(parseResult =>
+        {
+            ListOptions options = new()
+            {
+                RpfPath = parseResult.GetValue(rpfOpt)?.FullName ?? "",
+                ExePath = parseResult.GetRequiredValue(exeOpt).FullName,
+                Gen9 = parseResult.GetValue(gen9Opt),
+                Filters = Filter.Normalize(parseResult.GetValue(filterOpt)),
+                Verbose = parseResult.GetValue(verboseOpt),
+                Json = parseResult.GetValue(jsonOpt),
+                Recursive = parseResult.GetValue(recursiveOpt),
+                SizeFormat = parseResult.GetValue(siOpt) ? SizeFormat.SI : SizeFormat.IEC,
+            };
+            return Execute(options, cancellationToken);
+        });
 
         return command;
     }
 
-    public static int Execute(RpfOptions options, CancellationToken cancellationToken = default)
+    public static int Execute(ListOptions options, CancellationToken cancellationToken = default)
     {
-        string? initError = RpfService.ValidateAndLoadKeys(
+        string? initError = RpfHelper.ValidateAndLoadKeys(
             options.RpfPath,
             options.ExePath,
             options.Gen9,
@@ -35,7 +77,7 @@ internal static class ListHandler
         );
         if (initError != null)
         {
-            return RpfService.ReportError(
+            return Output.ReportError(
                 initError,
                 options.Json,
                 ErrorResult([], options)
@@ -45,7 +87,7 @@ internal static class ListHandler
         List<string> scanErrors = [];
         try
         {
-            RpfFile rpf = RpfService.OpenRpf(
+            RpfFile rpf = RpfHelper.OpenRpf(
                 options.RpfPath,
                 options.Verbose,
                 options.Json,
@@ -55,7 +97,7 @@ internal static class ListHandler
             if (!options.Json)
                 Console.Error.WriteLine();
 
-            List<(RpfFile rpf, RpfFileEntry entry)> entries = RpfService.CollectFiles(
+            List<(RpfFile rpf, RpfFileEntry entry)> entries = RpfHelper.CollectFiles(
                 rpf,
                 options.Filters,
                 options.Recursive
@@ -77,7 +119,7 @@ internal static class ListHandler
         }
         catch (Exception ex)
         {
-            return RpfService.ReportError(
+            return Output.ReportError(
                 ex.Message,
                 options.Json,
                 ErrorResult([.. scanErrors], options),
@@ -86,7 +128,7 @@ internal static class ListHandler
         }
     }
 
-    internal static Json.ListResult ErrorResult(string[] errorMessages, RpfOptions options) =>
+    internal static Json.ListResult ErrorResult(string[] errorMessages, ListOptions options) =>
         new()
         {
             Success = false,
@@ -103,7 +145,7 @@ internal static class ListHandler
         List<(RpfFile rpf, RpfFileEntry entry)> entries,
         RpfFile rpf,
         List<string> scanErrors,
-        RpfOptions options,
+        ListOptions options,
         CancellationToken cancellationToken = default)
     {
         long totalSize = 0;
@@ -123,7 +165,7 @@ internal static class ListHandler
                     Name = fileEntry.Name,
                     Size = size,
                     SizeFormatted = options.SizeFormat.ToFormattedString(size),
-                    Type = RpfService.GetFileType(fileEntry),
+                    Type = RpfHelper.GetFileType(fileEntry),
                     Extension = ext,
                 }
             );
@@ -143,11 +185,11 @@ internal static class ListHandler
     }
 
     internal static void PrintJsonList(Json.ListResult result) =>
-        Console.WriteLine(JsonSerializer.Serialize(result, RpfService.JsonSerializerOptions));
+        Console.WriteLine(JsonSerializer.Serialize(result, Output.JsonSerializerOptions));
 
     internal static void PrintList(
         Json.ListResult result,
-        RpfOptions options,
+        ListOptions options,
         CancellationToken cancellationToken = default)
     {
         foreach (Json.FileEntry file in result.Files)

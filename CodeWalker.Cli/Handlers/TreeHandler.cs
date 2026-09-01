@@ -15,7 +15,14 @@ namespace CodeWalker.Cli.Handlers;
 [ExcludeFromCodeCoverage]
 internal sealed record TreeOptions
 {
-    public required RpfOptions Rpf { get; init; }
+    public required string RpfPath { get; init; }
+    public required string ExePath { get; init; }
+    public required bool Gen9 { get; init; }
+    public required string[] Filters { get; init; }
+    public required bool Verbose { get; init; }
+    public required bool Json { get; init; }
+    public required bool Recursive { get; init; }
+    public required SizeFormat SizeFormat { get; init; }
     public required int Depth { get; init; }
 }
 
@@ -25,7 +32,14 @@ internal static class TreeHandler
 {
     public static Command CreateCommand(CancellationToken cancellationToken = default)
     {
-        RpfCommandOptions rpfOpts = new();
+        Option<FileInfo> rpfOpt = CliOptions.Rpf();
+        Option<DirectoryInfo> exeOpt = CliOptions.Exe();
+        Option<bool> gen9Opt = CliOptions.Gen9();
+        Option<string[]> filterOpt = CliOptions.Filter();
+        Option<bool> recursiveOpt = CliOptions.Recursive();
+        Option<bool> verboseOpt = CliOptions.Verbose();
+        Option<bool> jsonOpt = CliOptions.Json();
+        Option<bool> siOpt = CliOptions.Si();
         Option<int> depthOption = new("--depth", "-d")
         {
             Description = "Maximum depth to display (default: unlimited)",
@@ -40,17 +54,31 @@ internal static class TreeHandler
 
         Command command = new("tree", "Display a visual tree of the RPF directory structure")
         {
-            depthOption
+            rpfOpt,
+            exeOpt,
+            gen9Opt,
+            filterOpt,
+            recursiveOpt,
+            verboseOpt,
+            jsonOpt,
+            siOpt,
+            depthOption,
         };
-        rpfOpts.AddTo(command, includeThreads: false);
         command.Aliases.Add("t");
 
         command.SetAction(parseResult =>
         {
             TreeOptions options = new()
             {
-                Rpf = rpfOpts.Parse(parseResult),
-                Depth = parseResult.GetValue(depthOption)
+                RpfPath = parseResult.GetValue(rpfOpt)?.FullName ?? "",
+                ExePath = parseResult.GetRequiredValue(exeOpt).FullName,
+                Gen9 = parseResult.GetValue(gen9Opt),
+                Filters = Filter.Normalize(parseResult.GetValue(filterOpt)),
+                Verbose = parseResult.GetValue(verboseOpt),
+                Json = parseResult.GetValue(jsonOpt),
+                Recursive = parseResult.GetValue(recursiveOpt),
+                SizeFormat = parseResult.GetValue(siOpt) ? SizeFormat.SI : SizeFormat.IEC,
+                Depth = parseResult.GetValue(depthOption),
             };
             return Execute(options, cancellationToken);
         });
@@ -60,17 +88,17 @@ internal static class TreeHandler
 
     public static int Execute(TreeOptions options, CancellationToken cancellationToken = default)
     {
-        string? initError = RpfService.ValidateAndLoadKeys(
-            options.Rpf.RpfPath,
-            options.Rpf.ExePath,
-            options.Rpf.Gen9,
-            options.Rpf.Json
+        string? initError = RpfHelper.ValidateAndLoadKeys(
+            options.RpfPath,
+            options.ExePath,
+            options.Gen9,
+            options.Json
         );
         if (initError != null)
         {
-            return RpfService.ReportError(
+            return Output.ReportError(
                 initError,
-                options.Rpf.Json,
+                options.Json,
                 ErrorResult([], options)
             );
         }
@@ -78,10 +106,10 @@ internal static class TreeHandler
         List<string> scanErrors = [];
         try
         {
-            RpfFile rpf = RpfService.OpenRpf(
-                options.Rpf.RpfPath,
-                options.Rpf.Verbose,
-                options.Rpf.Json,
+            RpfFile rpf = RpfHelper.OpenRpf(
+                options.RpfPath,
+                options.Verbose,
+                options.Json,
                 scanErrors
             );
 
@@ -97,9 +125,9 @@ internal static class TreeHandler
                 ref totalDirs,
                 cancellationToken
             ) with
-            { Name = Path.GetFileName(options.Rpf.RpfPath) + "/" };
+            { Name = Path.GetFileName(options.RpfPath) + "/" };
 
-            if (options.Rpf.Json)
+            if (options.Json)
                 PrintJsonTree(rootNode, totalFiles, totalDirs, scanErrors, options);
             else
                 PrintTree(rootNode, totalFiles, totalDirs, options, cancellationToken);
@@ -113,11 +141,11 @@ internal static class TreeHandler
         }
         catch (Exception ex)
         {
-            return RpfService.ReportError(
+            return Output.ReportError(
                 ex.Message,
-                options.Rpf.Json,
+                options.Json,
                 ErrorResult([.. scanErrors], options),
-                options.Rpf.Verbose ? ex.StackTrace : null
+                options.Verbose ? ex.StackTrace : null
             );
         }
     }
@@ -126,7 +154,7 @@ internal static class TreeHandler
         new()
         {
             Success = false,
-            RpfFile = options.Rpf.RpfPath,
+            RpfFile = options.RpfPath,
             TotalFiles = 0,
             TotalDirs = 0,
             Root = null,
@@ -146,7 +174,7 @@ internal static class TreeHandler
         }
 
         // Add nested RPFs as expandable directories if recursive
-        if (options.Rpf.Recursive && dir.Files != null && rpf.Children != null)
+        if (options.Recursive && dir.Files != null && rpf.Children != null)
         {
             foreach (RpfFileEntry fileEntry in dir.Files)
             {
@@ -171,7 +199,7 @@ internal static class TreeHandler
         items.AddRange(dir.Files
             .Where(fe =>
                 !expandedRpfs.Contains(fe.Name)
-                && Filter.Matches(fe.Path, options.Rpf.Filters)
+                && Filter.Matches(fe.Path, options.Filters)
             )
             .Select(fe => new ChildItem(fe.Name, false, fe, null)));
 
@@ -211,7 +239,7 @@ internal static class TreeHandler
                     );
 
                     // Prune empty directories when filters are active
-                    if (options.Rpf.Filters.Length > 0
+                    if (options.Filters.Length > 0
                         && (dirNode.Children == null || dirNode.Children.Count == 0))
                     {
                         continue;
@@ -225,8 +253,8 @@ internal static class TreeHandler
                         {
                             Name = item.Name,
                             Size = archiveSize,
-                            SizeFormatted = options.Rpf.SizeFormat.ToFormattedString(archiveSize),
-                            FileType = RpfService.GetFileType(item.ArchiveEntry)
+                            SizeFormatted = options.SizeFormat.ToFormattedString(archiveSize),
+                            FileType = RpfHelper.GetFileType(item.ArchiveEntry)
                         });
                     }
                     else
@@ -245,8 +273,8 @@ internal static class TreeHandler
                     if (item.Entry is RpfFileEntry fileEntry)
                     {
                         size = fileEntry.GetFileSize();
-                        sizeFormatted = options.Rpf.SizeFormat.ToFormattedString(size.Value);
-                        fileType = RpfService.GetFileType(fileEntry);
+                        sizeFormatted = options.SizeFormat.ToFormattedString(size.Value);
+                        fileType = RpfHelper.GetFileType(fileEntry);
                         if (fileEntry is RpfResourceFileEntry rfe)
                             version = rfe.Version;
                     }
@@ -309,13 +337,13 @@ internal static class TreeHandler
 
             if (child.Type == "dir")
             {
-                if (options.Rpf.Verbose && child.SizeFormatted != null)
+                if (options.Verbose && child.SizeFormatted != null)
                     Console.WriteLine($"{prefix}{connector}{child.Name}/  <{child.SizeFormatted}, {child.FileType}>");
                 else
                     Console.WriteLine($"{prefix}{connector}{child.Name}/");
                 PrintTreeChildren(child, childPrefix, options, cancellationToken);
             }
-            else if (options.Rpf.Verbose && child.SizeFormatted != null)
+            else if (options.Verbose && child.SizeFormatted != null)
             {
                 string versionStr = child.Version != null ? $" v{child.Version}" : "";
                 Console.WriteLine(
@@ -339,7 +367,7 @@ internal static class TreeHandler
         Json.TreeResult result = new()
         {
             Success = scanErrors.Count == 0,
-            RpfFile = options.Rpf.RpfPath,
+            RpfFile = options.RpfPath,
             TotalFiles = totalFiles,
             TotalDirs = totalDirs,
             Root = root,
@@ -347,7 +375,7 @@ internal static class TreeHandler
         };
 
         Console.WriteLine(
-            JsonSerializer.Serialize(result, RpfService.JsonSerializerOptions)
+            JsonSerializer.Serialize(result, Output.JsonSerializerOptions)
         );
     }
 }

@@ -17,7 +17,11 @@ internal sealed record Gen9Options
 {
     public required string InputPath { get; init; }
     public required string OutputPath { get; init; }
-    public required CommonOptions Common { get; init; }
+    public required string ExePath { get; init; }
+    public required bool Verbose { get; init; }
+    public required bool Json { get; init; }
+    public required SizeFormat SizeFormat { get; init; }
+    public required int Threads { get; init; }
     public required bool NoRecurse { get; init; }
     public required bool NoOverwrite { get; init; }
     public required bool SkipUnconverted { get; init; }
@@ -28,7 +32,12 @@ internal static class Gen9Handler
 {
     public static Command CreateCommand(CancellationToken cancellationToken = default)
     {
-        CommonCommandOptions commonOpts = new();
+        Option<DirectoryInfo> exeOpt = CliOptions.Exe();
+        Option<bool> verboseOpt = CliOptions.Verbose();
+        Option<bool> jsonOpt = CliOptions.Json();
+        Option<bool> siOpt = CliOptions.Si();
+        Option<int> threadsOpt = CliOptions.Threads();
+
         Option<DirectoryInfo> inputOption = new("--input", "-i")
         {
             Description = "Input folder containing files to convert",
@@ -61,6 +70,7 @@ internal static class Gen9Handler
             Description = "Show progress bar",
         };
 
+
         Command command = new("gen9", "Convert files to enhanced (Gen9) format")
         {
             inputOption,
@@ -68,9 +78,14 @@ internal static class Gen9Handler
             noRecurseOption,
             noOverwriteOption,
             skipUnconvertedOption,
+
             progressOption,
+            exeOpt,
+            verboseOpt,
+            jsonOpt,
+            siOpt,
+            threadsOpt
         };
-        commonOpts.AddTo(command);
         command.Aliases.Add("g");
 
         command.SetAction(parseResult =>
@@ -79,7 +94,11 @@ internal static class Gen9Handler
             {
                 InputPath = parseResult.GetRequiredValue(inputOption).FullName,
                 OutputPath = parseResult.GetRequiredValue(outputOption).FullName,
-                Common = commonOpts.Parse(parseResult),
+                ExePath = parseResult.GetRequiredValue(exeOpt).FullName,
+                Verbose = parseResult.GetValue(verboseOpt),
+                Json = parseResult.GetValue(jsonOpt),
+                SizeFormat = parseResult.GetValue(siOpt) ? SizeFormat.SI : SizeFormat.IEC,
+                Threads = parseResult.GetValue(threadsOpt),
                 NoRecurse = parseResult.GetValue(noRecurseOption),
                 NoOverwrite = parseResult.GetValue(noOverwriteOption),
                 SkipUnconverted = parseResult.GetValue(skipUnconvertedOption),
@@ -110,9 +129,9 @@ internal static class Gen9Handler
 
         if (!Directory.Exists(options.InputPath))
         {
-            return RpfService.ReportError(
+            return Output.ReportError(
                 $"Input folder not found: {options.InputPath}",
-                options.Common.Json,
+                options.Json,
                 ErrorResult([])
             );
         }
@@ -125,21 +144,21 @@ internal static class Gen9Handler
             )
         )
         {
-            return RpfService.ReportError(
+            return Output.ReportError(
                 "Input folder and Output folder must be different.",
-                options.Common.Json,
+                options.Json,
                 ErrorResult([])
             );
         }
 
-        string? exeError = RpfService.ValidateExeAndLoadKeys(
-            options.Common.ExePath,
+        string? exeError = RpfHelper.ValidateExeAndLoadKeys(
+            options.ExePath,
             true,
-            options.Common.Json
+            options.Json
         );
         if (exeError != null)
         {
-            return RpfService.ReportError(exeError, options.Common.Json, ErrorResult([]));
+            return Output.ReportError(exeError, options.Json, ErrorResult([]));
         }
 
         try
@@ -174,7 +193,7 @@ internal static class Gen9Handler
 
                 int totalFileCount = filePaths.Count + rpfPaths.Count;
 
-                if (!options.Common.Json)
+                if (!options.Json)
                 {
                     Console.Error.WriteLine($"Found {totalFileCount} files in {options.InputPath}");
                 }
@@ -190,7 +209,7 @@ internal static class Gen9Handler
                 using (
                     ProgressBar progress = new(
                         totalFileCount,
-                        options.Progress && !options.Common.Json
+                        options.Progress && !options.Json
                     )
                 )
                 {
@@ -205,7 +224,7 @@ internal static class Gen9Handler
                     _ = Parallel.For(
                         0,
                         filePaths.Count,
-                        new ParallelOptions { MaxDegreeOfParallelism = options.Common.Threads, CancellationToken = cancellationToken },
+                        new ParallelOptions { MaxDegreeOfParallelism = options.Threads, CancellationToken = cancellationToken },
                         i =>
                         {
                             string path = filePaths[i];
@@ -225,7 +244,7 @@ internal static class Gen9Handler
                                         },
                                         null
                                     );
-                                    if (options.Common.Verbose && !options.Common.Json)
+                                    if (options.Verbose && !options.Json)
                                     {
                                         lock (consoleLock)
                                         {
@@ -251,7 +270,7 @@ internal static class Gen9Handler
                                     ext,
                                     msg =>
                                     {
-                                        if (options.Common.Verbose && !options.Common.Json)
+                                        if (options.Verbose && !options.Json)
                                         {
                                             lock (consoleLock)
                                             {
@@ -314,7 +333,7 @@ internal static class Gen9Handler
                                     },
                                     errorMsg
                                 );
-                                if (!options.Common.Json)
+                                if (!options.Json)
                                 {
                                     lock (consoleLock)
                                     {
@@ -369,7 +388,7 @@ internal static class Gen9Handler
                                         Message = "Output file already exists",
                                     }
                                 );
-                                if (options.Common.Verbose && !options.Common.Json)
+                                if (options.Verbose && !options.Json)
                                 {
                                     Console.Error.WriteLine($"{relPath} - skipped (exists)");
                                 }
@@ -409,7 +428,7 @@ internal static class Gen9Handler
                                     Message = ex.Message,
                                 }
                             );
-                            if (!options.Common.Json)
+                            if (!options.Json)
                             {
                                 Console.Error.WriteLine($"Error: {errorMsg}");
                             }
@@ -432,10 +451,10 @@ internal static class Gen9Handler
                     ErrorMessages = [.. errorMessages],
                 };
 
-                if (options.Common.Json)
+                if (options.Json)
                 {
                     Console.WriteLine(
-                        JsonSerializer.Serialize(result, RpfService.JsonSerializerOptions)
+                        JsonSerializer.Serialize(result, Output.JsonSerializerOptions)
                     );
                 }
                 else
@@ -456,11 +475,11 @@ internal static class Gen9Handler
         catch (OperationCanceledException) { throw; }
         catch (Exception ex)
         {
-            return RpfService.ReportError(
+            return Output.ReportError(
                 ex.Message,
-                options.Common.Json,
+                options.Json,
                 ErrorResult([]),
-                options.Common.Verbose ? ex.StackTrace : null
+                options.Verbose ? ex.StackTrace : null
             );
         }
     }
@@ -476,7 +495,7 @@ internal static class Gen9Handler
         ref int errors
     )
     {
-        if (options.Common.Verbose && !options.Common.Json)
+        if (options.Verbose && !options.Json)
         {
             Console.Error.WriteLine($"{relPath} - Converting RPF contents...");
         }
@@ -487,12 +506,12 @@ internal static class Gen9Handler
         rpf.ScanStructure(
             status =>
             {
-                if (options.Common.Verbose && !options.Common.Json)
+                if (options.Verbose && !options.Json)
                     Console.Error.WriteLine(status);
             },
             error =>
             {
-                if (!options.Common.Json)
+                if (!options.Json)
                     Console.Error.WriteLine($"Error: {error}");
                 errorMessages.Add(error);
             }
@@ -563,7 +582,7 @@ internal static class Gen9Handler
                     type,
                     msg =>
                     {
-                        if (options.Common.Verbose && !options.Common.Json)
+                        if (options.Verbose && !options.Json)
                             Console.Error.WriteLine(msg);
                     },
                     rfe.Path,
@@ -595,7 +614,7 @@ internal static class Gen9Handler
 
             if (changed)
             {
-                if (options.Common.Verbose && !options.Common.Json)
+                if (options.Verbose && !options.Json)
                 {
                     Console.Error.WriteLine($"{currentRpf.Path} - Defragmenting");
                 }

@@ -58,7 +58,7 @@ public sealed class InspectHandlerTests
 [Collection("ConsoleOutput")]
 public sealed class InspectHandlerExecuteTests
 {
-    private static RpfOptions MakeOptions(string rpfPath, bool json) =>
+    private static InspectOptions MakeOptions(string rpfPath, bool json, string filePath = "some/file.ydr") =>
         new()
         {
             RpfPath = rpfPath,
@@ -68,8 +68,8 @@ public sealed class InspectHandlerExecuteTests
             Verbose = false,
             Json = json,
             Recursive = false,
-            Threads = 1,
             SizeFormat = SizeFormat.IEC,
+            FilePath = filePath,
         };
 
     [Fact]
@@ -83,7 +83,7 @@ public sealed class InspectHandlerExecuteTests
             Console.SetOut(new StringWriter());
             Console.SetError(stderr);
 
-            int exitCode = InspectHandler.Execute(MakeOptions("/nonexistent/test.rpf", json: false), "some/file.ydr", TestContext.Current.CancellationToken);
+            int exitCode = InspectHandler.Execute(MakeOptions("/nonexistent/test.rpf", json: false), TestContext.Current.CancellationToken);
 
             Assert.Equal(1, exitCode);
             Assert.Contains("Error:", stderr.ToString());
@@ -106,7 +106,7 @@ public sealed class InspectHandlerExecuteTests
             Console.SetOut(stdout);
             Console.SetError(new StringWriter());
 
-            int exitCode = InspectHandler.Execute(MakeOptions("/nonexistent/test.rpf", json: true), "some/file.ydr", TestContext.Current.CancellationToken);
+            int exitCode = InspectHandler.Execute(MakeOptions("/nonexistent/test.rpf", json: true), TestContext.Current.CancellationToken);
 
             Assert.Equal(1, exitCode);
             string output = stdout.ToString();
@@ -129,7 +129,7 @@ public sealed class InspectHandlerExecuteTests
             StringWriter stdout = new();
             Console.SetOut(stdout);
 
-            _ = InspectHandler.Execute(MakeOptions("/nonexistent/test.rpf", json: true), "some/file.ydr", TestContext.Current.CancellationToken);
+            _ = InspectHandler.Execute(MakeOptions("/nonexistent/test.rpf", json: true), TestContext.Current.CancellationToken);
 
             string output = stdout.ToString();
             Assert.Contains("\"rpfFile\":", output);

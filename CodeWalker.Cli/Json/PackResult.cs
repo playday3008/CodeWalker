@@ -1,6 +1,8 @@
 using System.Diagnostics.CodeAnalysis;
 using System.Text.Json.Serialization;
 
+using CodeWalker.Cli.Helpers;
+
 namespace CodeWalker.Cli.Json;
 
 [ExcludeFromCodeCoverage]

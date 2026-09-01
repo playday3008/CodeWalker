@@ -13,11 +13,32 @@ using SharpDX;
 
 namespace CodeWalker.Cli.Handlers;
 
+internal sealed record InspectOptions
+{
+    public required string RpfPath { get; init; }
+    public required string ExePath { get; init; }
+    public required bool Gen9 { get; init; }
+    public required string[] Filters { get; init; }
+    public required bool Verbose { get; init; }
+    public required bool Json { get; init; }
+    public required bool Recursive { get; init; }
+    public required SizeFormat SizeFormat { get; init; }
+    public required string FilePath { get; init; }
+}
+
 internal static class InspectHandler
 {
     public static Command CreateCommand(CancellationToken cancellationToken = default)
     {
-        RpfCommandOptions rpfOpts = new();
+        Option<FileInfo> rpfOpt = CliOptions.Rpf();
+        Option<DirectoryInfo> exeOpt = CliOptions.Exe();
+        Option<bool> gen9Opt = CliOptions.Gen9();
+        Option<string[]> filterOpt = CliOptions.Filter();
+        Option<bool> recursiveOpt = CliOptions.Recursive();
+        Option<bool> verboseOpt = CliOptions.Verbose();
+        Option<bool> jsonOpt = CliOptions.Json();
+        Option<bool> siOpt = CliOptions.Si();
+
         Argument<string> pathArg = new("path")
         {
             Description = "Path of the file within the RPF archive",
@@ -29,18 +50,38 @@ internal static class InspectHandler
         )
         {
             pathArg,
+            rpfOpt,
+            exeOpt,
+            gen9Opt,
+            filterOpt,
+            recursiveOpt,
+            verboseOpt,
+            jsonOpt,
+            siOpt,
         };
-        rpfOpts.AddTo(command);
         command.Aliases.Add("i");
 
         command.SetAction(parseResult =>
-            Execute(rpfOpts.Parse(parseResult), parseResult.GetRequiredValue(pathArg), cancellationToken)
-        );
+        {
+            InspectOptions options = new()
+            {
+                RpfPath = parseResult.GetRequiredValue(rpfOpt).FullName,
+                ExePath = parseResult.GetRequiredValue(exeOpt).FullName,
+                Gen9 = parseResult.GetValue(gen9Opt),
+                Filters = Filter.Normalize(parseResult.GetValue(filterOpt)),
+                Verbose = parseResult.GetValue(verboseOpt),
+                Json = parseResult.GetValue(jsonOpt),
+                Recursive = parseResult.GetValue(recursiveOpt),
+                SizeFormat = parseResult.GetValue(siOpt) ? SizeFormat.SI : SizeFormat.IEC,
+                FilePath = parseResult.GetRequiredValue(pathArg),
+            };
+            return Execute(options, cancellationToken);
+        });
 
         return command;
     }
 
-    public static int Execute(RpfOptions options, string filePath, CancellationToken cancellationToken = default)
+    public static int Execute(InspectOptions options, CancellationToken cancellationToken = default)
     {
         cancellationToken.ThrowIfCancellationRequested();
 
@@ -49,7 +90,7 @@ internal static class InspectHandler
             {
                 Success = false,
                 RpfFile = options.RpfPath,
-                Path = filePath,
+                Path = options.FilePath,
                 Name = "",
                 Size = 0,
                 SizeFormatted = "0 B",
@@ -60,7 +101,7 @@ internal static class InspectHandler
                 ErrorMessages = errorMessages,
             };
 
-        string? initError = RpfService.ValidateAndLoadKeys(
+        string? initError = RpfHelper.ValidateAndLoadKeys(
             options.RpfPath,
             options.ExePath,
             options.Gen9,
@@ -68,13 +109,13 @@ internal static class InspectHandler
         );
         if (initError != null)
         {
-            return RpfService.ReportError(initError, options.Json, ErrorResult([]));
+            return Output.ReportError(initError, options.Json, ErrorResult([]));
         }
 
         List<string> scanErrors = [];
         try
         {
-            RpfFile rpf = RpfService.OpenRpf(
+            RpfFile rpf = RpfHelper.OpenRpf(
                 options.RpfPath,
                 options.Verbose,
                 options.Json,
@@ -87,13 +128,13 @@ internal static class InspectHandler
             }
 
             // Find entry by normalized path
-            string normalizedPath = filePath.Replace('\\', '/');
+            string normalizedPath = options.FilePath.Replace('\\', '/');
             RpfFileEntry? found = FindEntry(rpf, normalizedPath, options.Recursive);
 
             if (found == null)
             {
-                return RpfService.ReportError(
-                    $"File not found in archive: {filePath}",
+                return Output.ReportError(
+                    $"File not found in archive: {options.FilePath}",
                     options.Json,
                     ErrorResult([.. scanErrors])
                 );
@@ -101,7 +142,7 @@ internal static class InspectHandler
 
             long size = found.GetFileSize();
             string ext = Path.GetExtension(found.Name).ToLowerInvariant();
-            string fileType = RpfService.GetFileType(found);
+            string fileType = RpfHelper.GetFileType(found);
 
             // Extract type-specific metadata
             int? resourceVersion = null;
@@ -146,7 +187,7 @@ internal static class InspectHandler
             if (options.Json)
             {
                 Console.WriteLine(
-                    JsonSerializer.Serialize(result, RpfService.JsonSerializerOptions)
+                    JsonSerializer.Serialize(result, Output.JsonSerializerOptions)
                 );
             }
             else
@@ -159,7 +200,7 @@ internal static class InspectHandler
         catch (OperationCanceledException) { throw; }
         catch (Exception ex)
         {
-            return RpfService.ReportError(
+            return Output.ReportError(
                 ex.Message,
                 options.Json,
                 ErrorResult([.. scanErrors]),
@@ -458,7 +499,7 @@ internal static class InspectHandler
     internal static string FormatVector3(Vector3 v) =>
         $"{v.X:F2}, {v.Y:F2}, {v.Z:F2}";
 
-    private static void PrintTextResult(Json.InspectResult result, RpfOptions options)
+    private static void PrintTextResult(Json.InspectResult result, InspectOptions options)
     {
         Console.WriteLine($"Path:       {result.Path}");
         Console.WriteLine($"Name:       {result.Name}");

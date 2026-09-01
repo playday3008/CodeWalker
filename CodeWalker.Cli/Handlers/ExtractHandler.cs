@@ -13,7 +13,15 @@ namespace CodeWalker.Cli.Handlers;
 
 internal sealed record ExtractOptions
 {
-    public required RpfOptions Rpf { get; init; }
+    public required string RpfPath { get; init; }
+    public required string ExePath { get; init; }
+    public required bool Gen9 { get; init; }
+    public required string[] Filters { get; init; }
+    public required bool Verbose { get; init; }
+    public required bool Json { get; init; }
+    public required bool Recursive { get; init; }
+    public required int Threads { get; init; }
+    public required SizeFormat SizeFormat { get; init; }
     public required string? OutputPath { get; init; }
     public required bool DryRun { get; init; }
     public required bool NoOverwrite { get; init; }
@@ -24,43 +32,51 @@ internal static class ExtractHandler
 {
     public static Command CreateCommand(CancellationToken cancellationToken = default)
     {
-        RpfCommandOptions rpfOpts = new();
-        Option<DirectoryInfo> outputOption = new("--output", "-o")
-        {
-            Description = "Output directory",
-            DefaultValueFactory = _ => new DirectoryInfo(Directory.GetCurrentDirectory()),
-        };
-
-        Option<bool> dryRunOption = new("--dry-run", "-n")
-        {
-            Description = "Show what would be extracted without actually extracting",
-        };
-
-        Option<bool> noOverwriteOption = new("--no-overwrite")
-        {
-            Description = "Skip existing files instead of overwriting",
-        };
-
-        Option<bool> progressOption = new("--progress", "-P")
-        {
-            Description = "Show progress bar during extraction",
-        };
+        Option<FileInfo> rpfOpt = CliOptions.Rpf();
+        Option<DirectoryInfo> exeOpt = CliOptions.Exe();
+        Option<bool> gen9Opt = CliOptions.Gen9();
+        Option<string[]> filterOpt = CliOptions.Filter();
+        Option<bool> recursiveOpt = CliOptions.Recursive();
+        Option<bool> verboseOpt = CliOptions.Verbose();
+        Option<bool> jsonOpt = CliOptions.Json();
+        Option<bool> siOpt = CliOptions.Si();
+        Option<int> threadsOpt = CliOptions.Threads();
+        Option<DirectoryInfo> outputOption = CliOptions.OutputDir();
+        Option<bool> dryRunOption = CliOptions.DryRun();
+        Option<bool> noOverwriteOption = CliOptions.NoOverwrite();
+        Option<bool> progressOption = CliOptions.Progress();
 
         Command command = new("extract", "Extract files from an RPF archive")
         {
+            rpfOpt,
+            exeOpt,
+            gen9Opt,
+            filterOpt,
+            recursiveOpt,
+            verboseOpt,
+            jsonOpt,
+            siOpt,
+            threadsOpt,
             outputOption,
             dryRunOption,
             noOverwriteOption,
             progressOption,
         };
-        rpfOpts.AddTo(command);
         command.Aliases.Add("x");
 
         command.SetAction(parseResult =>
         {
             ExtractOptions options = new()
             {
-                Rpf = rpfOpts.Parse(parseResult),
+                RpfPath = parseResult.GetValue(rpfOpt)?.FullName ?? "",
+                ExePath = parseResult.GetRequiredValue(exeOpt).FullName,
+                Gen9 = parseResult.GetValue(gen9Opt),
+                Filters = Filter.Normalize(parseResult.GetValue(filterOpt)),
+                Verbose = parseResult.GetValue(verboseOpt),
+                Json = parseResult.GetValue(jsonOpt),
+                Recursive = parseResult.GetValue(recursiveOpt),
+                Threads = parseResult.GetValue(threadsOpt),
+                SizeFormat = parseResult.GetValue(siOpt) ? SizeFormat.SI : SizeFormat.IEC,
                 OutputPath = parseResult.GetValue(outputOption)?.FullName,
                 DryRun = parseResult.GetValue(dryRunOption),
                 NoOverwrite = parseResult.GetValue(noOverwriteOption),
@@ -78,7 +94,7 @@ internal static class ExtractHandler
             new()
             {
                 Success = false,
-                RpfFile = options.Rpf.RpfPath,
+                RpfFile = options.RpfPath,
                 OutputDir = options.OutputPath ?? Directory.GetCurrentDirectory(),
                 TotalFiles = 0,
                 Extracted = 0,
@@ -89,28 +105,28 @@ internal static class ExtractHandler
                 ErrorMessages = errorMessages,
             };
 
-        string? initError = RpfService.ValidateAndLoadKeys(
-            options.Rpf.RpfPath,
-            options.Rpf.ExePath,
-            options.Rpf.Gen9,
-            options.Rpf.Json
+        string? initError = RpfHelper.ValidateAndLoadKeys(
+            options.RpfPath,
+            options.ExePath,
+            options.Gen9,
+            options.Json
         );
         if (initError != null)
         {
-            return RpfService.ReportError(initError, options.Rpf.Json, ErrorResult([]));
+            return Output.ReportError(initError, options.Json, ErrorResult([]));
         }
 
         List<string> scanErrors = [];
         try
         {
-            RpfFile rpf = RpfService.OpenRpf(
-                options.Rpf.RpfPath,
-                options.Rpf.Verbose,
-                options.Rpf.Json,
+            RpfFile rpf = RpfHelper.OpenRpf(
+                options.RpfPath,
+                options.Verbose,
+                options.Json,
                 scanErrors
             );
 
-            if (!options.Rpf.Json && options.DryRun)
+            if (!options.Json && options.DryRun)
             {
                 Console.Error.WriteLine("Dry run mode - no files will be extracted");
             }
@@ -123,14 +139,14 @@ internal static class ExtractHandler
             }
 
             // Collect files first for progress bar
-            List<(RpfFile rpf, RpfFileEntry entry)> filesToExtract = RpfService.CollectFiles(
+            List<(RpfFile rpf, RpfFileEntry entry)> filesToExtract = RpfHelper.CollectFiles(
                 rpf,
-                options.Rpf.Filters,
-                options.Rpf.Recursive
+                options.Filters,
+                options.Recursive
             );
 
             // Count non-RPF files that were excluded by filters
-            int totalNonRpfFiles = RpfService.CountNonRpfFiles(rpf, options.Rpf.Recursive);
+            int totalNonRpfFiles = RpfHelper.CountNonRpfFiles(rpf, options.Recursive);
             int skipped = totalNonRpfFiles - filesToExtract.Count;
             int overwriteSkipped = 0;
 
@@ -143,14 +159,14 @@ internal static class ExtractHandler
             using (
                 ProgressBar progress = new(
                     filesToExtract.Count,
-                    options.Progress && !options.Rpf.Json
+                    options.Progress && !options.Json
                 )
             )
             {
                 _ = Parallel.For(
                     0,
                     filesToExtract.Count,
-                    new ParallelOptions { MaxDegreeOfParallelism = options.Rpf.Threads, CancellationToken = cancellationToken },
+                    new ParallelOptions { MaxDegreeOfParallelism = options.Threads, CancellationToken = cancellationToken },
                     i =>
                     {
                         (RpfFile sourceRpf, RpfFileEntry fileEntry) = filesToExtract[i];
@@ -171,14 +187,14 @@ internal static class ExtractHandler
                                 Path = fileEntry.Path,
                                 Name = fileEntry.Name,
                                 Size = size,
-                                SizeFormatted = options.Rpf.SizeFormat.ToFormattedString(size),
-                                Type = RpfService.GetFileType(fileEntry),
+                                SizeFormatted = options.SizeFormat.ToFormattedString(size),
+                                Type = RpfHelper.GetFileType(fileEntry),
                                 Extension = ext,
                             };
 
                             if (options.DryRun)
                             {
-                                if (options.Rpf.Verbose && !options.Rpf.Json)
+                                if (options.Verbose && !options.Json)
                                 {
                                     lock (consoleLock)
                                     {
@@ -190,7 +206,7 @@ internal static class ExtractHandler
                             else if (options.NoOverwrite && File.Exists(outputPath))
                             {
                                 _ = Interlocked.Increment(ref overwriteSkipped);
-                                if (options.Rpf.Verbose && !options.Rpf.Json && !options.Progress)
+                                if (options.Verbose && !options.Json && !options.Progress)
                                 {
                                     lock (consoleLock)
                                     {
@@ -208,7 +224,7 @@ internal static class ExtractHandler
                                     _ = Directory.CreateDirectory(fileDir);
                                 }
 
-                                if (options.Rpf.Verbose && !options.Rpf.Json && !options.Progress)
+                                if (options.Verbose && !options.Json && !options.Progress)
                                 {
                                     lock (consoleLock)
                                     {
@@ -227,7 +243,7 @@ internal static class ExtractHandler
                                 }
                                 else
                                 {
-                                    if (options.Rpf.Verbose && !options.Rpf.Json)
+                                    if (options.Verbose && !options.Json)
                                     {
                                         lock (consoleLock)
                                         {
@@ -247,7 +263,7 @@ internal static class ExtractHandler
                         }
                         catch (Exception ex)
                         {
-                            if (!options.Rpf.Json)
+                            if (!options.Json)
                             {
                                 lock (consoleLock)
                                 {
@@ -292,7 +308,7 @@ internal static class ExtractHandler
             Json.ExtractResult result = new()
             {
                 Success = errors == 0 && scanErrors.Count == 0,
-                RpfFile = options.Rpf.RpfPath,
+                RpfFile = options.RpfPath,
                 OutputDir = options.OutputPath ?? Directory.GetCurrentDirectory(),
                 TotalFiles = totalNonRpfFiles,
                 Extracted = extracted,
@@ -303,10 +319,10 @@ internal static class ExtractHandler
                 ErrorMessages = [.. errorMessages],
             };
 
-            if (options.Rpf.Json)
+            if (options.Json)
             {
                 Console.WriteLine(
-                    JsonSerializer.Serialize(result, RpfService.JsonSerializerOptions)
+                    JsonSerializer.Serialize(result, Output.JsonSerializerOptions)
                 );
             }
             else
@@ -323,11 +339,11 @@ internal static class ExtractHandler
         catch (OperationCanceledException) { throw; }
         catch (Exception ex)
         {
-            return RpfService.ReportError(
+            return Output.ReportError(
                 ex.Message,
-                options.Rpf.Json,
+                options.Json,
                 ErrorResult([.. scanErrors]),
-                options.Rpf.Verbose ? ex.StackTrace : null
+                options.Verbose ? ex.StackTrace : null
             );
         }
     }

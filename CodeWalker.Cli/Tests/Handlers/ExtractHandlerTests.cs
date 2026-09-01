@@ -14,18 +14,15 @@ public sealed class ExtractHandlerTests
     private static ExtractOptions MakeOptions(string rpfPath, bool json, bool dryRun = false) =>
         new()
         {
-            Rpf = new RpfOptions
-            {
-                RpfPath = rpfPath,
-                ExePath = "/nonexistent",
-                Gen9 = false,
-                Filters = [],
-                Verbose = false,
-                Json = json,
-                Recursive = false,
-                Threads = 1,
-                SizeFormat = SizeFormat.IEC,
-            },
+            RpfPath = rpfPath,
+            ExePath = "/nonexistent",
+            Gen9 = false,
+            Filters = [],
+            Verbose = false,
+            Json = json,
+            Recursive = false,
+            Threads = 1,
+            SizeFormat = SizeFormat.IEC,
             OutputPath = "/tmp/cw_extract_out",
             DryRun = dryRun,
             NoOverwrite = false,

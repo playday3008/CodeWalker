@@ -4,6 +4,7 @@ using System.Text.Json;
 using System.Threading;
 
 using CodeWalker.Cli.Handlers;
+using CodeWalker.Cli.Helpers;
 using CodeWalker.GameFiles;
 
 using Xunit;
@@ -170,7 +171,7 @@ public sealed class PrintJsonHashesTests
     {
         Json.HashResult? result = JsonSerializer.Deserialize<Json.HashResult>(
             Capture(["test"], JenkHashInputEncoding.UTF8).Trim(),
-            RpfService.JsonSerializerOptions
+            Output.JsonSerializerOptions
         );
         Assert.NotNull(result);
         Assert.True(result.Success);
@@ -184,7 +185,7 @@ public sealed class PrintJsonHashesTests
         JenkHash expected = new("test", JenkHashInputEncoding.UTF8);
         Json.HashResult? result = JsonSerializer.Deserialize<Json.HashResult>(
             Capture(["test"], JenkHashInputEncoding.UTF8).Trim(),
-            RpfService.JsonSerializerOptions
+            Output.JsonSerializerOptions
         );
         Assert.NotNull(result);
 
@@ -201,7 +202,7 @@ public sealed class PrintJsonHashesTests
     {
         Json.HashResult? result = JsonSerializer.Deserialize<Json.HashResult>(
             Capture(["hello"], JenkHashInputEncoding.ASCII).Trim(),
-            RpfService.JsonSerializerOptions
+            Output.JsonSerializerOptions
         );
         Assert.NotNull(result);
         Assert.Equal("ASCII", result.Hashes[0].Encoding);
@@ -212,7 +213,7 @@ public sealed class PrintJsonHashesTests
     {
         Json.HashResult? result = JsonSerializer.Deserialize<Json.HashResult>(
             Capture(["alpha", "bravo"], JenkHashInputEncoding.UTF8).Trim(),
-            RpfService.JsonSerializerOptions
+            Output.JsonSerializerOptions
         );
         Assert.NotNull(result);
         Assert.Equal(2, result.Hashes.Count);
@@ -360,7 +361,7 @@ public sealed class HashExecuteTests
             ));
 
             Json.HashResult? result = JsonSerializer.Deserialize<Json.HashResult>(
-                sw.ToString().Trim(), RpfService.JsonSerializerOptions
+                sw.ToString().Trim(), Output.JsonSerializerOptions
             );
             Assert.NotNull(result);
             Assert.True(result.Success);
