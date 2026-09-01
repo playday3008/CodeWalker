@@ -26,7 +26,7 @@ public sealed class ValidateHandlerTests
             Progress = false,
         };
 
-    // ── Validation failures ────────────────────────────────────────────
+    // Validation failures
 
     [Fact]
     public void Execute_MissingRpf_ReturnsOne()

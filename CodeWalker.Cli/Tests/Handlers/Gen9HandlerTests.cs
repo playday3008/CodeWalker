@@ -39,7 +39,7 @@ public sealed class Gen9HandlerTests
         return dir;
     }
 
-    // ── Input folder missing ───────────────────────────────────────────
+    // Input folder missing
 
     [Fact]
     public void Execute_InputFolderMissing_ReturnsOne()
@@ -90,7 +90,7 @@ public sealed class Gen9HandlerTests
         }
     }
 
-    // ── Input equals output ────────────────────────────────────────────
+    // Input equals output
 
     [Fact]
     public void Execute_InputEqualsOutput_ReturnsOne()
@@ -144,7 +144,7 @@ public sealed class Gen9HandlerTests
         finally { Directory.Delete(dir, true); }
     }
 
-    // ── Missing exe ────────────────────────────────────────────────────
+    // Missing exe
 
     [Fact]
     public void Execute_MissingExe_ReturnsOne()
@@ -180,7 +180,7 @@ public sealed class Gen9HandlerTests
         }
     }
 
-    // ── JSON error structure ───────────────────────────────────────────
+    // JSON error structure
 
     [Fact]
     public void Execute_Json_ErrorContainsExpectedFields()

@@ -127,7 +127,6 @@ internal static class InspectHandler
                 Console.Error.WriteLine();
             }
 
-            // Find entry by normalized path
             string normalizedPath = options.FilePath.Replace('\\', '/');
             RpfFileEntry? found = FindEntry(rpf, normalizedPath, options.Recursive);
 
@@ -144,7 +143,6 @@ internal static class InspectHandler
             string ext = Path.GetExtension(found.Name).ToLowerInvariant();
             string fileType = RpfHelper.GetFileType(found);
 
-            // Extract type-specific metadata
             int? resourceVersion = null;
             long? systemSize = null;
             long? graphicsSize = null;

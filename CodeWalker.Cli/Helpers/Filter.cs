@@ -15,8 +15,6 @@ internal static class Filter
     /// <summary>
     /// Normalizes filter patterns once at parse time: trims, lowercases, and strips blanks.
     /// </summary>
-    /// <param name="filters">Array of filter patterns to normalize.</param>
-    /// <returns>Normalized array of filter patterns.</returns>
     public static string[] Normalize(string[]? filters)
     {
         if (filters == null || filters.Length == 0)
@@ -36,9 +34,6 @@ internal static class Filter
     /// Determines if the given path matches any of the provided glob patterns.
     /// Filters should be pre-normalized via <see cref="Normalize"/>.
     /// </summary>
-    /// <param name="path">Path to check.</param>
-    /// <param name="filters">Glob patterns to match against (pre-normalized).</param>
-    /// <returns>True if the path matches any pattern; otherwise, false.</returns>
     public static bool Matches(string path, string[]? filters)
     {
         if (filters == null || filters.Length == 0)
@@ -57,7 +52,6 @@ internal static class Filter
 
     private static bool MatchesGlob(string input, string pattern)
     {
-        // Normalize path separators
         input = input.Replace('\\', '/');
         pattern = pattern.Replace('\\', '/');
 
@@ -83,11 +77,10 @@ internal static class Filter
             pattern,
             static p =>
             {
-                // Convert glob pattern to regex
                 // Escape all regex special chars except * and ?
                 string regexPattern = Regex.Escape(p);
 
-                // Handle ** (globstar) before * — order matters
+                // Globstar must be handled before a lone *, or ** matches as two singles
                 // **/ matches zero or more directory segments
                 regexPattern = regexPattern.Replace("\\*\\*/", "(.*/)?", StringComparison.Ordinal);
                 // standalone ** matches any characters including /

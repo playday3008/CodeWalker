@@ -158,7 +158,6 @@ internal static class PackHandler
                 );
             }
 
-            // Create the output directory if needed
             string? outputDir = Path.GetDirectoryName(options.OutputPath);
             if (!string.IsNullOrEmpty(outputDir) && !Directory.Exists(outputDir))
             {
@@ -308,7 +307,6 @@ internal static class PackHandler
             }
         }
 
-        // Add files
         foreach (string filePath in Directory.GetFiles(fsDir))
         {
             cancellationToken.ThrowIfCancellationRequested();

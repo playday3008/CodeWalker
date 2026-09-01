@@ -123,7 +123,6 @@ internal static class DiffHandler
 
     public static int Execute(DiffOptions options, CancellationToken cancellationToken = default)
     {
-        // Validate both RPF files and exe paths before loading keys
         string? leftError = RpfHelper.ValidateInputs(
             options.LeftPath,
             options.LeftExePath,

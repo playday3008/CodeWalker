@@ -38,7 +38,7 @@ public sealed class PackHandlerTests
         return dir;
     }
 
-    // ── Input dir missing ──────────────────────────────────────────────
+    // Input dir missing
 
     [Fact]
     public void Execute_InputDirMissing_ReturnsOne()
@@ -88,7 +88,7 @@ public sealed class PackHandlerTests
         }
     }
 
-    // ── Output file exists without --force ─────────────────────────────
+    // Output file exists without --force
 
     [Fact]
     public void Execute_OutputExists_NoForce_ReturnsOne()
@@ -153,7 +153,7 @@ public sealed class PackHandlerTests
         finally { Directory.Delete(inputDir, true); }
     }
 
-    // ── Missing exe ────────────────────────────────────────────────────
+    // Missing exe
 
     [Fact]
     public void Execute_MissingExe_ReturnsOne()
@@ -189,7 +189,7 @@ public sealed class PackHandlerTests
         }
     }
 
-    // ── JSON error structure ───────────────────────────────────────────
+    // JSON error structure
 
     [Fact]
     public void Execute_Json_ErrorContainsExpectedFields()

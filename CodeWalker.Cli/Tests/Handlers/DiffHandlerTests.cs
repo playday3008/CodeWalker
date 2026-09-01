@@ -194,7 +194,7 @@ public sealed class DiffHandlerTests
             [],
             Options()
         );
-        Assert.Single(result.Modified);
+        _ = Assert.Single(result.Modified);
         Assert.Empty(result.Unchanged);
     }
 
@@ -250,7 +250,7 @@ public sealed class DiffHandlerTests
             Options()
         );
         Assert.False(result.Success);
-        Assert.Single(result.ErrorMessages);
+        _ = Assert.Single(result.ErrorMessages);
     }
 }
 

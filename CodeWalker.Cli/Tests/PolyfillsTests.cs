@@ -70,7 +70,7 @@ public sealed class StringExtensionsFuzzTests
         "/", "\\", "\0", "🎮", "xx",
     ];
 
-    // ─── Contains(string, StringComparison) ─────────────────────────
+    // Contains(string, StringComparison)
     // Polyfill wraps IndexOf; built-in is the native implementation.
 
     [Fact]
@@ -85,7 +85,7 @@ public sealed class StringExtensionsFuzzTests
                         $"Contains(\"{Esc(s)}\", \"{Esc(sub)}\", {cmp})");
     }
 
-    // ─── Contains(char) ─────────────────────────────────────────────
+    // Contains(char)
     // Built-in string.Contains(char) exists on .NET 5+.
 
     [Fact]
@@ -99,7 +99,7 @@ public sealed class StringExtensionsFuzzTests
                     $"Contains(\"{Esc(s)}\", '{c}')");
     }
 
-    // ─── Contains(char, StringComparison) ───────────────────────────
+    // Contains(char, StringComparison)
     // No built-in char overload; verify against string-based Contains.
 
     [Fact]
@@ -114,7 +114,7 @@ public sealed class StringExtensionsFuzzTests
                         $"Contains(\"{Esc(s)}\", '{c}', {cmp})");
     }
 
-    // ─── StartsWith(char) ───────────────────────────────────────────
+    // StartsWith(char)
     // Verify against string-based StartsWith with Ordinal comparison.
 
     [Fact]
@@ -128,7 +128,7 @@ public sealed class StringExtensionsFuzzTests
                     $"StartsWith(\"{Esc(s)}\", '{c}')");
     }
 
-    // ─── EndsWith(char) ─────────────────────────────────────────────
+    // EndsWith(char)
     // Verify against string-based EndsWith with Ordinal comparison.
 
     [Fact]
@@ -142,7 +142,7 @@ public sealed class StringExtensionsFuzzTests
                     $"EndsWith(\"{Esc(s)}\", '{c}')");
     }
 
-    // ─── Replace(string, string?, StringComparison) ─────────────────
+    // Replace(string, string?, StringComparison)
     // Ordinal path delegates to built-in; non-Ordinal uses ReplaceCore.
 
     [Fact]
@@ -161,7 +161,7 @@ public sealed class StringExtensionsFuzzTests
                             $"Replace(\"{Esc(s)}\", \"{Esc(old)}\", \"{Esc(@new)}\", {cmp})");
     }
 
-    // ─── Helpers ────────────────────────────────────────────────────
+    // Helpers
 
     private static void AssertBool(bool expected, bool actual, string label) =>
         Assert.True(expected == actual, $"{label}: expected={expected} actual={actual}");
