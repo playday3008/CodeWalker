@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.CommandLine;
+using System.Globalization;
 using System.IO;
 using System.Linq;
 using System.Text.Json;
@@ -495,7 +496,7 @@ internal static class InspectHandler
     }
 
     internal static string FormatVector3(Vector3 v) =>
-        $"{v.X:F2}, {v.Y:F2}, {v.Z:F2}";
+        string.Format(CultureInfo.InvariantCulture, "{0:F2}, {1:F2}, {2:F2}", v.X, v.Y, v.Z);
 
     private static void PrintTextResult(Json.InspectResult result, InspectOptions options)
     {

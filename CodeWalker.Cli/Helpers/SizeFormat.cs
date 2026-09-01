@@ -1,4 +1,5 @@
 using System;
+using System.Globalization;
 
 namespace CodeWalker.Cli.Helpers;
 
@@ -40,6 +41,8 @@ internal static class SizeFormatExtensions
 
     /// <summary>
     /// Formats the given byte size into a human-readable string based on the size format.
+    /// Invariant, so the same archive reports the same figures on every machine and the
+    /// formatted values in --json output stay stable.
     /// </summary>
     public static string ToFormattedString(this SizeFormat format, long bytes)
     {
@@ -53,6 +56,6 @@ internal static class SizeFormatExtensions
             i++;
         }
         if (bytes < 0) size = -size;
-        return $"{size:0.##} {suffixes[i]}";
+        return string.Format(CultureInfo.InvariantCulture, "{0:0.##} {1}", size, suffixes[i]);
     }
 }
