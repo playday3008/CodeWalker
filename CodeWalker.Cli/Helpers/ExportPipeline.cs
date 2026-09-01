@@ -62,9 +62,11 @@ internal static class ExportPipeline
         ExportFileProcessor processor
     )
     {
+        // RPF entry paths are separated with backslashes. Path.GetDirectoryName only
+        // recognises the platform separator, so they must be translated first or the
+        // whole path reads as a bare file name and every export lands in the root.
         string relativePath =
-            Path.GetDirectoryName(fileEntry.Path)
-                ?.Replace('\\', Path.DirectorySeparatorChar)
+            Path.GetDirectoryName(fileEntry.Path.Replace('\\', Path.DirectorySeparatorChar))
             ?? "";
 
         string fileOutputDir = Path.Combine(outputDir, relativePath);

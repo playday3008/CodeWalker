@@ -123,6 +123,38 @@ public sealed class ProcessSingleFileTests
         new() { Path = path, Name = name };
 
     [Fact]
+    public void BackslashEntryPath_MirrorsArchiveStructureInOutputDir()
+    {
+        // RPF entry paths use backslashes on every platform. If they are not translated
+        // before the directory is split off, every file collapses into the output root and
+        // entries sharing a name overwrite each other.
+        string? seen = null;
+        _ = ExportPipeline.ProcessSingleFile(
+            MakeEntry(@"x64b.rpf\data\lang\spanish_rel.rpf\yoga.gxt2", "yoga.gxt2"),
+            data: [1],
+            outputDir: "/out",
+            dryRun: false,
+            noOverwrite: false,
+            processor: (entry, _, fileOutputDir, _) =>
+            {
+                seen = fileOutputDir;
+                return (new Json.ExportFileEntry
+                {
+                    Path = entry.Path,
+                    Name = entry.Name,
+                    OutputFiles = 1,
+                    Status = "exported",
+                }, null);
+            }
+        );
+
+        Assert.Equal(
+            Path.Combine("/out", "x64b.rpf", "data", "lang", "spanish_rel.rpf"),
+            seen
+        );
+    }
+
+    [Fact]
     public void DryRun_ReturnsEntryWithNoError()
     {
         (Json.ExportFileEntry? entry, string? error) = ExportPipeline.ProcessSingleFile(
