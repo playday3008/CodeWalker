@@ -53,10 +53,15 @@ internal static class RpfHelper
     }
 
     /// <summary>
-    /// Loads GTA V encryption keys from the installation directory.
+    /// Loads GTA V encryption keys and selects the resource layout for the target generation.
+    /// <see cref="RpfManager.IsGen9"/> is a process-wide switch that every resource reader
+    /// consults, so it must be set before any resource file is parsed.
     /// </summary>
-    public static void LoadKeys(string exePath, bool gen9) =>
+    public static void LoadKeys(string exePath, bool gen9)
+    {
+        RpfManager.IsGen9 = gen9;
         GTA5Keys.LoadFromPath(exePath, gen9);
+    }
 
     /// <summary>
     /// Validates inputs, loads encryption keys, and prints status to stderr.

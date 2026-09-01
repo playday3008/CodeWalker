@@ -110,6 +110,30 @@ public sealed class RpfHelperTests
         finally { Directory.Delete(dir, true); }
     }
 
+    // --- LoadKeys ---
+
+    [Theory]
+    [InlineData(true)]
+    [InlineData(false)]
+    public void LoadKeys_SelectsResourceLayout_BeforeReadingKeys(bool gen9)
+    {
+        bool previous = RpfManager.IsGen9;
+        string dir = CreateTempDir();
+        try
+        {
+            RpfManager.IsGen9 = !gen9;
+            // No game executable here, so key loading throws. The layout flag is still set,
+            // because every resource reader consults it and it must not lag behind the keys.
+            _ = Assert.Throws<FileNotFoundException>(() => RpfHelper.LoadKeys(dir, gen9));
+            Assert.Equal(gen9, RpfManager.IsGen9);
+        }
+        finally
+        {
+            RpfManager.IsGen9 = previous;
+            Directory.Delete(dir, true);
+        }
+    }
+
     // --- ValidateExeAndLoadKeys / ValidateAndLoadKeys early-return ---
 
     [Fact]
