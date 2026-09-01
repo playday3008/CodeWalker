@@ -160,33 +160,6 @@ internal static class RpfHelper
     }
 
     /// <summary>
-    /// Counts non-RPF files in the archive, optionally recursing into nested RPFs.
-    /// </summary>
-    public static int CountNonRpfFiles(RpfFile rpf, bool recursive)
-    {
-        int count = 0;
-        CountNonRpfFilesRecursive(rpf, recursive, ref count);
-        return count;
-    }
-
-    private static void CountNonRpfFilesRecursive(RpfFile rpf, bool recursive, ref int count)
-    {
-        if (rpf.AllEntries != null)
-        {
-            count += rpf.AllEntries
-                .Count(entry =>
-                    entry is RpfFileEntry
-                    && !entry.NameLower.EndsWith(".rpf", StringComparison.Ordinal));
-        }
-
-        if (recursive && rpf.Children != null)
-        {
-            foreach (RpfFile child in rpf.Children)
-                CountNonRpfFilesRecursive(child, recursive, ref count);
-        }
-    }
-
-    /// <summary>
     /// Returns the file type string for a given RPF file entry.
     /// </summary>
     public static string GetFileType(RpfFileEntry fileEntry) => fileEntry switch
