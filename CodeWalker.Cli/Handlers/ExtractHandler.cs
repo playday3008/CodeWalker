@@ -138,17 +138,13 @@ internal static class ExtractHandler
                 _ = Directory.CreateDirectory(outputDir);
             }
 
-            // Collect files first for progress bar
             List<(RpfFile rpf, RpfFileEntry entry)> filesToExtract = RpfHelper.CollectFiles(
                 rpf,
                 options.Filters,
                 options.Recursive
             );
 
-            // Count non-RPF files that were excluded by filters
-            int totalNonRpfFiles = RpfHelper.CountNonRpfFiles(rpf, options.Recursive);
-            int skipped = totalNonRpfFiles - filesToExtract.Count;
-            int overwriteSkipped = 0;
+            int skipped = 0;
 
             // Process files in parallel, storing results by index to preserve order
             (Json.FileEntry? jsonEntry, string? errorMessage)[] results =
@@ -205,7 +201,7 @@ internal static class ExtractHandler
                             }
                             else if (options.NoOverwrite && File.Exists(outputPath))
                             {
-                                _ = Interlocked.Increment(ref overwriteSkipped);
+                                _ = Interlocked.Increment(ref skipped);
                                 if (options.Verbose && !options.Json && !options.Progress)
                                 {
                                     lock (consoleLock)
@@ -282,7 +278,6 @@ internal static class ExtractHandler
                 );
             }
 
-            // Aggregate results in order
             int extracted = 0;
             int errors = 0;
             List<Json.FileEntry> files = [];
@@ -303,14 +298,12 @@ internal static class ExtractHandler
                 }
             }
 
-            skipped += overwriteSkipped;
-
             Json.ExtractResult result = new()
             {
                 Success = errors == 0 && scanErrors.Count == 0,
                 RpfFile = options.RpfPath,
                 OutputDir = options.OutputPath ?? Directory.GetCurrentDirectory(),
-                TotalFiles = totalNonRpfFiles,
+                TotalFiles = filesToExtract.Count,
                 Extracted = extracted,
                 Skipped = skipped,
                 Errors = errors,

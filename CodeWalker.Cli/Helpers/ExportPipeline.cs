@@ -104,8 +104,7 @@ internal static class ExportPipeline
 
     internal static ExportAggregation AggregateResults(
         (Json.ExportFileEntry? jsonEntry, string? errorMessage)[] results,
-        IReadOnlyList<string> scanErrors,
-        int filterSkipped
+        IReadOnlyList<string> scanErrors
     )
     {
         int exported = 0;
@@ -136,8 +135,6 @@ internal static class ExportPipeline
                 errorMessages.Add($"Error processing: {jsonEntry.Path}");
             }
         }
-
-        skipped += filterSkipped;
 
         return new ExportAggregation
         {
@@ -205,9 +202,6 @@ internal static class ExportPipeline
                 options.Filters,
                 options.Recursive
             );
-
-            int totalNonRpfFiles = RpfHelper.CountNonRpfFiles(rpf, options.Recursive);
-            int filterSkipped = totalNonRpfFiles - filesToExport.Count;
 
             (Json.ExportFileEntry? jsonEntry, string? errorMessage)[] results =
                 new (Json.ExportFileEntry?, string?)[filesToExport.Count];
@@ -293,7 +287,7 @@ internal static class ExportPipeline
                 );
             }
 
-            ExportAggregation agg = AggregateResults(results, scanErrors, filterSkipped);
+            ExportAggregation agg = AggregateResults(results, scanErrors);
 
             Json.ExportResult jsonResult = new()
             {
@@ -301,7 +295,7 @@ internal static class ExportPipeline
                 RpfFile = options.RpfPath,
                 OutputDir = options.OutputPath,
                 Format = format,
-                TotalFiles = totalNonRpfFiles,
+                TotalFiles = filesToExport.Count,
                 Exported = agg.Exported,
                 Skipped = agg.Skipped,
                 Errors = agg.Errors,

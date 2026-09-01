@@ -335,8 +335,7 @@ public sealed class AggregateResultsTests
     {
         ExportPipeline.ExportAggregation agg = ExportPipeline.AggregateResults(
             [],
-            OneScanError,
-            filterSkipped: 0
+            OneScanError
         );
 
         Assert.Equal(0, agg.Exported);
@@ -357,7 +356,7 @@ public sealed class AggregateResultsTests
             (MakeFileEntry("exported"), null),
         ];
 
-        ExportPipeline.ExportAggregation agg = ExportPipeline.AggregateResults(results, [], filterSkipped: 0);
+        ExportPipeline.ExportAggregation agg = ExportPipeline.AggregateResults(results, []);
 
         Assert.Equal(3, agg.Exported);
     }
@@ -371,22 +370,26 @@ public sealed class AggregateResultsTests
             (MakeFileEntry("skipped"), null),
         ];
 
-        ExportPipeline.ExportAggregation agg = ExportPipeline.AggregateResults(results, [], filterSkipped: 0);
+        ExportPipeline.ExportAggregation agg = ExportPipeline.AggregateResults(results, []);
 
         Assert.Equal(2, agg.Skipped);
     }
 
     [Fact]
-    public void AddsFilterSkipped_ToSkippedCount()
+    public void CountsOnlyProcessedEntries_AsSkipped()
     {
+        // Files excluded by --filter are never handed to the pipeline, so they must
+        // not turn up in the skipped count the way they used to.
         (Json.ExportFileEntry?, string?)[] results =
         [
             (MakeFileEntry("skipped"), null),
+            (MakeFileEntry("exported"), null),
         ];
 
-        ExportPipeline.ExportAggregation agg = ExportPipeline.AggregateResults(results, [], filterSkipped: 5);
+        ExportPipeline.ExportAggregation agg = ExportPipeline.AggregateResults(results, []);
 
-        Assert.Equal(6, agg.Skipped);
+        Assert.Equal(1, agg.Skipped);
+        Assert.Equal(1, agg.Exported);
     }
 
     [Fact]
@@ -399,7 +402,7 @@ public sealed class AggregateResultsTests
             (MakeFileEntry("exported"), null),
         ];
 
-        ExportPipeline.ExportAggregation agg = ExportPipeline.AggregateResults(results, [], filterSkipped: 0);
+        ExportPipeline.ExportAggregation agg = ExportPipeline.AggregateResults(results, []);
 
         Assert.Equal(2, agg.Errors);
     }
@@ -417,7 +420,7 @@ public sealed class AggregateResultsTests
             (skipped, null),
         ];
 
-        ExportPipeline.ExportAggregation agg = ExportPipeline.AggregateResults(results, [], filterSkipped: 0);
+        ExportPipeline.ExportAggregation agg = ExportPipeline.AggregateResults(results, []);
 
         Assert.Equal(2, agg.Files.Count);
         Assert.Same(exported, agg.Files[0]);
@@ -434,7 +437,7 @@ public sealed class AggregateResultsTests
             (errorEntry, "conversion failed"),
         ];
 
-        ExportPipeline.ExportAggregation agg = ExportPipeline.AggregateResults(results, [], filterSkipped: 0);
+        ExportPipeline.ExportAggregation agg = ExportPipeline.AggregateResults(results, []);
 
         Assert.Equal(0, agg.Exported);
         Assert.Equal(0, agg.Skipped);
@@ -455,7 +458,7 @@ public sealed class AggregateResultsTests
             (entry, "partial failure"),
         ];
 
-        ExportPipeline.ExportAggregation agg = ExportPipeline.AggregateResults(results, [], filterSkipped: 0);
+        ExportPipeline.ExportAggregation agg = ExportPipeline.AggregateResults(results, []);
 
         Assert.Equal(0, agg.Exported);
         Assert.Equal(1, agg.Errors);
@@ -473,7 +476,7 @@ public sealed class AggregateResultsTests
             (entry, "unexpected failure"),
         ];
 
-        ExportPipeline.ExportAggregation agg = ExportPipeline.AggregateResults(results, [], filterSkipped: 0);
+        ExportPipeline.ExportAggregation agg = ExportPipeline.AggregateResults(results, []);
 
         Assert.Equal(0, agg.Skipped);
         Assert.Equal(1, agg.Errors);
@@ -491,7 +494,7 @@ public sealed class AggregateResultsTests
             (errorEntry, null),
         ];
 
-        ExportPipeline.ExportAggregation agg = ExportPipeline.AggregateResults(results, [], filterSkipped: 0);
+        ExportPipeline.ExportAggregation agg = ExportPipeline.AggregateResults(results, []);
 
         Assert.Equal(0, agg.Exported);
         Assert.Equal(0, agg.Skipped);
@@ -513,8 +516,7 @@ public sealed class AggregateResultsTests
 
         ExportPipeline.ExportAggregation agg = ExportPipeline.AggregateResults(
             results,
-            OneScanWarning,
-            filterSkipped: 0
+            OneScanWarning
         );
 
         Assert.Equal(2, agg.ErrorMessages.Count);
