@@ -1,4 +1,6 @@
 using System;
+using System.Globalization;
+using System.Threading;
 
 using CodeWalker.Cli.Helpers;
 
@@ -153,5 +155,23 @@ public sealed class SizeFormatTests
             _ = Assert.Throws<ArgumentOutOfRangeException>(() =>
                 invalid.ToFormattedString(1337));
         }
+    }
+
+    [Theory]
+    [InlineData("de-DE")]
+    [InlineData("fr-FR")]
+    [InlineData("tr-TR")]
+    public void ToFormattedString_IsInvariantOfCurrentCulture(string culture)
+    {
+        // These strings also travel inside --json as the *Formatted fields, so a comma-decimal
+        // machine must not produce different output from a dot-decimal one.
+        CultureInfo previous = Thread.CurrentThread.CurrentCulture;
+        try
+        {
+            Thread.CurrentThread.CurrentCulture = new CultureInfo(culture);
+            Assert.Equal("1.5 KiB", SizeFormat.IEC.ToFormattedString(1536));
+            Assert.Equal("1.5 KB", SizeFormat.SI.ToFormattedString(1500));
+        }
+        finally { Thread.CurrentThread.CurrentCulture = previous; }
     }
 }

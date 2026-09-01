@@ -334,7 +334,13 @@ internal static class StatHandler
             string compressedStr = options.SizeFormat.ToFormattedString(result.CompressedSize);
             string uncompressedStr = options.SizeFormat.ToFormattedString(result.UncompressedSize);
             Console.Error.WriteLine(
-                $"Compression: {compressedStr} / {uncompressedStr} ({result.CompressionRatio:P1} of original)"
+                string.Format(
+                    CultureInfo.InvariantCulture,
+                    "Compression: {0} / {1} ({2:P1} of original)",
+                    compressedStr,
+                    uncompressedStr,
+                    result.CompressionRatio
+                )
             );
         }
     }
