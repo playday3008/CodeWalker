@@ -39,10 +39,7 @@ internal static class ValidateHandler
         Option<bool> jsonOpt = CliOptions.Json();
         Option<bool> siOpt = CliOptions.Si();
         Option<int> threadsOpt = CliOptions.Threads();
-        Option<bool> progressOpt = new("--progress", "-P")
-        {
-            Description = "Show progress bar during validation",
-        };
+        Option<bool> progressOpt = CliOptions.Progress();
 
         Command command = new("validate", "Validate game file integrity by parsing RPF contents")
         {

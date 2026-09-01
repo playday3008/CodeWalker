@@ -65,11 +65,7 @@ internal static class Gen9Handler
             Description = "Don't copy files that don't need conversion",
         };
 
-        Option<bool> progressOption = new("--progress", "-P")
-        {
-            Description = "Show progress bar",
-        };
-
+        Option<bool> progressOption = CliOptions.Progress();
 
         Command command = new("gen9", "Convert files to enhanced (Gen9) format")
         {

@@ -54,11 +54,7 @@ internal static class PackHandler
             Description = "Overwrite existing output file",
         };
 
-        Option<bool> progressOption = new("--progress", "-P")
-        {
-            Description = "Show progress bar",
-        };
-
+        Option<bool> progressOption = CliOptions.Progress();
 
         Command command = new("pack", "Create an RPF archive from a directory of loose files")
         {

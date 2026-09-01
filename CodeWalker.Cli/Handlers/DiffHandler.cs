@@ -77,11 +77,7 @@ internal static class DiffHandler
             Description = "Include nested RPFs in comparison",
         };
 
-        Option<bool> progressOption = new("--progress", "-P")
-        {
-            Description = "Show progress bar",
-        };
-
+        Option<bool> progressOption = CliOptions.Progress();
 
         Command command = new("diff", "Compare two RPF archives")
         {

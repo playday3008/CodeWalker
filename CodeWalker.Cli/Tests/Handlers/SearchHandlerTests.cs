@@ -51,13 +51,6 @@ public sealed class SearchErrorResultTests
     }
 
     [Fact]
-    public void ErrorResult_SetsPatternTypeSubstring()
-    {
-        Json.SearchResult result = SearchHandler.ErrorResult([], MakeOptions(pattern: "*.ydr"));
-        Assert.Equal("substring", result.PatternType);
-    }
-
-    [Fact]
     public void ErrorResult_SetsMatchCountZero()
     {
         Json.SearchResult result = SearchHandler.ErrorResult([], MakeOptions(pattern: "*.ydr"));
@@ -165,7 +158,6 @@ public sealed class SearchCollectSearchTests
 
         Assert.True(result.Success);
         Assert.Equal(2, result.MatchCount);
-        Assert.Equal("substring", result.PatternType);
     }
 
     [Fact]
@@ -183,7 +175,6 @@ public sealed class SearchCollectSearchTests
 
         Assert.True(result.Success);
         Assert.Equal(2, result.MatchCount);
-        Assert.Equal("substring", result.PatternType);
     }
 
     [Fact]
@@ -566,7 +557,6 @@ public sealed class SearchPrintTests
     private static Json.SearchResult MakeResult(
         List<Json.SearchMatch>? matches = null,
         string pattern = "*.ydr",
-        string patternType = "glob",
         int? matchCount = null,
         IReadOnlyList<string>? rpfFiles = null) =>
         new()
@@ -575,7 +565,6 @@ public sealed class SearchPrintTests
             RpfFile = "/test.rpf",
             RpfFiles = rpfFiles ?? ["/test.rpf"],
             Pattern = pattern,
-            PatternType = patternType,
             MatchCount = matchCount ?? matches?.Count ?? 0,
             Matches = matches ?? [],
             ErrorMessages = [],
@@ -668,14 +657,12 @@ public sealed class SearchPrintTests
 
             Json.SearchResult result = MakeResult(
                 [MakeMatch()],
-                pattern: "adder",
-                patternType: "substring");
+                pattern: "adder");
             SearchHandler.PrintSearch(result, MakeOptions());
 
             string errOutput = stderr.ToString();
             Assert.Contains("Found 1 match for", errOutput);
             Assert.Contains("'adder'", errOutput);
-            Assert.Contains("(substring)", errOutput);
         }
         finally
         {
@@ -696,7 +683,7 @@ public sealed class SearchPrintTests
             Console.SetOut(stdout);
             Console.SetError(stderr);
 
-            Json.SearchResult result = MakeResult(pattern: "nothing", patternType: "substring");
+            Json.SearchResult result = MakeResult(pattern: "nothing");
             SearchHandler.PrintSearch(result, MakeOptions());
 
             Assert.Equal("", stdout.ToString());
@@ -778,14 +765,12 @@ public sealed class SearchPrintTests
 
             Json.SearchResult result = MakeResult(
                 [MakeMatch()],
-                pattern: "adder",
-                patternType: "substring");
+                pattern: "adder");
             SearchHandler.PrintJsonSearch(result);
 
             string output = stdout.ToString();
             Assert.Contains("\"success\": true", output);
             Assert.Contains("\"pattern\": \"adder\"", output);
-            Assert.Contains("\"patternType\": \"substring\"", output);
             Assert.Contains("\"matchCount\": 1", output);
             Assert.Contains("\"path\": \"vehicles/adder.ydr\"", output);
         }
@@ -1110,7 +1095,6 @@ public sealed class SearchPrintMultiArchiveTests
                 RpfFile = "/dir",
                 RpfFiles = ["/dir/a.rpf", "/dir/b.rpf"],
                 Pattern = "*.ydr",
-                PatternType = "glob",
                 MatchCount = 2,
                 Matches =
                 [
@@ -1156,7 +1140,6 @@ public sealed class SearchPrintMultiArchiveTests
                 RpfFile = "/dir",
                 RpfFiles = ["/dir/a.rpf", "/dir/b.rpf"],
                 Pattern = "adder",
-                PatternType = "substring",
                 MatchCount = 3,
                 Matches =
                 [
@@ -1172,7 +1155,6 @@ public sealed class SearchPrintMultiArchiveTests
             string errOutput = stderr.ToString();
             Assert.Contains("Found 3 matches across 2 archive(s)", errOutput);
             Assert.Contains("'adder'", errOutput);
-            Assert.Contains("(substring)", errOutput);
         }
         finally
         {
@@ -1199,7 +1181,6 @@ public sealed class SearchPrintMultiArchiveTests
                 RpfFile = "/test.rpf",
                 RpfFiles = ["/test.rpf"],
                 Pattern = "*.ydr",
-                PatternType = "glob",
                 MatchCount = 1,
                 Matches =
                 [
@@ -1240,7 +1221,6 @@ public sealed class SearchPrintMultiArchiveTests
                 RpfFile = "/dir",
                 RpfFiles = ["/dir/a.rpf", "/dir/b.rpf"],
                 Pattern = "*.ydr",
-                PatternType = "glob",
                 MatchCount = 2,
                 Matches =
                 [
