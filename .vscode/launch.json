@@ -6,7 +6,7 @@
       "type": "clr",
       "request": "launch",
       "preLaunchTask": "build-cli",
-      "program": "${workspaceFolder}/CodeWalker.Cli/bin/Debug/net48/CodeWalker.Cli.exe",
+      "program": "${workspaceFolder}/CodeWalker.Cli/bin/CodeWalker.Cli/Debug/net48/CodeWalker.Cli.exe",
       "args": [],
       "cwd": "${workspaceFolder}",
       "console": "integratedTerminal"
@@ -16,7 +16,7 @@
       "type": "coreclr",
       "request": "launch",
       "preLaunchTask": "build-cli",
-      "program": "${workspaceFolder}/CodeWalker.Cli/bin/Debug/net8.0/CodeWalker.Cli.dll",
+      "program": "${workspaceFolder}/CodeWalker.Cli/bin/CodeWalker.Cli/Debug/net8.0/CodeWalker.Cli.dll",
       "args": [],
       "cwd": "${workspaceFolder}",
       "console": "integratedTerminal"
@@ -26,7 +26,7 @@
       "type": "coreclr",
       "request": "launch",
       "preLaunchTask": "build-cli",
-      "program": "${workspaceFolder}/CodeWalker.Cli/bin/Debug/net10.0/CodeWalker.Cli.dll",
+      "program": "${workspaceFolder}/CodeWalker.Cli/bin/CodeWalker.Cli/Debug/net10.0/CodeWalker.Cli.dll",
       "args": [],
       "cwd": "${workspaceFolder}",
       "console": "integratedTerminal"
