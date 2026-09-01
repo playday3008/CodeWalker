@@ -3,6 +3,7 @@ using System.CommandLine;
 using System.Threading;
 
 using CodeWalker.Cli.Handlers;
+using CodeWalker.Cli.Helpers;
 
 using CancellationTokenSource cts = new();
 Console.CancelKeyPress += (_, e) =>
@@ -26,6 +27,8 @@ RootCommand rootCommand = new(description: "CodeWalker CLI - RPF Archive Tool")
     ValidateHandler.CreateCommand(cts.Token),
     InspectHandler.CreateCommand(cts.Token),
 };
+
+HelpLayout.Install(rootCommand);
 
 try
 {

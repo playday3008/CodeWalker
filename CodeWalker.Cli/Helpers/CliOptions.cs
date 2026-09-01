@@ -6,14 +6,12 @@ namespace CodeWalker.Cli.Helpers;
 
 internal static class CliOptions
 {
-    // From RpfCommandOptions:
     public static Option<FileInfo> Rpf() => new("--rpf", "-r")
     {
         Description = "Path to the RPF file",
         Required = true,
     };
 
-    // From CommonCommandOptions:
     public static Option<DirectoryInfo> Exe(bool required = true) => new("--exe", "-e")
     {
         Description = "Path to the GTA V installation directory (containing GTA5.exe)",
@@ -66,16 +64,16 @@ internal static class CliOptions
         return opt;
     }
 
-    // From ExportCommandOptions:
     public static Option<DirectoryInfo> OutputDir() => new("--output", "-o")
     {
         Description = "Output directory",
-        DefaultValueFactory = _ => new DirectoryInfo(Directory.GetCurrentDirectory()),
+        // Relative so help shows "." rather than whichever directory help was run from.
+        DefaultValueFactory = _ => new DirectoryInfo("."),
     };
 
     public static Option<bool> DryRun() => new("--dry-run", "-n")
     {
-        Description = "Show what would be exported without writing files",
+        Description = "Show what would be done without writing any files",
     };
 
     public static Option<bool> NoOverwrite() => new("--no-overwrite")
@@ -85,6 +83,6 @@ internal static class CliOptions
 
     public static Option<bool> Progress() => new("--progress", "-P")
     {
-        Description = "Show progress bar during export",
+        Description = "Show a progress bar",
     };
 }

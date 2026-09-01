@@ -40,9 +40,6 @@ internal sealed record SearchResult : BaseResult
     [JsonPropertyName("pattern")]
     public required string Pattern { get; init; }
 
-    [JsonPropertyName("patternType")]
-    public required string PatternType { get; init; }
-
     [JsonPropertyName("matchCount")]
     public required int MatchCount { get; init; }
 

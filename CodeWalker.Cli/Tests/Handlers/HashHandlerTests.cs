@@ -26,6 +26,19 @@ public sealed class ParseEncodingTests
         Assert.Equal(expected, HashHandler.ParseEncoding(input));
 
     [Theory]
+    [InlineData(JenkHashInputEncoding.UTF8, "utf-8")]
+    [InlineData(JenkHashInputEncoding.ASCII, "ascii")]
+    public void EncodingName_RoundTripsThroughParseEncoding(
+        JenkHashInputEncoding encoding,
+        string expected
+    )
+    {
+        string name = HashHandler.EncodingName(encoding);
+        Assert.Equal(expected, name);
+        Assert.Equal(encoding, HashHandler.ParseEncoding(name));
+    }
+
+    [Theory]
     [InlineData("utf8")]
     [InlineData("latin-1")]
     [InlineData("")]
@@ -84,7 +97,7 @@ public sealed class PrintHashesTests
     public void SingleInput_PrintsAllFourLines()
     {
         string output = Capture(["test"], JenkHashInputEncoding.UTF8);
-        Assert.Contains("Input (UTF8): test", output);
+        Assert.Contains("Input (utf-8): test", output);
         Assert.Contains("Hash (uint):", output);
         Assert.Contains("Hash (int):", output);
         Assert.Contains("Hash (hex):", output);
@@ -104,22 +117,22 @@ public sealed class PrintHashesTests
     public void AsciiEncoding_ShowsAsciiInHeader()
     {
         string output = Capture(["hello"], JenkHashInputEncoding.ASCII);
-        Assert.Contains("Input (ASCII): hello", output);
+        Assert.Contains("Input (ascii): hello", output);
     }
 
     [Fact]
     public void MultipleInputs_PrintsEach()
     {
         string output = Capture(["alpha", "bravo"], JenkHashInputEncoding.UTF8);
-        Assert.Contains("Input (UTF8): alpha", output);
-        Assert.Contains("Input (UTF8): bravo", output);
+        Assert.Contains("Input (utf-8): alpha", output);
+        Assert.Contains("Input (utf-8): bravo", output);
     }
 
     [Fact]
     public void EmptyString_Succeeds()
     {
         string output = Capture([""], JenkHashInputEncoding.UTF8);
-        Assert.Contains("Input (UTF8): ", output);
+        Assert.Contains("Input (utf-8): ", output);
         Assert.Contains("Hash (uint):", output);
     }
 
@@ -194,7 +207,7 @@ public sealed class PrintJsonHashesTests
         Assert.Equal(expected.HashUint, entry.Hash);
         Assert.Equal(expected.HashInt, entry.HashSigned);
         Assert.Equal(expected.HashHex, entry.HashHex);
-        Assert.Equal("UTF8", entry.Encoding);
+        Assert.Equal("utf-8", entry.Encoding);
     }
 
     [Fact]
@@ -205,7 +218,7 @@ public sealed class PrintJsonHashesTests
             Output.JsonSerializerOptions
         );
         Assert.NotNull(result);
-        Assert.Equal("ASCII", result.Hashes[0].Encoding);
+        Assert.Equal("ascii", result.Hashes[0].Encoding);
     }
 
     [Fact]
@@ -252,7 +265,7 @@ public sealed class CollectHashesTests
         Assert.Equal(expected.HashUint, entry.Hash);
         Assert.Equal(expected.HashInt, entry.HashSigned);
         Assert.Equal(expected.HashHex, entry.HashHex);
-        Assert.Equal("UTF8", entry.Encoding);
+        Assert.Equal("utf-8", entry.Encoding);
     }
 
     [Fact]
@@ -263,7 +276,7 @@ public sealed class CollectHashesTests
             JenkHashInputEncoding.ASCII,
             TestContext.Current.CancellationToken
         );
-        Assert.Equal("ASCII", entries[0].Encoding);
+        Assert.Equal("ascii", entries[0].Encoding);
     }
 
     [Fact]
@@ -421,7 +434,7 @@ public sealed class HashExecuteTests
 
     [Fact]
     public void DefaultEncoding_IsUtf8() =>
-        Assert.Equal("UTF-8", HashOptions.DefaultEncoding);
+        Assert.Equal("utf-8", HashOptions.DefaultEncoding);
 
     [Fact]
     public void Text_Cancelled_ThrowsOperationCanceledException()

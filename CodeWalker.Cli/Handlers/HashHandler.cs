@@ -17,7 +17,7 @@ internal sealed record HashOptions
     public required string Encoding { get; init; }
     public required bool Json { get; init; }
 
-    public const string DefaultEncoding = "UTF-8";
+    public const string DefaultEncoding = "utf-8";
 }
 
 internal static class HashHandler
@@ -127,6 +127,17 @@ internal static class HashHandler
         };
 
     /// <summary>
+    /// Spells an encoding the way <c>--encoding</c> accepts it, so reported values can be fed
+    /// straight back in.
+    /// </summary>
+    internal static string EncodingName(JenkHashInputEncoding encoding) => encoding switch
+    {
+        JenkHashInputEncoding.UTF8 => "utf-8",
+        JenkHashInputEncoding.ASCII => "ascii",
+        _ => encoding.ToString(),
+    };
+
+    /// <summary>
     /// Collects the hash results for each input string and returns them as an array of <see cref="Json.HashEntry"/> objects.
     /// </summary>
     /// <param name="inputs">An array of input strings to hash.</param>
@@ -151,7 +162,7 @@ internal static class HashHandler
                     Hash = jenkHash.HashUint,
                     HashSigned = jenkHash.HashInt,
                     HashHex = jenkHash.HashHex,
-                    Encoding = jenkHash.Encoding.ToString()
+                    Encoding = EncodingName(jenkHash.Encoding)
                 }
             );
         }

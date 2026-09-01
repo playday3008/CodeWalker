@@ -30,6 +30,7 @@ internal static class SearchHandler
     {
         Option<FileInfo> rpfOpt = CliOptions.Rpf();
         rpfOpt.Required = false;
+        rpfOpt.Description = "Path to the RPF file; use --dir to search a folder instead";
         Option<DirectoryInfo> exeOpt = CliOptions.Exe();
         Option<bool> gen9Opt = CliOptions.Gen9();
         Option<string[]> filterOpt = CliOptions.Filter();
@@ -40,7 +41,7 @@ internal static class SearchHandler
 
         Option<DirectoryInfo> dirOpt = new("--dir", "-D")
         {
-            Description = "Directory to search — discovers all .rpf files recursively",
+            Description = "Directory to search; every .rpf below it is searched",
         };
 
         Argument<string> patternArg = new("pattern")
@@ -48,7 +49,7 @@ internal static class SearchHandler
             Description = "Substring to search for in file paths",
         };
 
-        Command command = new("search", "Search for files by name or path in an RPF archive")
+        Command command = new("search", "Search for files by name or path in one or more RPF archives")
         {
             patternArg,
             rpfOpt,
@@ -230,7 +231,6 @@ internal static class SearchHandler
             RpfFile = options.DirPath!,
             RpfFiles = rpfFiles,
             Pattern = options.Pattern,
-            PatternType = "substring",
             MatchCount = allMatches.Count,
             Matches = allMatches,
             ErrorMessages = [.. allScanErrors],
@@ -251,7 +251,6 @@ internal static class SearchHandler
             RpfFile = options.RpfPath,
             RpfFiles = [],
             Pattern = options.Pattern,
-            PatternType = "substring",
             MatchCount = 0,
             Matches = [],
             ErrorMessages = errorMessages,
@@ -311,7 +310,6 @@ internal static class SearchHandler
             RpfFile = archivePath,
             RpfFiles = [archivePath],
             Pattern = options.Pattern,
-            PatternType = "substring",
             MatchCount = matches.Count,
             Matches = matches,
             ErrorMessages = [.. scanErrors],
@@ -353,8 +351,8 @@ internal static class SearchHandler
         Console.Error.WriteLine();
         Console.Error.WriteLine(
             multiArchive
-                ? $"Found {result.MatchCount} {matchWord} across {result.RpfFiles.Count} archive(s) for '{result.Pattern}' ({result.PatternType})"
-                : $"Found {result.MatchCount} {matchWord} for '{result.Pattern}' ({result.PatternType})"
+                ? $"Found {result.MatchCount} {matchWord} across {result.RpfFiles.Count} archive(s) for '{result.Pattern}'"
+                : $"Found {result.MatchCount} {matchWord} for '{result.Pattern}'"
         );
     }
 
