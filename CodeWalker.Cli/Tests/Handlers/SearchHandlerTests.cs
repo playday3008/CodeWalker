@@ -15,7 +15,7 @@ namespace CodeWalker.Cli.Tests.Handlers;
 
 public sealed class SearchErrorResultTests
 {
-    private static RpfOptions MakeOptions(string rpfPath = "/test.rpf") =>
+    private static SearchOptions MakeOptions(string rpfPath = "/test.rpf", string pattern = "*.ydr") =>
         new()
         {
             RpfPath = rpfPath,
@@ -25,49 +25,49 @@ public sealed class SearchErrorResultTests
             Verbose = false,
             Json = false,
             Recursive = false,
-            Threads = 1,
             SizeFormat = SizeFormat.IEC,
+            Pattern = pattern,
         };
 
     [Fact]
     public void ErrorResult_SetsSuccessFalse()
     {
-        Json.SearchResult result = SearchHandler.ErrorResult([], MakeOptions(), "*.ydr");
+        Json.SearchResult result = SearchHandler.ErrorResult([], MakeOptions(pattern: "*.ydr"));
         Assert.False(result.Success);
     }
 
     [Fact]
     public void ErrorResult_PreservesRpfFile()
     {
-        Json.SearchResult result = SearchHandler.ErrorResult([], MakeOptions("/my/test.rpf"), "test");
+        Json.SearchResult result = SearchHandler.ErrorResult([], MakeOptions("/my/test.rpf", pattern: "test"));
         Assert.Equal("/my/test.rpf", result.RpfFile);
     }
 
     [Fact]
     public void ErrorResult_PreservesPattern()
     {
-        Json.SearchResult result = SearchHandler.ErrorResult([], MakeOptions(), "adder");
+        Json.SearchResult result = SearchHandler.ErrorResult([], MakeOptions(pattern: "adder"));
         Assert.Equal("adder", result.Pattern);
     }
 
     [Fact]
     public void ErrorResult_SetsPatternTypeSubstring()
     {
-        Json.SearchResult result = SearchHandler.ErrorResult([], MakeOptions(), "*.ydr");
+        Json.SearchResult result = SearchHandler.ErrorResult([], MakeOptions(pattern: "*.ydr"));
         Assert.Equal("substring", result.PatternType);
     }
 
     [Fact]
     public void ErrorResult_SetsMatchCountZero()
     {
-        Json.SearchResult result = SearchHandler.ErrorResult([], MakeOptions(), "*.ydr");
+        Json.SearchResult result = SearchHandler.ErrorResult([], MakeOptions(pattern: "*.ydr"));
         Assert.Equal(0, result.MatchCount);
     }
 
     [Fact]
     public void ErrorResult_SetsEmptyMatches()
     {
-        Json.SearchResult result = SearchHandler.ErrorResult([], MakeOptions(), "*.ydr");
+        Json.SearchResult result = SearchHandler.ErrorResult([], MakeOptions(pattern: "*.ydr"));
         Assert.Empty(result.Matches);
     }
 
@@ -75,7 +75,7 @@ public sealed class SearchErrorResultTests
     public void ErrorResult_PreservesErrorMessages()
     {
         string[] msgs = ["err1", "err2"];
-        Json.SearchResult result = SearchHandler.ErrorResult(msgs, MakeOptions(), "*.ydr");
+        Json.SearchResult result = SearchHandler.ErrorResult(msgs, MakeOptions(pattern: "*.ydr"));
         Assert.Equal(msgs, result.ErrorMessages);
     }
 }
@@ -84,11 +84,12 @@ public sealed class SearchErrorResultTests
 
 public sealed class SearchCollectSearchTests
 {
-    private static RpfOptions MakeOptions(
+    private static SearchOptions MakeOptions(
         string rpfPath = "/test.rpf",
         bool recursive = false,
         bool verbose = false,
-        string[]? filters = null) =>
+        string[]? filters = null,
+        string pattern = "") =>
         new()
         {
             RpfPath = rpfPath,
@@ -98,8 +99,8 @@ public sealed class SearchCollectSearchTests
             Verbose = verbose,
             Json = false,
             Recursive = recursive,
-            Threads = 1,
             SizeFormat = SizeFormat.IEC,
+            Pattern = pattern,
         };
 
     private static RpfFile MakeRpf() =>
@@ -130,7 +131,7 @@ public sealed class SearchCollectSearchTests
         RpfFile rpf = MakeRpf();
         rpf.AllEntries = [];
 
-        Json.SearchResult result = SearchHandler.CollectSearch(rpf, [], MakeOptions(), "adder", cancellationToken: TestContext.Current.CancellationToken);
+        Json.SearchResult result = SearchHandler.CollectSearch(rpf, [], MakeOptions(pattern: "adder"), cancellationToken: TestContext.Current.CancellationToken);
 
         Assert.True(result.Success);
         Assert.Equal(0, result.MatchCount);
@@ -143,7 +144,7 @@ public sealed class SearchCollectSearchTests
         RpfFile rpf = MakeRpf();
         rpf.AllEntries = null;
 
-        Json.SearchResult result = SearchHandler.CollectSearch(rpf, [], MakeOptions(), "adder", cancellationToken: TestContext.Current.CancellationToken);
+        Json.SearchResult result = SearchHandler.CollectSearch(rpf, [], MakeOptions(pattern: "adder"), cancellationToken: TestContext.Current.CancellationToken);
 
         Assert.True(result.Success);
         Assert.Equal(0, result.MatchCount);
@@ -160,7 +161,7 @@ public sealed class SearchCollectSearchTests
             MakeBinary("adder.ytd", "vehicles/adder.ytd"),
         ];
 
-        Json.SearchResult result = SearchHandler.CollectSearch(rpf, [], MakeOptions(), "adder", cancellationToken: TestContext.Current.CancellationToken);
+        Json.SearchResult result = SearchHandler.CollectSearch(rpf, [], MakeOptions(pattern: "adder"), cancellationToken: TestContext.Current.CancellationToken);
 
         Assert.True(result.Success);
         Assert.Equal(2, result.MatchCount);
@@ -178,7 +179,7 @@ public sealed class SearchCollectSearchTests
             MakeBinary("zentorno.ydr", "vehicles/zentorno.ydr"),
         ];
 
-        Json.SearchResult result = SearchHandler.CollectSearch(rpf, [], MakeOptions(), ".ydr", cancellationToken: TestContext.Current.CancellationToken);
+        Json.SearchResult result = SearchHandler.CollectSearch(rpf, [], MakeOptions(pattern: ".ydr"), cancellationToken: TestContext.Current.CancellationToken);
 
         Assert.True(result.Success);
         Assert.Equal(2, result.MatchCount);
@@ -194,7 +195,7 @@ public sealed class SearchCollectSearchTests
             MakeBinary("adder.ydr", "vehicles/adder.ydr", fileSize: 4096),
         ];
 
-        Json.SearchResult result = SearchHandler.CollectSearch(rpf, [], MakeOptions(), "adder", cancellationToken: TestContext.Current.CancellationToken);
+        Json.SearchResult result = SearchHandler.CollectSearch(rpf, [], MakeOptions(pattern: "adder"), cancellationToken: TestContext.Current.CancellationToken);
 
         Assert.Equal(1, result.MatchCount);
         Json.SearchMatch match = result.Matches[0];
@@ -214,7 +215,7 @@ public sealed class SearchCollectSearchTests
             MakeResource("adder.ydr", "vehicles/adder.ydr"),
         ];
 
-        Json.SearchResult result = SearchHandler.CollectSearch(rpf, [], MakeOptions(), "adder", cancellationToken: TestContext.Current.CancellationToken);
+        Json.SearchResult result = SearchHandler.CollectSearch(rpf, [], MakeOptions(pattern: "adder"), cancellationToken: TestContext.Current.CancellationToken);
 
         Assert.Equal(1, result.MatchCount);
         Assert.Equal("resource", result.Matches[0].Type);
@@ -234,7 +235,7 @@ public sealed class SearchCollectSearchTests
             },
         ];
 
-        Json.SearchResult result = SearchHandler.CollectSearch(rpf, [], MakeOptions(), "vehicles", cancellationToken: TestContext.Current.CancellationToken);
+        Json.SearchResult result = SearchHandler.CollectSearch(rpf, [], MakeOptions(pattern: "vehicles"), cancellationToken: TestContext.Current.CancellationToken);
 
         Assert.Equal(1, result.MatchCount);
         Assert.Equal("directory", result.Matches[0].Type);
@@ -251,7 +252,7 @@ public sealed class SearchCollectSearchTests
             MakeBinary("adder.ydr", "vehicles/adder.ydr"),
         ];
 
-        Json.SearchResult result = SearchHandler.CollectSearch(rpf, [], MakeOptions(), "weapons", cancellationToken: TestContext.Current.CancellationToken);
+        Json.SearchResult result = SearchHandler.CollectSearch(rpf, [], MakeOptions(pattern: "weapons"), cancellationToken: TestContext.Current.CancellationToken);
 
         Assert.True(result.Success);
         Assert.Equal(0, result.MatchCount);
@@ -268,7 +269,7 @@ public sealed class SearchCollectSearchTests
         ];
         List<string> scanErrors = ["scan error 1"];
 
-        Json.SearchResult result = SearchHandler.CollectSearch(rpf, scanErrors, MakeOptions(), "adder", cancellationToken: TestContext.Current.CancellationToken);
+        Json.SearchResult result = SearchHandler.CollectSearch(rpf, scanErrors, MakeOptions(pattern: "adder"), cancellationToken: TestContext.Current.CancellationToken);
 
         Assert.False(result.Success);
         Assert.Equal(1, result.MatchCount);
@@ -285,7 +286,7 @@ public sealed class SearchCollectSearchTests
             MakeBinary("adder.ytd", "vehicles/adder.ytd"),
         ];
 
-        Json.SearchResult result = SearchHandler.CollectSearch(rpf, [], MakeOptions(filters: Filter.Normalize(["*.ydr"])), "adder", cancellationToken: TestContext.Current.CancellationToken);
+        Json.SearchResult result = SearchHandler.CollectSearch(rpf, [], MakeOptions(filters: Filter.Normalize(["*.ydr"]), pattern: "adder"), cancellationToken: TestContext.Current.CancellationToken);
 
         Assert.True(result.Success);
         Assert.Equal(1, result.MatchCount);
@@ -302,7 +303,7 @@ public sealed class SearchCollectSearchTests
             MakeBinary("adder.ytd", "vehicles/adder.ytd"),
         ];
 
-        Json.SearchResult result = SearchHandler.CollectSearch(rpf, [], MakeOptions(), "adder", cancellationToken: TestContext.Current.CancellationToken);
+        Json.SearchResult result = SearchHandler.CollectSearch(rpf, [], MakeOptions(pattern: "adder"), cancellationToken: TestContext.Current.CancellationToken);
 
         Assert.True(result.Success);
         Assert.Equal(2, result.MatchCount);
@@ -318,7 +319,7 @@ public sealed class SearchCollectSearchTests
             MakeBinary("zentorno.ydr", "vehicles/zentorno.ydr"),
         ];
 
-        Json.SearchResult result = SearchHandler.CollectSearch(rpf, [], MakeOptions(), "vehicles\\adder", cancellationToken: TestContext.Current.CancellationToken);
+        Json.SearchResult result = SearchHandler.CollectSearch(rpf, [], MakeOptions(pattern: "vehicles\\adder"), cancellationToken: TestContext.Current.CancellationToken);
 
         Assert.Equal(1, result.MatchCount);
         Assert.Equal("vehicles/adder.ydr", result.Matches[0].Path);
@@ -334,7 +335,7 @@ public sealed class SearchCollectSearchTests
             MakeBinary("zentorno.ydr", "vehicles/zentorno.ydr"),
         ];
 
-        Json.SearchResult result = SearchHandler.CollectSearch(rpf, [], MakeOptions(), "ADDER", cancellationToken: TestContext.Current.CancellationToken);
+        Json.SearchResult result = SearchHandler.CollectSearch(rpf, [], MakeOptions(pattern: "ADDER"), cancellationToken: TestContext.Current.CancellationToken);
 
         Assert.Equal(1, result.MatchCount);
         Assert.Equal("adder.ydr", result.Matches[0].Name);
@@ -356,7 +357,7 @@ public sealed class SearchCollectSearchTests
             },
         ];
 
-        Json.SearchResult result = SearchHandler.CollectSearch(rpf, [], MakeOptions(), "adder", cancellationToken: TestContext.Current.CancellationToken);
+        Json.SearchResult result = SearchHandler.CollectSearch(rpf, [], MakeOptions(pattern: "adder"), cancellationToken: TestContext.Current.CancellationToken);
 
         Assert.Equal(0, result.MatchCount);
         Assert.Empty(result.Matches);
@@ -368,7 +369,7 @@ public sealed class SearchCollectSearchTests
         RpfFile rpf = MakeRpf();
         rpf.AllEntries = [];
 
-        Json.SearchResult result = SearchHandler.CollectSearch(rpf, [], MakeOptions("/my/archive.rpf"), "test", cancellationToken: TestContext.Current.CancellationToken);
+        Json.SearchResult result = SearchHandler.CollectSearch(rpf, [], MakeOptions("/my/archive.rpf", pattern: "test"), cancellationToken: TestContext.Current.CancellationToken);
 
         Assert.Equal("/my/archive.rpf", result.RpfFile);
         Assert.Equal("test", result.Pattern);
@@ -508,7 +509,7 @@ public sealed class SearchCancellationTests
             FileUncompressedSize = 1024,
         };
 
-    private static RpfOptions MakeOptions() =>
+    private static SearchOptions MakeOptions(string pattern = "*") =>
         new()
         {
             RpfPath = "/test.rpf",
@@ -518,8 +519,8 @@ public sealed class SearchCancellationTests
             Verbose = false,
             Json = false,
             Recursive = false,
-            Threads = 1,
             SizeFormat = SizeFormat.IEC,
+            Pattern = pattern,
         };
 
     [Fact]
@@ -536,7 +537,7 @@ public sealed class SearchCancellationTests
         cts.Cancel();
 
         _ = Assert.Throws<OperationCanceledException>(
-            () => SearchHandler.CollectSearch(rpf, [], MakeOptions(), "*", cancellationToken: cts.Token)
+            () => SearchHandler.CollectSearch(rpf, [], MakeOptions("*"), cancellationToken: cts.Token)
         );
     }
 }
@@ -548,7 +549,7 @@ public sealed class SearchPrintTests
 {
     private static readonly char[] SplitChars = ['\r', '\n'];
 
-    private static RpfOptions MakeOptions(bool verbose = false, SizeFormat sizeFormat = SizeFormat.IEC) =>
+    private static SearchOptions MakeOptions(bool verbose = false, SizeFormat sizeFormat = SizeFormat.IEC) =>
         new()
         {
             RpfPath = "/test.rpf",
@@ -558,8 +559,8 @@ public sealed class SearchPrintTests
             Verbose = verbose,
             Json = false,
             Recursive = false,
-            Threads = 1,
             SizeFormat = sizeFormat,
+            Pattern = "",
         };
 
     private static Json.SearchResult MakeResult(
@@ -822,7 +823,7 @@ public sealed class SearchPrintTests
 [Collection("ConsoleOutput")]
 public sealed class SearchHandlerExecuteTests
 {
-    private static RpfOptions MakeOptions(string rpfPath, bool json) =>
+    private static SearchOptions MakeOptions(string rpfPath, bool json, string pattern = "", string? dirPath = null) =>
         new()
         {
             RpfPath = rpfPath,
@@ -832,8 +833,9 @@ public sealed class SearchHandlerExecuteTests
             Verbose = false,
             Json = json,
             Recursive = false,
-            Threads = 1,
             SizeFormat = SizeFormat.IEC,
+            Pattern = pattern,
+            DirPath = dirPath,
         };
 
     [Fact]
@@ -847,7 +849,7 @@ public sealed class SearchHandlerExecuteTests
             Console.SetOut(new StringWriter());
             Console.SetError(stderr);
 
-            int exitCode = SearchHandler.Execute(MakeOptions("/nonexistent/test.rpf", json: false), "*.ydr", cancellationToken: TestContext.Current.CancellationToken);
+            int exitCode = SearchHandler.Execute(MakeOptions("/nonexistent/test.rpf", json: false, pattern: "*.ydr"), cancellationToken: TestContext.Current.CancellationToken);
 
             Assert.Equal(1, exitCode);
             Assert.Contains("Error:", stderr.ToString());
@@ -870,7 +872,7 @@ public sealed class SearchHandlerExecuteTests
             Console.SetOut(stdout);
             Console.SetError(new StringWriter());
 
-            int exitCode = SearchHandler.Execute(MakeOptions("/nonexistent/test.rpf", json: true), "adder", cancellationToken: TestContext.Current.CancellationToken);
+            int exitCode = SearchHandler.Execute(MakeOptions("/nonexistent/test.rpf", json: true, pattern: "adder"), cancellationToken: TestContext.Current.CancellationToken);
 
             Assert.Equal(1, exitCode);
             string output = stdout.ToString();
@@ -893,7 +895,7 @@ public sealed class SearchHandlerExecuteTests
             StringWriter stdout = new();
             Console.SetOut(stdout);
 
-            _ = SearchHandler.Execute(MakeOptions("/nonexistent/test.rpf", json: true), "test*", cancellationToken: TestContext.Current.CancellationToken);
+            _ = SearchHandler.Execute(MakeOptions("/nonexistent/test.rpf", json: true, pattern: "test*"), cancellationToken: TestContext.Current.CancellationToken);
 
             string output = stdout.ToString();
             Assert.Contains("\"rpfFile\":", output);
@@ -915,9 +917,7 @@ public sealed class SearchHandlerExecuteTests
             Console.SetError(stderr);
 
             int exitCode = SearchHandler.Execute(
-                MakeOptions("/unused.rpf", json: false),
-                "*.ydr",
-                dirPath: "/nonexistent_dir_xyz_12345",
+                MakeOptions("/unused.rpf", json: false, pattern: "*.ydr", dirPath: "/nonexistent_dir_xyz_12345"),
                 cancellationToken: TestContext.Current.CancellationToken);
 
             Assert.Equal(1, exitCode);
@@ -942,9 +942,7 @@ public sealed class SearchHandlerExecuteTests
             Console.SetError(new StringWriter());
 
             int exitCode = SearchHandler.Execute(
-                MakeOptions("/unused.rpf", json: true),
-                "adder",
-                dirPath: "/nonexistent_dir_xyz_12345",
+                MakeOptions("/unused.rpf", json: true, pattern: "adder", dirPath: "/nonexistent_dir_xyz_12345"),
                 cancellationToken: TestContext.Current.CancellationToken);
 
             Assert.Equal(1, exitCode);
@@ -964,7 +962,7 @@ public sealed class SearchHandlerExecuteTests
 
 public sealed class SearchCollectSearchArchiveTests
 {
-    private static RpfOptions MakeOptions(string rpfPath = "/test.rpf") =>
+    private static SearchOptions MakeOptions(string rpfPath = "/test.rpf", string pattern = "") =>
         new()
         {
             RpfPath = rpfPath,
@@ -974,8 +972,8 @@ public sealed class SearchCollectSearchArchiveTests
             Verbose = false,
             Json = false,
             Recursive = false,
-            Threads = 1,
             SizeFormat = SizeFormat.IEC,
+            Pattern = pattern,
         };
 
     private static RpfFile MakeRpf() =>
@@ -997,7 +995,7 @@ public sealed class SearchCollectSearchArchiveTests
         RpfFile rpf = MakeRpf();
         rpf.AllEntries = [MakeBinary("a.ydr", "a.ydr")];
 
-        Json.SearchResult result = SearchHandler.CollectSearch(rpf, [], MakeOptions("/my/archive.rpf"), "a", cancellationToken: TestContext.Current.CancellationToken);
+        Json.SearchResult result = SearchHandler.CollectSearch(rpf, [], MakeOptions("/my/archive.rpf", pattern: "a"), cancellationToken: TestContext.Current.CancellationToken);
 
         Assert.Equal("/my/archive.rpf", result.Matches[0].Archive);
         Assert.Equal("/my/archive.rpf", result.RpfFile);
@@ -1015,7 +1013,7 @@ public sealed class SearchCollectSearchArchiveTests
             MakeBinary("b.ydr", "b.ydr"),
         ];
 
-        Json.SearchResult result = SearchHandler.CollectSearch(rpf, [], MakeOptions(), ".ydr", archive: "/dir/test.rpf", cancellationToken: TestContext.Current.CancellationToken);
+        Json.SearchResult result = SearchHandler.CollectSearch(rpf, [], MakeOptions(pattern: ".ydr"), archive: "/dir/test.rpf", cancellationToken: TestContext.Current.CancellationToken);
 
         Assert.Equal(2, result.MatchCount);
         Assert.All(result.Matches, m => Assert.Equal("/dir/test.rpf", m.Archive));
@@ -1027,7 +1025,7 @@ public sealed class SearchCollectSearchArchiveTests
         RpfFile rpf = MakeRpf();
         rpf.AllEntries = [MakeBinary("a.ydr", "a.ydr")];
 
-        Json.SearchResult result = SearchHandler.CollectSearch(rpf, [], MakeOptions(), "a", archive: "/dir/custom.rpf", cancellationToken: TestContext.Current.CancellationToken);
+        Json.SearchResult result = SearchHandler.CollectSearch(rpf, [], MakeOptions(pattern: "a"), archive: "/dir/custom.rpf", cancellationToken: TestContext.Current.CancellationToken);
 
         Assert.Equal("/dir/custom.rpf", result.Matches[0].Archive);
         Assert.Equal("/dir/custom.rpf", result.RpfFile);
@@ -1040,7 +1038,7 @@ public sealed class SearchCollectSearchArchiveTests
 
 public sealed class SearchErrorResultRpfFilesTests
 {
-    private static RpfOptions MakeOptions() =>
+    private static SearchOptions MakeOptions(string pattern = "*.ydr") =>
         new()
         {
             RpfPath = "/test.rpf",
@@ -1050,14 +1048,14 @@ public sealed class SearchErrorResultRpfFilesTests
             Verbose = false,
             Json = false,
             Recursive = false,
-            Threads = 1,
             SizeFormat = SizeFormat.IEC,
+            Pattern = pattern,
         };
 
     [Fact]
     public void ErrorResult_SetsEmptyRpfFiles()
     {
-        Json.SearchResult result = SearchHandler.ErrorResult([], MakeOptions(), "*.ydr");
+        Json.SearchResult result = SearchHandler.ErrorResult([], MakeOptions("*.ydr"));
         Assert.Empty(result.RpfFiles);
     }
 }
@@ -1069,7 +1067,7 @@ public sealed class SearchPrintMultiArchiveTests
 {
     private static readonly char[] SplitChars = ['\r', '\n'];
 
-    private static RpfOptions MakeOptions(bool verbose = false) =>
+    private static SearchOptions MakeOptions(bool verbose = false) =>
         new()
         {
             RpfPath = "/dir",
@@ -1079,8 +1077,8 @@ public sealed class SearchPrintMultiArchiveTests
             Verbose = verbose,
             Json = false,
             Recursive = false,
-            Threads = 1,
             SizeFormat = SizeFormat.IEC,
+            Pattern = "",
         };
 
     private static Json.SearchMatch MakeMatch(string archive, string path, string name) =>
@@ -1330,7 +1328,7 @@ public sealed class SearchRelativePathTests
 [Collection("ConsoleOutput")]
 public sealed class SearchExecuteDirectoryTests
 {
-    private static RpfOptions MakeOptions(bool json = false) =>
+    private static SearchOptions MakeOptions(bool json = false, string pattern = "", string? dirPath = null) =>
         new()
         {
             RpfPath = "",
@@ -1340,8 +1338,9 @@ public sealed class SearchExecuteDirectoryTests
             Verbose = false,
             Json = json,
             Recursive = false,
-            Threads = 1,
             SizeFormat = SizeFormat.IEC,
+            Pattern = pattern,
+            DirPath = dirPath,
         };
 
     [Fact]
@@ -1356,9 +1355,7 @@ public sealed class SearchExecuteDirectoryTests
             Console.SetError(stderr);
 
             int exitCode = SearchHandler.ExecuteDirectory(
-                MakeOptions(),
-                "*.ydr",
-                "/nonexistent_dir_xyz_12345",
+                MakeOptions(pattern: "*.ydr", dirPath: "/nonexistent_dir_xyz_12345"),
                 TestContext.Current.CancellationToken);
 
             Assert.Equal(1, exitCode);
@@ -1383,9 +1380,7 @@ public sealed class SearchExecuteDirectoryTests
             Console.SetError(new StringWriter());
 
             int exitCode = SearchHandler.ExecuteDirectory(
-                MakeOptions(json: true),
-                "adder",
-                "/nonexistent_dir_xyz_12345",
+                MakeOptions(json: true, pattern: "adder", dirPath: "/nonexistent_dir_xyz_12345"),
                 TestContext.Current.CancellationToken);
 
             Assert.Equal(1, exitCode);
@@ -1414,9 +1409,7 @@ public sealed class SearchExecuteDirectoryTests
             Console.SetError(stderr);
 
             int exitCode = SearchHandler.ExecuteDirectory(
-                MakeOptions(),
-                "*.ydr",
-                tempDir,
+                MakeOptions(pattern: "*.ydr", dirPath: tempDir),
                 TestContext.Current.CancellationToken);
 
             Assert.Equal(1, exitCode);
@@ -1444,9 +1437,7 @@ public sealed class SearchExecuteDirectoryTests
             Console.SetError(new StringWriter());
 
             int exitCode = SearchHandler.ExecuteDirectory(
-                MakeOptions(json: true),
-                "adder",
-                tempDir,
+                MakeOptions(json: true, pattern: "adder", dirPath: tempDir),
                 TestContext.Current.CancellationToken);
 
             Assert.Equal(1, exitCode);
@@ -1477,9 +1468,7 @@ public sealed class SearchExecuteDirectoryTests
             Console.SetError(stderr);
 
             int exitCode = SearchHandler.ExecuteDirectory(
-                MakeOptions(),
-                "*.ydr",
-                tempDir,
+                MakeOptions(pattern: "*.ydr", dirPath: tempDir),
                 TestContext.Current.CancellationToken);
 
             Assert.Equal(1, exitCode);

@@ -21,14 +21,11 @@ public sealed class Gen9HandlerTests
         {
             InputPath = inputPath,
             OutputPath = outputPath,
-            Common = new CommonOptions
-            {
-                ExePath = exePath,
-                Verbose = false,
-                Json = json,
-                SizeFormat = SizeFormat.IEC,
-                Threads = 1,
-            },
+            ExePath = exePath,
+            Verbose = false,
+            Json = json,
+            SizeFormat = SizeFormat.IEC,
+            Threads = 1,
             NoRecurse = false,
             NoOverwrite = false,
             SkipUnconverted = false,

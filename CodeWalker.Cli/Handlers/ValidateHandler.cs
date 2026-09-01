@@ -14,7 +14,15 @@ namespace CodeWalker.Cli.Handlers;
 
 internal sealed record ValidateOptions
 {
-    public required RpfOptions Rpf { get; init; }
+    public required string RpfPath { get; init; }
+    public required string ExePath { get; init; }
+    public required bool Gen9 { get; init; }
+    public required string[] Filters { get; init; }
+    public required bool Verbose { get; init; }
+    public required bool Json { get; init; }
+    public required bool Recursive { get; init; }
+    public required int Threads { get; init; }
+    public required SizeFormat SizeFormat { get; init; }
     public required bool Progress { get; init; }
 }
 
@@ -22,25 +30,49 @@ internal static class ValidateHandler
 {
     public static Command CreateCommand(CancellationToken cancellationToken = default)
     {
-        RpfCommandOptions rpfOpts = new();
-        Option<bool> progressOption = new("--progress", "-P")
+        Option<FileInfo> rpfOpt = CliOptions.Rpf();
+        Option<DirectoryInfo> exeOpt = CliOptions.Exe();
+        Option<bool> gen9Opt = CliOptions.Gen9();
+        Option<string[]> filterOpt = CliOptions.Filter();
+        Option<bool> recursiveOpt = CliOptions.Recursive();
+        Option<bool> verboseOpt = CliOptions.Verbose();
+        Option<bool> jsonOpt = CliOptions.Json();
+        Option<bool> siOpt = CliOptions.Si();
+        Option<int> threadsOpt = CliOptions.Threads();
+        Option<bool> progressOpt = new("--progress", "-P")
         {
             Description = "Show progress bar during validation",
         };
 
         Command command = new("validate", "Validate game file integrity by parsing RPF contents")
         {
-            progressOption,
+            rpfOpt,
+            exeOpt,
+            gen9Opt,
+            filterOpt,
+            recursiveOpt,
+            verboseOpt,
+            jsonOpt,
+            siOpt,
+            threadsOpt,
+            progressOpt,
         };
-        rpfOpts.AddTo(command);
         command.Aliases.Add("val");
 
         command.SetAction(parseResult =>
         {
             ValidateOptions options = new()
             {
-                Rpf = rpfOpts.Parse(parseResult),
-                Progress = parseResult.GetValue(progressOption),
+                RpfPath = parseResult.GetRequiredValue(rpfOpt).FullName,
+                ExePath = parseResult.GetRequiredValue(exeOpt).FullName,
+                Gen9 = parseResult.GetValue(gen9Opt),
+                Filters = Filter.Normalize(parseResult.GetValue(filterOpt)),
+                Verbose = parseResult.GetValue(verboseOpt),
+                Json = parseResult.GetValue(jsonOpt),
+                Recursive = parseResult.GetValue(recursiveOpt),
+                Threads = parseResult.GetValue(threadsOpt),
+                SizeFormat = parseResult.GetValue(siOpt) ? SizeFormat.SI : SizeFormat.IEC,
+                Progress = parseResult.GetValue(progressOpt),
             };
             return Execute(options, cancellationToken);
         });
@@ -54,7 +86,7 @@ internal static class ValidateHandler
             new()
             {
                 Success = false,
-                RpfFile = options.Rpf.RpfPath,
+                RpfFile = options.RpfPath,
                 TotalFiles = 0,
                 Valid = 0,
                 Warnings = 0,
@@ -64,47 +96,47 @@ internal static class ValidateHandler
                 ErrorMessages = errorMessages,
             };
 
-        string? initError = RpfService.ValidateAndLoadKeys(
-            options.Rpf.RpfPath,
-            options.Rpf.ExePath,
-            options.Rpf.Gen9,
-            options.Rpf.Json
+        string? initError = RpfHelper.ValidateAndLoadKeys(
+            options.RpfPath,
+            options.ExePath,
+            options.Gen9,
+            options.Json
         );
         if (initError != null)
         {
-            return RpfService.ReportError(initError, options.Rpf.Json, ErrorResult([]));
+            return Output.ReportError(initError, options.Json, ErrorResult([]));
         }
 
         List<string> scanErrors = [];
         try
         {
-            RpfFile rpf = RpfService.OpenRpf(
-                options.Rpf.RpfPath,
-                options.Rpf.Verbose,
-                options.Rpf.Json,
+            RpfFile rpf = RpfHelper.OpenRpf(
+                options.RpfPath,
+                options.Verbose,
+                options.Json,
                 scanErrors
             );
 
-            if (!options.Rpf.Json)
+            if (!options.Json)
             {
                 Console.Error.WriteLine();
             }
 
-            List<(RpfFile rpf, RpfFileEntry entry)> entries = RpfService.CollectFiles(
+            List<(RpfFile rpf, RpfFileEntry entry)> entries = RpfHelper.CollectFiles(
                 rpf,
-                options.Rpf.Filters,
-                options.Rpf.Recursive
+                options.Filters,
+                options.Recursive
             );
 
             Json.ValidateFileEntry?[] results = new Json.ValidateFileEntry?[entries.Count];
             object consoleLock = new();
 
-            using (ProgressBar progress = new(entries.Count, options.Progress && !options.Rpf.Json))
+            using (ProgressBar progress = new(entries.Count, options.Progress && !options.Json))
             {
                 _ = Parallel.For(
                     0,
                     entries.Count,
-                    new ParallelOptions { MaxDegreeOfParallelism = options.Rpf.Threads, CancellationToken = cancellationToken },
+                    new ParallelOptions { MaxDegreeOfParallelism = options.Threads, CancellationToken = cancellationToken },
                     i =>
                     {
                         (_, RpfFileEntry fileEntry) = entries[i];
@@ -126,7 +158,7 @@ internal static class ValidateHandler
                             };
 
                             if (
-                                !options.Rpf.Json
+                                !options.Json
                                 && !options.Progress
                                 && (status == "warning" || status == "error")
                             )
@@ -149,7 +181,7 @@ internal static class ValidateHandler
                                 Message = ex.Message,
                             };
 
-                            if (!options.Rpf.Json && !options.Progress)
+                            if (!options.Json && !options.Progress)
                             {
                                 lock (consoleLock)
                                 {
@@ -173,14 +205,14 @@ internal static class ValidateHandler
             int skipped = nonNull.Count(e => e.Status == "skipped");
 
             // In verbose mode or JSON, include all; otherwise only warnings/errors
-            List<Json.ValidateFileEntry> files = (options.Rpf.Json || options.Rpf.Verbose)
+            List<Json.ValidateFileEntry> files = (options.Json || options.Verbose)
                 ? nonNull
                 : nonNull.Where(e => e.Status is "warning" or "error").ToList();
 
             Json.ValidateResult result = new()
             {
                 Success = errors == 0 && scanErrors.Count == 0,
-                RpfFile = options.Rpf.RpfPath,
+                RpfFile = options.RpfPath,
                 TotalFiles = entries.Count,
                 Valid = valid,
                 Warnings = warnings,
@@ -190,10 +222,10 @@ internal static class ValidateHandler
                 ErrorMessages = [.. scanErrors],
             };
 
-            if (options.Rpf.Json)
+            if (options.Json)
             {
                 Console.WriteLine(
-                    JsonSerializer.Serialize(result, RpfService.JsonSerializerOptions)
+                    JsonSerializer.Serialize(result, Output.JsonSerializerOptions)
                 );
             }
             else
@@ -209,11 +241,11 @@ internal static class ValidateHandler
         catch (OperationCanceledException) { throw; }
         catch (Exception ex)
         {
-            return RpfService.ReportError(
+            return Output.ReportError(
                 ex.Message,
-                options.Rpf.Json,
+                options.Json,
                 ErrorResult([.. scanErrors]),
-                options.Rpf.Verbose ? ex.StackTrace : null
+                options.Verbose ? ex.StackTrace : null
             );
         }
     }

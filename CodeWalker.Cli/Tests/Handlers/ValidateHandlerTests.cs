@@ -14,18 +14,15 @@ public sealed class ValidateHandlerTests
     private static ValidateOptions MakeOptions(string rpfPath, bool json) =>
         new()
         {
-            Rpf = new RpfOptions
-            {
-                RpfPath = rpfPath,
-                ExePath = "/nonexistent",
-                Gen9 = false,
-                Filters = [],
-                Verbose = false,
-                Json = json,
-                Recursive = false,
-                Threads = 1,
-                SizeFormat = SizeFormat.IEC,
-            },
+            RpfPath = rpfPath,
+            ExePath = "/nonexistent",
+            Gen9 = false,
+            Filters = [],
+            Verbose = false,
+            Json = json,
+            Recursive = false,
+            Threads = 1,
+            SizeFormat = SizeFormat.IEC,
             Progress = false,
         };
 

@@ -22,14 +22,10 @@ public sealed class PackHandlerTests
         {
             InputPath = inputPath,
             OutputPath = outputPath,
-            Common = new CommonOptions
-            {
-                ExePath = exePath,
-                Verbose = false,
-                Json = json,
-                SizeFormat = SizeFormat.IEC,
-                Threads = 1,
-            },
+            ExePath = exePath,
+            Verbose = false,
+            Json = json,
+            SizeFormat = SizeFormat.IEC,
             Gen9 = false,
             Force = force,
             Progress = false,

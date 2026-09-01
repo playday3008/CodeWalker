@@ -14,7 +14,10 @@ internal sealed record PackOptions
 {
     public required string InputPath { get; init; }
     public required string OutputPath { get; init; }
-    public required CommonOptions Common { get; init; }
+    public required string ExePath { get; init; }
+    public required bool Verbose { get; init; }
+    public required bool Json { get; init; }
+    public required SizeFormat SizeFormat { get; init; }
     public required bool Gen9 { get; init; }
     public required bool Force { get; init; }
     public required bool Progress { get; init; }
@@ -24,7 +27,11 @@ internal static class PackHandler
 {
     public static Command CreateCommand(CancellationToken cancellationToken = default)
     {
-        CommonCommandOptions commonOpts = new();
+        Option<DirectoryInfo> exeOpt = CliOptions.Exe();
+        Option<bool> verboseOpt = CliOptions.Verbose();
+        Option<bool> jsonOpt = CliOptions.Json();
+        Option<bool> siOpt = CliOptions.Si();
+
         Option<DirectoryInfo> inputOption = new("--input", "-i")
         {
             Description = "Source directory of loose files to pack",
@@ -52,15 +59,21 @@ internal static class PackHandler
             Description = "Show progress bar",
         };
 
+
         Command command = new("pack", "Create an RPF archive from a directory of loose files")
         {
             inputOption,
             outputOption,
             gen9Option,
             forceOption,
+
             progressOption,
+            exeOpt,
+            verboseOpt,
+            jsonOpt,
+            siOpt
         };
-        commonOpts.AddTo(command, includeThreads: false);
+
         command.Aliases.Add("p");
 
         command.SetAction(parseResult =>
@@ -69,7 +82,10 @@ internal static class PackHandler
             {
                 InputPath = parseResult.GetRequiredValue(inputOption).FullName,
                 OutputPath = parseResult.GetRequiredValue(outputOption).FullName,
-                Common = commonOpts.Parse(parseResult),
+                ExePath = parseResult.GetRequiredValue(exeOpt).FullName,
+                Verbose = parseResult.GetValue(verboseOpt),
+                Json = parseResult.GetValue(jsonOpt),
+                SizeFormat = parseResult.GetValue(siOpt) ? SizeFormat.SI : SizeFormat.IEC,
                 Gen9 = parseResult.GetValue(gen9Option),
                 Force = parseResult.GetValue(forceOption),
                 Progress = parseResult.GetValue(progressOption),
@@ -98,9 +114,9 @@ internal static class PackHandler
 
         if (!Directory.Exists(options.InputPath))
         {
-            return RpfService.ReportError(
+            return Output.ReportError(
                 $"Input directory not found: {options.InputPath}",
-                options.Common.Json,
+                options.Json,
                 ErrorResult([])
             );
         }
@@ -109,23 +125,23 @@ internal static class PackHandler
         {
             if (!options.Force)
             {
-                return RpfService.ReportError(
+                return Output.ReportError(
                     $"Output file already exists: {options.OutputPath}. Use --force to overwrite.",
-                    options.Common.Json,
+                    options.Json,
                     ErrorResult([])
                 );
             }
             File.Delete(options.OutputPath);
         }
 
-        string? exeError = RpfService.ValidateExeAndLoadKeys(
-            options.Common.ExePath,
+        string? exeError = RpfHelper.ValidateExeAndLoadKeys(
+            options.ExePath,
             options.Gen9,
-            options.Common.Json
+            options.Json
         );
         if (exeError != null)
         {
-            return RpfService.ReportError(exeError, options.Common.Json, ErrorResult([]));
+            return Output.ReportError(exeError, options.Json, ErrorResult([]));
         }
 
         bool previousGen9 = RpfManager.IsGen9;
@@ -139,7 +155,7 @@ internal static class PackHandler
                 SearchOption.AllDirectories
             );
 
-            if (!options.Common.Json)
+            if (!options.Json)
             {
                 Console.Error.WriteLine(
                     $"Packing {allFiles.Length} files from {options.InputPath}"
@@ -158,7 +174,7 @@ internal static class PackHandler
 
             RpfFile rpf = RpfFile.CreateNew(outputFolder, outputFileName);
 
-            if (!options.Common.Json)
+            if (!options.Json)
             {
                 Console.Error.WriteLine($"Created RPF: {options.OutputPath}");
             }
@@ -172,7 +188,7 @@ internal static class PackHandler
             using (
                 ProgressBar progress = new(
                     allFiles.Length,
-                    options.Progress && !options.Common.Json
+                    options.Progress && !options.Json
                 )
             )
             {
@@ -190,13 +206,13 @@ internal static class PackHandler
                 );
             }
 
-            if (!options.Common.Json)
+            if (!options.Json)
             {
                 Console.Error.WriteLine("Defragmenting archive...");
             }
             RpfFile.Defragment(rpf);
 
-            SizeFormat sizeFormat = options.Common.SizeFormat;
+            SizeFormat sizeFormat = options.SizeFormat;
 
             Json.PackResult result = new()
             {
@@ -211,10 +227,10 @@ internal static class PackHandler
                 ErrorMessages = [.. errorMessages],
             };
 
-            if (options.Common.Json)
+            if (options.Json)
             {
                 Console.WriteLine(
-                    JsonSerializer.Serialize(result, RpfService.JsonSerializerOptions)
+                    JsonSerializer.Serialize(result, Output.JsonSerializerOptions)
                 );
             }
             else
@@ -230,11 +246,11 @@ internal static class PackHandler
         catch (OperationCanceledException) { throw; }
         catch (Exception ex)
         {
-            return RpfService.ReportError(
+            return Output.ReportError(
                 ex.Message,
-                options.Common.Json,
+                options.Json,
                 ErrorResult([]),
-                options.Common.Verbose ? ex.StackTrace : null
+                options.Verbose ? ex.StackTrace : null
             );
         }
         finally
@@ -263,7 +279,7 @@ internal static class PackHandler
             string dirName = Path.GetFileName(subDirPath);
             try
             {
-                if (options.Common.Verbose && !options.Common.Json)
+                if (options.Verbose && !options.Json)
                 {
                     Console.Error.WriteLine($"Creating directory: {dirName}");
                 }
@@ -289,7 +305,7 @@ internal static class PackHandler
                 errors++;
                 string errorMsg = $"Error creating directory {dirName}: {ex.Message}";
                 errorMessages.Add(errorMsg);
-                if (!options.Common.Json)
+                if (!options.Json)
                 {
                     Console.Error.WriteLine($"Error: {errorMsg}");
                 }
@@ -305,7 +321,7 @@ internal static class PackHandler
             {
                 byte[] data = File.ReadAllBytes(filePath);
 
-                if (options.Common.Verbose && !options.Common.Json)
+                if (options.Verbose && !options.Json)
                 {
                     Console.Error.WriteLine($"Adding file: {fileName} ({data.Length} bytes)");
                 }
@@ -320,7 +336,7 @@ internal static class PackHandler
                 errors++;
                 string errorMsg = $"Error adding file {fileName}: {ex.Message}";
                 errorMessages.Add(errorMsg);
-                if (!options.Common.Json)
+                if (!options.Json)
                 {
                     Console.Error.WriteLine($"Error: {errorMsg}");
                 }

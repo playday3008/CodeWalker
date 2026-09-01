@@ -5,11 +5,9 @@ using System.Text.Json;
 using System.Threading;
 using System.Threading.Tasks;
 
-using CodeWalker.Cli.Handlers;
-using CodeWalker.Cli.Helpers;
 using CodeWalker.GameFiles;
 
-namespace CodeWalker.Cli;
+namespace CodeWalker.Cli.Helpers;
 
 /// <summary>
 /// Delegate for processing a single file entry during export.
@@ -27,7 +25,24 @@ internal delegate (Json.ExportFileEntry? entry, string? error) ExportFileProcess
     bool noOverwrite
 );
 
-internal static class ExportService
+internal sealed record ExportOptions
+{
+    public required string RpfPath { get; init; }
+    public required string ExePath { get; init; }
+    public required bool Gen9 { get; init; }
+    public required string[] Filters { get; init; }
+    public required bool Verbose { get; init; }
+    public required bool Json { get; init; }
+    public required bool Recursive { get; init; }
+    public required int Threads { get; init; }
+    public required SizeFormat SizeFormat { get; init; }
+    public required string OutputPath { get; init; }
+    public required bool DryRun { get; init; }
+    public required bool NoOverwrite { get; init; }
+    public required bool Progress { get; init; }
+}
+
+internal static class ExportPipeline
 {
     internal readonly record struct ExportAggregation
     {
@@ -146,7 +161,7 @@ internal static class ExportService
             new()
             {
                 Success = false,
-                RpfFile = options.Rpf.RpfPath,
+                RpfFile = options.RpfPath,
                 OutputDir = options.OutputPath,
                 Format = format,
                 TotalFiles = 0,
@@ -158,26 +173,26 @@ internal static class ExportService
                 ErrorMessages = errorMessages,
             };
 
-        string? initError = RpfService.ValidateAndLoadKeys(
-            options.Rpf.RpfPath,
-            options.Rpf.ExePath,
-            options.Rpf.Gen9,
-            options.Rpf.Json
+        string? initError = RpfHelper.ValidateAndLoadKeys(
+            options.RpfPath,
+            options.ExePath,
+            options.Gen9,
+            options.Json
         );
         if (initError != null)
-            return RpfService.ReportError(initError, options.Rpf.Json, ErrorResult([]));
+            return Output.ReportError(initError, options.Json, ErrorResult([]));
 
         try
         {
             List<string> scanErrors = [];
-            RpfFile rpf = RpfService.OpenRpf(
-                options.Rpf.RpfPath,
-                options.Rpf.Verbose,
-                options.Rpf.Json,
+            RpfFile rpf = RpfHelper.OpenRpf(
+                options.RpfPath,
+                options.Verbose,
+                options.Json,
                 scanErrors
             );
 
-            if (!options.Rpf.Json && options.DryRun)
+            if (!options.Json && options.DryRun)
                 Console.Error.WriteLine("Dry run mode - no files will be exported");
 
             string outputDir = options.OutputPath;
@@ -185,13 +200,13 @@ internal static class ExportService
             if (!options.DryRun && !Directory.Exists(outputDir))
                 _ = Directory.CreateDirectory(outputDir);
 
-            List<(RpfFile rpf, RpfFileEntry entry)> filesToExport = RpfService.CollectFiles(
+            List<(RpfFile rpf, RpfFileEntry entry)> filesToExport = RpfHelper.CollectFiles(
                 rpf,
-                options.Rpf.Filters,
-                options.Rpf.Recursive
+                options.Filters,
+                options.Recursive
             );
 
-            int totalNonRpfFiles = RpfService.CountNonRpfFiles(rpf, options.Rpf.Recursive);
+            int totalNonRpfFiles = RpfHelper.CountNonRpfFiles(rpf, options.Recursive);
             int filterSkipped = totalNonRpfFiles - filesToExport.Count;
 
             (Json.ExportFileEntry? jsonEntry, string? errorMessage)[] results =
@@ -202,14 +217,14 @@ internal static class ExportService
             using (
                 ProgressBar progress = new(
                     filesToExport.Count,
-                    options is { Progress: true, Rpf.Json: false }
+                    options is { Progress: true, Json: false }
                 )
             )
             {
                 _ = Parallel.For(
                     0,
                     filesToExport.Count,
-                    new ParallelOptions { MaxDegreeOfParallelism = options.Rpf.Threads, CancellationToken = cancellationToken },
+                    new ParallelOptions { MaxDegreeOfParallelism = options.Threads, CancellationToken = cancellationToken },
                     i =>
                     {
                         (RpfFile sourceRpf, RpfFileEntry fileEntry) = filesToExport[i];
@@ -232,7 +247,7 @@ internal static class ExportService
 
                             if (
                                 result.entry != null
-                                && options is { Rpf: { Verbose: true, Json: false }, Progress: false }
+                                && options is { Verbose: true, Json: false, Progress: false }
                             )
                             {
                                 if (options.DryRun)
@@ -259,7 +274,7 @@ internal static class ExportService
                         }
                         catch (Exception ex)
                         {
-                            if (!options.Rpf.Json)
+                            if (!options.Json)
                             {
                                 lock (consoleLock)
                                 {
@@ -283,7 +298,7 @@ internal static class ExportService
             Json.ExportResult jsonResult = new()
             {
                 Success = agg.ErrorMessages.Count == 0,
-                RpfFile = options.Rpf.RpfPath,
+                RpfFile = options.RpfPath,
                 OutputDir = options.OutputPath,
                 Format = format,
                 TotalFiles = totalNonRpfFiles,
@@ -295,10 +310,10 @@ internal static class ExportService
                 ErrorMessages = agg.ErrorMessages,
             };
 
-            if (options.Rpf.Json)
+            if (options.Json)
             {
                 Console.WriteLine(
-                    JsonSerializer.Serialize(jsonResult, RpfService.JsonSerializerOptions)
+                    JsonSerializer.Serialize(jsonResult, Output.JsonSerializerOptions)
                 );
             }
             else
@@ -315,11 +330,11 @@ internal static class ExportService
         catch (OperationCanceledException) { throw; }
         catch (Exception ex)
         {
-            return RpfService.ReportError(
+            return Output.ReportError(
                 ex.Message,
-                options.Rpf.Json,
+                options.Json,
                 ErrorResult([]),
-                options.Rpf.Verbose ? ex.StackTrace : null
+                options.Verbose ? ex.StackTrace : null
             );
         }
     }

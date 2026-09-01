@@ -12,17 +12,59 @@ using CodeWalker.GameFiles;
 
 namespace CodeWalker.Cli.Handlers;
 
+internal sealed record StatOptions
+{
+    public required string RpfPath { get; init; }
+    public required string ExePath { get; init; }
+    public required bool Gen9 { get; init; }
+    public required string[] Filters { get; init; }
+    public required bool Verbose { get; init; }
+    public required bool Json { get; init; }
+    public required bool Recursive { get; init; }
+    public required SizeFormat SizeFormat { get; init; }
+}
+
 internal static class StatHandler
 {
     public static Command CreateCommand(CancellationToken cancellationToken = default)
     {
-        RpfCommandOptions rpfOpts = new();
+        Option<FileInfo> rpfOpt = CliOptions.Rpf();
+        Option<DirectoryInfo> exeOpt = CliOptions.Exe();
+        Option<bool> gen9Opt = CliOptions.Gen9();
+        Option<string[]> filterOpt = CliOptions.Filter();
+        Option<bool> recursiveOpt = CliOptions.Recursive();
+        Option<bool> verboseOpt = CliOptions.Verbose();
+        Option<bool> jsonOpt = CliOptions.Json();
+        Option<bool> siOpt = CliOptions.Si();
 
-        Command command = new("stat", "Show aggregate statistics for RPF archive contents");
-        rpfOpts.AddTo(command, includeThreads: false);
+        Command command = new("stat", "Show aggregate statistics for RPF archive contents")
+        {
+            rpfOpt,
+            exeOpt,
+            gen9Opt,
+            filterOpt,
+            recursiveOpt,
+            verboseOpt,
+            jsonOpt,
+            siOpt,
+        };
         command.Aliases.Add("S");
 
-        command.SetAction(parseResult => Execute(rpfOpts.Parse(parseResult), cancellationToken));
+        command.SetAction(parseResult =>
+        {
+            StatOptions options = new()
+            {
+                RpfPath = parseResult.GetValue(rpfOpt)?.FullName ?? "",
+                ExePath = parseResult.GetRequiredValue(exeOpt).FullName,
+                Gen9 = parseResult.GetValue(gen9Opt),
+                Filters = Filter.Normalize(parseResult.GetValue(filterOpt)),
+                Verbose = parseResult.GetValue(verboseOpt),
+                Json = parseResult.GetValue(jsonOpt),
+                Recursive = parseResult.GetValue(recursiveOpt),
+                SizeFormat = parseResult.GetValue(siOpt) ? SizeFormat.SI : SizeFormat.IEC,
+            };
+            return Execute(options, cancellationToken);
+        });
 
         return command;
     }
@@ -33,9 +75,9 @@ internal static class StatHandler
     /// <param name="options">The options for the stat command, including the RPF file path, filters, and output format.</param>
     /// <param name="cancellationToken">A cancellation token to observe while performing the operation.</param>
     /// <returns>An integer exit code indicating success (0) or failure (1).</returns>
-    public static int Execute(RpfOptions options, CancellationToken cancellationToken = default)
+    public static int Execute(StatOptions options, CancellationToken cancellationToken = default)
     {
-        string? initError = RpfService.ValidateAndLoadKeys(
+        string? initError = RpfHelper.ValidateAndLoadKeys(
             options.RpfPath,
             options.ExePath,
             options.Gen9,
@@ -43,7 +85,7 @@ internal static class StatHandler
         );
         if (initError != null)
         {
-            return RpfService.ReportError(
+            return Output.ReportError(
                 initError,
                 options.Json,
                 ErrorResult([], options)
@@ -53,7 +95,7 @@ internal static class StatHandler
         List<string> scanErrors = [];
         try
         {
-            RpfFile rpf = RpfService.OpenRpf(
+            RpfFile rpf = RpfHelper.OpenRpf(
                 options.RpfPath,
                 options.Verbose,
                 options.Json,
@@ -63,7 +105,7 @@ internal static class StatHandler
             if (!options.Json)
                 Console.Error.WriteLine();
 
-            List<(RpfFile rpf, RpfFileEntry entry)> entries = RpfService.CollectFiles(
+            List<(RpfFile rpf, RpfFileEntry entry)> entries = RpfHelper.CollectFiles(
                 rpf,
                 options.Filters,
                 options.Recursive
@@ -85,7 +127,7 @@ internal static class StatHandler
         }
         catch (Exception ex)
         {
-            return RpfService.ReportError(
+            return Output.ReportError(
                 ex.Message,
                 options.Json,
                 ErrorResult([.. scanErrors], options),
@@ -100,7 +142,7 @@ internal static class StatHandler
     /// <param name="errorMessages">An array of error messages to include in the result.</param>
     /// <param name="options">The options used to populate the RpfFile field in the result.</param>
     /// <returns>A <see cref="Json.StatResult"/> object with success set to false, the RpfFile field set from options, and all statistics fields set to default values.</returns>
-    internal static Json.StatResult ErrorResult(string[] errorMessages, RpfOptions options) =>
+    internal static Json.StatResult ErrorResult(string[] errorMessages, StatOptions options) =>
         new()
         {
             Success = false,
@@ -130,7 +172,7 @@ internal static class StatHandler
     internal static Json.StatResult CollectStats(
         List<(RpfFile rpf, RpfFileEntry entry)> entries,
         List<string> scanErrors,
-        RpfOptions options,
+        StatOptions options,
         CancellationToken cancellationToken = default)
     {
         int resourceCount = 0;
@@ -236,7 +278,7 @@ internal static class StatHandler
     /// </summary>
     /// <param name="result">The collected statistics to serialize.</param>
     internal static void PrintJsonStats(Json.StatResult result) =>
-        Console.WriteLine(JsonSerializer.Serialize(result, RpfService.JsonSerializerOptions));
+        Console.WriteLine(JsonSerializer.Serialize(result, Output.JsonSerializerOptions));
 
     /// <summary>
     /// Prints the collected statistics to the console in a human-readable format.
@@ -244,7 +286,7 @@ internal static class StatHandler
     /// <param name="result">The collected statistics to print.</param>
     /// <param name="options">The options used to format size values in the output.</param>
     /// <param name="cancellationToken">A cancellation token to observe while printing.</param>
-    internal static void PrintStats(Json.StatResult result, RpfOptions options, CancellationToken cancellationToken = default)
+    internal static void PrintStats(Json.StatResult result, StatOptions options, CancellationToken cancellationToken = default)
     {
         cancellationToken.ThrowIfCancellationRequested();
         // Collect all rows for dynamic column sizing

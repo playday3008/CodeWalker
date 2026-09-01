@@ -32,7 +32,11 @@ internal static class DiffHandler
 {
     public static Command CreateCommand(CancellationToken cancellationToken = default)
     {
-        CommonCommandOptions commonOpts = new();
+        Option<bool> verboseOpt = CliOptions.Verbose();
+        Option<bool> jsonOpt = CliOptions.Json();
+        Option<bool> siOpt = CliOptions.Si();
+        Option<int> threadsOpt = CliOptions.Threads();
+
         Option<FileInfo> leftOption = new("--left", "-l")
         {
             Description = "First RPF archive to compare",
@@ -77,6 +81,7 @@ internal static class DiffHandler
             Description = "Show progress bar",
         };
 
+
         Command command = new("diff", "Compare two RPF archives")
         {
             leftOption,
@@ -86,9 +91,14 @@ internal static class DiffHandler
             leftGen9Option,
             rightGen9Option,
             recursiveOption,
+
             progressOption,
+            verboseOpt,
+            jsonOpt,
+            siOpt,
+            threadsOpt
         };
-        commonOpts.AddTo(command, includeExe: false);
+
         command.Aliases.Add("d");
 
         command.SetAction(parseResult =>
@@ -103,10 +113,10 @@ internal static class DiffHandler
                 RightGen9 = parseResult.GetValue(rightGen9Option),
                 Recursive = parseResult.GetValue(recursiveOption),
                 Progress = parseResult.GetValue(progressOption),
-                Verbose = parseResult.GetValue(commonOpts.Verbose),
-                Json = parseResult.GetValue(commonOpts.Json),
-                SizeFormat = parseResult.GetValue(commonOpts.Si) ? SizeFormat.SI : SizeFormat.IEC,
-                Threads = parseResult.GetValue(commonOpts.Threads),
+                Verbose = parseResult.GetValue(verboseOpt),
+                Json = parseResult.GetValue(jsonOpt),
+                SizeFormat = parseResult.GetValue(siOpt) ? SizeFormat.SI : SizeFormat.IEC,
+                Threads = parseResult.GetValue(threadsOpt),
             };
             return Execute(options, cancellationToken);
         });
@@ -117,28 +127,28 @@ internal static class DiffHandler
     public static int Execute(DiffOptions options, CancellationToken cancellationToken = default)
     {
         // Validate both RPF files and exe paths before loading keys
-        string? leftError = RpfService.ValidateInputs(
+        string? leftError = RpfHelper.ValidateInputs(
             options.LeftPath,
             options.LeftExePath,
             options.LeftGen9
         );
         if (leftError != null)
         {
-            return RpfService.ReportError(
+            return Output.ReportError(
                 leftError,
                 options.Json,
                 ErrorResult([], options)
             );
         }
 
-        string? rightError = RpfService.ValidateInputs(
+        string? rightError = RpfHelper.ValidateInputs(
             options.RightPath,
             options.RightExePath,
             options.RightGen9
         );
         if (rightError != null)
         {
-            return RpfService.ReportError(
+            return Output.ReportError(
                 rightError,
                 options.Json,
                 ErrorResult([], options)
@@ -150,18 +160,18 @@ internal static class DiffHandler
         {
             if (!options.Json)
                 Console.Error.WriteLine("Loading encryption keys...");
-            RpfService.LoadKeys(options.LeftExePath, options.LeftGen9);
+            RpfHelper.LoadKeys(options.LeftExePath, options.LeftGen9);
             if (options.RightExePath != options.LeftExePath || options.RightGen9 != options.LeftGen9)
-                RpfService.LoadKeys(options.RightExePath, options.RightGen9);
+                RpfHelper.LoadKeys(options.RightExePath, options.RightGen9);
 
-            RpfFile leftRpf = RpfService.OpenRpf(
+            RpfFile leftRpf = RpfHelper.OpenRpf(
                 options.LeftPath,
                 options.Verbose,
                 options.Json,
                 errorMessages
             );
 
-            RpfFile rightRpf = RpfService.OpenRpf(
+            RpfFile rightRpf = RpfHelper.OpenRpf(
                 options.RightPath,
                 options.Verbose,
                 options.Json,
@@ -180,7 +190,7 @@ internal static class DiffHandler
         catch (OperationCanceledException) { throw; }
         catch (Exception ex)
         {
-            return RpfService.ReportError(
+            return Output.ReportError(
                 ex.Message,
                 options.Json,
                 ErrorResult([.. errorMessages], options),
@@ -217,12 +227,12 @@ internal static class DiffHandler
         CancellationToken cancellationToken = default)
     {
         // Collect files from both archives
-        List<(RpfFile rpf, RpfFileEntry entry)> leftFiles = RpfService.CollectFiles(
+        List<(RpfFile rpf, RpfFileEntry entry)> leftFiles = RpfHelper.CollectFiles(
             leftRpf,
             null,
             options.Recursive
         );
-        List<(RpfFile rpf, RpfFileEntry entry)> rightFiles = RpfService.CollectFiles(
+        List<(RpfFile rpf, RpfFileEntry entry)> rightFiles = RpfHelper.CollectFiles(
             rightRpf,
             null,
             options.Recursive
@@ -259,8 +269,8 @@ internal static class DiffHandler
 
                     long leftSize = leftEntry.GetFileSize();
                     long rightSize = rightEntry.GetFileSize();
-                    string leftType = RpfService.GetFileType(leftEntry);
-                    string rightType = RpfService.GetFileType(rightEntry);
+                    string leftType = RpfHelper.GetFileType(leftEntry);
+                    string rightType = RpfHelper.GetFileType(rightEntry);
 
                     if (leftSize != rightSize || leftType != rightType)
                     {
@@ -310,7 +320,7 @@ internal static class DiffHandler
                     {
                         Path = path,
                         Name = leftEntry.Name,
-                        Type = RpfService.GetFileType(leftEntry),
+                        Type = RpfHelper.GetFileType(leftEntry),
                         LeftSize = leftSize,
                         LeftSizeFormatted = sizeFormat.ToFormattedString(leftSize),
                         RightSize = rightSize,
@@ -326,7 +336,7 @@ internal static class DiffHandler
                     {
                         Path = path,
                         Name = leftEntry.Name,
-                        Type = RpfService.GetFileType(leftEntry),
+                        Type = RpfHelper.GetFileType(leftEntry),
                         Size = size,
                         SizeFormatted = sizeFormat.ToFormattedString(size),
                     }
@@ -345,7 +355,7 @@ internal static class DiffHandler
                     {
                         Path = kvp.Key,
                         Name = kvp.Value.entry.Name,
-                        Type = RpfService.GetFileType(kvp.Value.entry),
+                        Type = RpfHelper.GetFileType(kvp.Value.entry),
                         Size = size,
                         SizeFormatted = sizeFormat.ToFormattedString(size),
                     };
@@ -363,7 +373,7 @@ internal static class DiffHandler
                     {
                         Path = kvp.Key,
                         Name = kvp.Value.entry.Name,
-                        Type = RpfService.GetFileType(kvp.Value.entry),
+                        Type = RpfHelper.GetFileType(kvp.Value.entry),
                         Size = size,
                         SizeFormatted = sizeFormat.ToFormattedString(size),
                     };
@@ -399,7 +409,7 @@ internal static class DiffHandler
     }
 
     internal static void PrintJsonDiff(Json.DiffResult result) =>
-        Console.WriteLine(JsonSerializer.Serialize(result, RpfService.JsonSerializerOptions));
+        Console.WriteLine(JsonSerializer.Serialize(result, Output.JsonSerializerOptions));
 
     internal static void PrintDiff(Json.DiffResult result, DiffOptions options)
     {

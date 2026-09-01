@@ -15,7 +15,7 @@ namespace CodeWalker.Cli.Tests.Handlers;
 [Collection("ConsoleOutput")]
 public sealed class ListHandlerTests
 {
-    private static RpfOptions MakeOptions(
+    private static ListOptions MakeOptions(
         string rpfPath = "/test/test.rpf",
         bool json = false,
         bool verbose = false,
@@ -29,7 +29,6 @@ public sealed class ListHandlerTests
             Verbose = verbose,
             Json = json,
             Recursive = false,
-            Threads = 1,
             SizeFormat = sizeFormat,
         };
 

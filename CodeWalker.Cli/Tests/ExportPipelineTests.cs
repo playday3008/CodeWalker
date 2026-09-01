@@ -2,7 +2,6 @@ using System;
 using System.IO;
 using System.Threading;
 
-using CodeWalker.Cli.Handlers;
 using CodeWalker.Cli.Helpers;
 using CodeWalker.GameFiles;
 
@@ -11,23 +10,20 @@ using Xunit;
 namespace CodeWalker.Cli.Tests;
 
 [Collection("ConsoleOutput")]
-public sealed class ExportServiceExecuteTests
+public sealed class ExportPipelineExecuteTests
 {
     private static ExportOptions MakeOptions(bool json) =>
         new()
         {
-            Rpf = new RpfOptions
-            {
-                RpfPath = "/nonexistent/test.rpf",
-                ExePath = "/nonexistent",
-                Gen9 = false,
-                Filters = [],
-                Verbose = false,
-                Json = json,
-                Recursive = false,
-                Threads = 1,
-                SizeFormat = SizeFormat.IEC,
-            },
+            RpfPath = "/nonexistent/test.rpf",
+            ExePath = "/nonexistent",
+            Gen9 = false,
+            Filters = [],
+            Verbose = false,
+            Json = json,
+            Recursive = false,
+            Threads = 1,
+            SizeFormat = SizeFormat.IEC,
             OutputPath = "/tmp/output",
             DryRun = false,
             NoOverwrite = false,
@@ -46,7 +42,7 @@ public sealed class ExportServiceExecuteTests
             StringWriter stderr = new();
             Console.SetOut(new StringWriter());
             Console.SetError(stderr);
-            int exitCode = ExportService.Execute(MakeOptions(json: false), "xml", "XML", NoOpProcessor, TestContext.Current.CancellationToken);
+            int exitCode = ExportPipeline.Execute(MakeOptions(json: false), "xml", "XML", NoOpProcessor, TestContext.Current.CancellationToken);
             Assert.Equal(1, exitCode);
             Assert.Contains("Error:", stderr.ToString());
         }
@@ -67,7 +63,7 @@ public sealed class ExportServiceExecuteTests
             StringWriter stdout = new();
             Console.SetOut(stdout);
             Console.SetError(new StringWriter());
-            int exitCode = ExportService.Execute(MakeOptions(json: true), "xml", "XML", NoOpProcessor, TestContext.Current.CancellationToken);
+            int exitCode = ExportPipeline.Execute(MakeOptions(json: true), "xml", "XML", NoOpProcessor, TestContext.Current.CancellationToken);
             Assert.Equal(1, exitCode);
             string output = stdout.ToString();
             Assert.Contains("\"success\": false", output);
@@ -90,7 +86,7 @@ public sealed class ExportServiceExecuteTests
             Console.SetOut(new StringWriter());
             StringWriter stderr = new();
             Console.SetError(stderr);
-            int exitCode = ExportService.Execute(MakeOptions(json: false), "xml", "XML", NoOpProcessor, new CancellationToken(canceled: true));
+            int exitCode = ExportPipeline.Execute(MakeOptions(json: false), "xml", "XML", NoOpProcessor, new CancellationToken(canceled: true));
             Assert.Equal(1, exitCode);
             Assert.Contains("Error:", stderr.ToString());
         }
@@ -109,7 +105,7 @@ public sealed class ExportServiceExecuteTests
         {
             StringWriter stdout = new();
             Console.SetOut(stdout);
-            int exitCode = ExportService.Execute(MakeOptions(json: true), "textures", "Textures", NoOpProcessor, TestContext.Current.CancellationToken);
+            int exitCode = ExportPipeline.Execute(MakeOptions(json: true), "textures", "Textures", NoOpProcessor, TestContext.Current.CancellationToken);
             Assert.Equal(1, exitCode);
             string output = stdout.ToString();
             Assert.Contains("\"format\": \"textures\"", output);
@@ -129,7 +125,7 @@ public sealed class ProcessSingleFileTests
     [Fact]
     public void DryRun_ReturnsEntryWithNoError()
     {
-        (Json.ExportFileEntry? entry, string? error) = ExportService.ProcessSingleFile(
+        (Json.ExportFileEntry? entry, string? error) = ExportPipeline.ProcessSingleFile(
             MakeEntry("folder/test.ydr", "test.ydr"),
             data: null,
             outputDir: "/out",
@@ -146,7 +142,7 @@ public sealed class ProcessSingleFileTests
     [Fact]
     public void DryRun_EntryHasCorrectFields()
     {
-        (Json.ExportFileEntry? entry, string? _) = ExportService.ProcessSingleFile(
+        (Json.ExportFileEntry? entry, string? _) = ExportPipeline.ProcessSingleFile(
             MakeEntry("vehicles/adder.ydr", "adder.ydr"),
             data: [1, 2, 3],
             outputDir: "/out",
@@ -165,7 +161,7 @@ public sealed class ProcessSingleFileTests
     [Fact]
     public void NullData_ReturnsExtractionFailure()
     {
-        (Json.ExportFileEntry? entry, string? error) = ExportService.ProcessSingleFile(
+        (Json.ExportFileEntry? entry, string? error) = ExportPipeline.ProcessSingleFile(
             MakeEntry("test.ydr", "test.ydr"),
             data: null,
             outputDir: "/out",
@@ -191,7 +187,7 @@ public sealed class ProcessSingleFileTests
             Status = "error",
         };
 
-        (Json.ExportFileEntry? entry, string? error) = ExportService.ProcessSingleFile(
+        (Json.ExportFileEntry? entry, string? error) = ExportPipeline.ProcessSingleFile(
             MakeEntry("test.ydr", "test.ydr"),
             data: [1],
             outputDir: "/out",
@@ -215,7 +211,7 @@ public sealed class ProcessSingleFileTests
             Status = "exported",
         };
 
-        (Json.ExportFileEntry? entry, string? error) = ExportService.ProcessSingleFile(
+        (Json.ExportFileEntry? entry, string? error) = ExportPipeline.ProcessSingleFile(
             MakeEntry("test.ydr", "test.ydr"),
             data: [1],
             outputDir: "/out",
@@ -231,7 +227,7 @@ public sealed class ProcessSingleFileTests
     [Fact]
     public void ProcessorReturnsNullEntry_ReturnsNoResult()
     {
-        (Json.ExportFileEntry? entry, string? error) = ExportService.ProcessSingleFile(
+        (Json.ExportFileEntry? entry, string? error) = ExportPipeline.ProcessSingleFile(
             MakeEntry("test.ydr", "test.ydr"),
             data: [1],
             outputDir: "/out",
@@ -256,7 +252,7 @@ public sealed class ProcessSingleFileTests
             Status = "unsupported",
         };
 
-        (Json.ExportFileEntry? entry, string? error) = ExportService.ProcessSingleFile(
+        (Json.ExportFileEntry? entry, string? error) = ExportPipeline.ProcessSingleFile(
             MakeEntry("test.ybn", "test.ybn"),
             data: [1],
             outputDir: "/out",
@@ -273,7 +269,7 @@ public sealed class ProcessSingleFileTests
     public void ProcessorThrows_ExceptionPropagates()
     {
         InvalidOperationException ex = Assert.Throws<InvalidOperationException>(() =>
-            ExportService.ProcessSingleFile(
+            ExportPipeline.ProcessSingleFile(
                 MakeEntry("test.ydr", "test.ydr"),
                 data: [1],
                 outputDir: "/out",
@@ -291,7 +287,7 @@ public sealed class ProcessSingleFileTests
     {
         string? capturedOutputDir = null;
 
-        _ = ExportService.ProcessSingleFile(
+        _ = ExportPipeline.ProcessSingleFile(
             MakeEntry("x64\\levels\\gta5\\vehicles.rpf\\adder.ydr", "adder.ydr"),
             data: [1],
             outputDir: "/out",
@@ -337,7 +333,7 @@ public sealed class AggregateResultsTests
     [Fact]
     public void EmptyResults_AllZeros_OnlyScanErrors()
     {
-        ExportService.ExportAggregation agg = ExportService.AggregateResults(
+        ExportPipeline.ExportAggregation agg = ExportPipeline.AggregateResults(
             [],
             OneScanError,
             filterSkipped: 0
@@ -361,7 +357,7 @@ public sealed class AggregateResultsTests
             (MakeFileEntry("exported"), null),
         ];
 
-        ExportService.ExportAggregation agg = ExportService.AggregateResults(results, [], filterSkipped: 0);
+        ExportPipeline.ExportAggregation agg = ExportPipeline.AggregateResults(results, [], filterSkipped: 0);
 
         Assert.Equal(3, agg.Exported);
     }
@@ -375,7 +371,7 @@ public sealed class AggregateResultsTests
             (MakeFileEntry("skipped"), null),
         ];
 
-        ExportService.ExportAggregation agg = ExportService.AggregateResults(results, [], filterSkipped: 0);
+        ExportPipeline.ExportAggregation agg = ExportPipeline.AggregateResults(results, [], filterSkipped: 0);
 
         Assert.Equal(2, agg.Skipped);
     }
@@ -388,7 +384,7 @@ public sealed class AggregateResultsTests
             (MakeFileEntry("skipped"), null),
         ];
 
-        ExportService.ExportAggregation agg = ExportService.AggregateResults(results, [], filterSkipped: 5);
+        ExportPipeline.ExportAggregation agg = ExportPipeline.AggregateResults(results, [], filterSkipped: 5);
 
         Assert.Equal(6, agg.Skipped);
     }
@@ -403,7 +399,7 @@ public sealed class AggregateResultsTests
             (MakeFileEntry("exported"), null),
         ];
 
-        ExportService.ExportAggregation agg = ExportService.AggregateResults(results, [], filterSkipped: 0);
+        ExportPipeline.ExportAggregation agg = ExportPipeline.AggregateResults(results, [], filterSkipped: 0);
 
         Assert.Equal(2, agg.Errors);
     }
@@ -421,7 +417,7 @@ public sealed class AggregateResultsTests
             (skipped, null),
         ];
 
-        ExportService.ExportAggregation agg = ExportService.AggregateResults(results, [], filterSkipped: 0);
+        ExportPipeline.ExportAggregation agg = ExportPipeline.AggregateResults(results, [], filterSkipped: 0);
 
         Assert.Equal(2, agg.Files.Count);
         Assert.Same(exported, agg.Files[0]);
@@ -438,7 +434,7 @@ public sealed class AggregateResultsTests
             (errorEntry, "conversion failed"),
         ];
 
-        ExportService.ExportAggregation agg = ExportService.AggregateResults(results, [], filterSkipped: 0);
+        ExportPipeline.ExportAggregation agg = ExportPipeline.AggregateResults(results, [], filterSkipped: 0);
 
         Assert.Equal(0, agg.Exported);
         Assert.Equal(0, agg.Skipped);
@@ -459,7 +455,7 @@ public sealed class AggregateResultsTests
             (entry, "partial failure"),
         ];
 
-        ExportService.ExportAggregation agg = ExportService.AggregateResults(results, [], filterSkipped: 0);
+        ExportPipeline.ExportAggregation agg = ExportPipeline.AggregateResults(results, [], filterSkipped: 0);
 
         Assert.Equal(0, agg.Exported);
         Assert.Equal(1, agg.Errors);
@@ -477,7 +473,7 @@ public sealed class AggregateResultsTests
             (entry, "unexpected failure"),
         ];
 
-        ExportService.ExportAggregation agg = ExportService.AggregateResults(results, [], filterSkipped: 0);
+        ExportPipeline.ExportAggregation agg = ExportPipeline.AggregateResults(results, [], filterSkipped: 0);
 
         Assert.Equal(0, agg.Skipped);
         Assert.Equal(1, agg.Errors);
@@ -495,7 +491,7 @@ public sealed class AggregateResultsTests
             (errorEntry, null),
         ];
 
-        ExportService.ExportAggregation agg = ExportService.AggregateResults(results, [], filterSkipped: 0);
+        ExportPipeline.ExportAggregation agg = ExportPipeline.AggregateResults(results, [], filterSkipped: 0);
 
         Assert.Equal(0, agg.Exported);
         Assert.Equal(0, agg.Skipped);
@@ -515,7 +511,7 @@ public sealed class AggregateResultsTests
             (MakeFileEntry("exported"), null),
         ];
 
-        ExportService.ExportAggregation agg = ExportService.AggregateResults(
+        ExportPipeline.ExportAggregation agg = ExportPipeline.AggregateResults(
             results,
             OneScanWarning,
             filterSkipped: 0
