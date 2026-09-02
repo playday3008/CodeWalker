@@ -4,6 +4,7 @@ using System.IO;
 using CodeWalker.Cli.Helpers;
 
 using Xunit;
+using Xunit.v3;
 
 namespace CodeWalker.Cli.Tests;
 
@@ -44,7 +45,7 @@ public sealed class ExtractHandlerTests
             Console.SetOut(new StringWriter());
             Console.SetError(stderr);
 
-            int exitCode = ExtractHandler.Execute(MakeOptions("/nonexistent/test.rpf", json: false));
+            int exitCode = ExtractHandler.Execute(MakeOptions("/nonexistent/test.rpf", json: false), TestContext.Current.CancellationToken);
 
             Assert.Equal(1, exitCode);
             Assert.Contains("Error:", stderr.ToString());
@@ -67,7 +68,7 @@ public sealed class ExtractHandlerTests
             Console.SetOut(stdout);
             Console.SetError(new StringWriter());
 
-            int exitCode = ExtractHandler.Execute(MakeOptions("/nonexistent/test.rpf", json: true));
+            int exitCode = ExtractHandler.Execute(MakeOptions("/nonexistent/test.rpf", json: true), TestContext.Current.CancellationToken);
 
             Assert.Equal(1, exitCode);
             string output = stdout.ToString();
@@ -90,7 +91,7 @@ public sealed class ExtractHandlerTests
             StringWriter stdout = new();
             Console.SetOut(stdout);
 
-            _ = ExtractHandler.Execute(MakeOptions("/nonexistent/test.rpf", json: true));
+            _ = ExtractHandler.Execute(MakeOptions("/nonexistent/test.rpf", json: true), TestContext.Current.CancellationToken);
 
             string output = stdout.ToString();
             Assert.Contains("\"rpfFile\":", output);
@@ -120,7 +121,7 @@ public sealed class ExtractHandlerTests
                 StringWriter stderr = new();
                 Console.SetError(stderr);
 
-                int exitCode = ExtractHandler.Execute(MakeOptions(rpf, json: false));
+                int exitCode = ExtractHandler.Execute(MakeOptions(rpf, json: false), TestContext.Current.CancellationToken);
 
                 Assert.Equal(1, exitCode);
                 Assert.Contains("Error:", stderr.ToString());
@@ -143,7 +144,7 @@ public sealed class ExtractHandlerTests
             StringWriter stdout = new();
             Console.SetOut(stdout);
 
-            _ = ExtractHandler.Execute(MakeOptions("/nonexistent/test.rpf", json: true, dryRun: true));
+            _ = ExtractHandler.Execute(MakeOptions("/nonexistent/test.rpf", json: true, dryRun: true), TestContext.Current.CancellationToken);
 
             string output = stdout.ToString();
             Assert.Contains("\"dryRun\": true", output);

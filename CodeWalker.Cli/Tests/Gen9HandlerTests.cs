@@ -4,6 +4,7 @@ using System.IO;
 using CodeWalker.Cli.Helpers;
 
 using Xunit;
+using Xunit.v3;
 
 namespace CodeWalker.Cli.Tests;
 
@@ -54,7 +55,7 @@ public sealed class Gen9HandlerTests
             Console.SetOut(new StringWriter());
             Console.SetError(stderr);
 
-            int exitCode = Gen9Handler.Execute(MakeOptions("/nonexistent/input", "/tmp/out", json: false));
+            int exitCode = Gen9Handler.Execute(MakeOptions("/nonexistent/input", "/tmp/out", json: false), TestContext.Current.CancellationToken);
 
             Assert.Equal(1, exitCode);
             Assert.Contains("Error:", stderr.ToString());
@@ -78,7 +79,7 @@ public sealed class Gen9HandlerTests
             Console.SetOut(stdout);
             Console.SetError(new StringWriter());
 
-            int exitCode = Gen9Handler.Execute(MakeOptions("/nonexistent/input", "/tmp/out", json: true));
+            int exitCode = Gen9Handler.Execute(MakeOptions("/nonexistent/input", "/tmp/out", json: true), TestContext.Current.CancellationToken);
 
             Assert.Equal(1, exitCode);
             string output = stdout.ToString();
@@ -108,7 +109,7 @@ public sealed class Gen9HandlerTests
                 Console.SetOut(new StringWriter());
                 Console.SetError(stderr);
 
-                int exitCode = Gen9Handler.Execute(MakeOptions(dir, dir, json: false));
+                int exitCode = Gen9Handler.Execute(MakeOptions(dir, dir, json: false), TestContext.Current.CancellationToken);
 
                 Assert.Equal(1, exitCode);
                 Assert.Contains("must be different", stderr.ToString());
@@ -134,7 +135,7 @@ public sealed class Gen9HandlerTests
                 StringWriter stdout = new();
                 Console.SetOut(stdout);
 
-                int exitCode = Gen9Handler.Execute(MakeOptions(dir, dir, json: true));
+                int exitCode = Gen9Handler.Execute(MakeOptions(dir, dir, json: true), TestContext.Current.CancellationToken);
 
                 Assert.Equal(1, exitCode);
                 string output = stdout.ToString();
@@ -163,7 +164,7 @@ public sealed class Gen9HandlerTests
                 Console.SetOut(new StringWriter());
                 Console.SetError(stderr);
 
-                int exitCode = Gen9Handler.Execute(MakeOptions(inputDir, outputDir, json: false));
+                int exitCode = Gen9Handler.Execute(MakeOptions(inputDir, outputDir, json: false), TestContext.Current.CancellationToken);
 
                 Assert.Equal(1, exitCode);
                 Assert.Contains("Error:", stderr.ToString());
@@ -193,7 +194,7 @@ public sealed class Gen9HandlerTests
             StringWriter stdout = new();
             Console.SetOut(stdout);
 
-            _ = Gen9Handler.Execute(MakeOptions("/nonexistent/input", "/tmp/out", json: true));
+            _ = Gen9Handler.Execute(MakeOptions("/nonexistent/input", "/tmp/out", json: true), TestContext.Current.CancellationToken);
 
             string output = stdout.ToString();
             Assert.Contains("\"inputFolder\":", output);

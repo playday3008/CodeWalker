@@ -107,15 +107,9 @@ internal static class StringExtensions
         if (index < 0)
             return 0;
 
-        // Fast path: most matches consume exactly value.Length characters
-        if (index + value.Length <= source.Length
-            && compareInfo.Compare(source, index, value.Length, value, 0, value.Length, options) == 0)
-        {
-            return value.Length;
-        }
-
-        // Slow path: cultural normalization means the matched span differs
-        // from value.Length (e.g. zero-weight characters like \0)
+        // Find the actual span length that culturally matches 'value'.
+        // Usually len == value.Length, but zero-weight characters (e.g. \u00AD
+        // on .NET Framework) can make the matched span shorter or longer.
         int maxLen = source.Length - index;
         for (int len = 1; len <= maxLen; len++)
         {
@@ -123,7 +117,7 @@ internal static class StringExtensions
                 return len;
         }
 
-        return value.Length; // fallback (should be unreachable if IndexOf found a match)
+        return value.Length; // unreachable: IndexOf guarantees a match exists
     }
 
     public static string Replace(this string s, string oldValue, string? newValue, StringComparison comparisonType)

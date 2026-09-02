@@ -4,6 +4,7 @@ using System.IO;
 using CodeWalker.Cli.Helpers;
 
 using Xunit;
+using Xunit.v3;
 
 namespace CodeWalker.Cli.Tests;
 
@@ -94,7 +95,7 @@ public sealed class SearchHandlerExecuteTests
             Console.SetOut(new StringWriter());
             Console.SetError(stderr);
 
-            int exitCode = SearchHandler.Execute(MakeOptions("/nonexistent/test.rpf", json: false), "*.ydr");
+            int exitCode = SearchHandler.Execute(MakeOptions("/nonexistent/test.rpf", json: false), "*.ydr", TestContext.Current.CancellationToken);
 
             Assert.Equal(1, exitCode);
             Assert.Contains("Error:", stderr.ToString());
@@ -117,7 +118,7 @@ public sealed class SearchHandlerExecuteTests
             Console.SetOut(stdout);
             Console.SetError(new StringWriter());
 
-            int exitCode = SearchHandler.Execute(MakeOptions("/nonexistent/test.rpf", json: true), "adder");
+            int exitCode = SearchHandler.Execute(MakeOptions("/nonexistent/test.rpf", json: true), "adder", TestContext.Current.CancellationToken);
 
             Assert.Equal(1, exitCode);
             string output = stdout.ToString();
@@ -140,7 +141,7 @@ public sealed class SearchHandlerExecuteTests
             StringWriter stdout = new();
             Console.SetOut(stdout);
 
-            _ = SearchHandler.Execute(MakeOptions("/nonexistent/test.rpf", json: true), "test*");
+            _ = SearchHandler.Execute(MakeOptions("/nonexistent/test.rpf", json: true), "test*", TestContext.Current.CancellationToken);
 
             string output = stdout.ToString();
             Assert.Contains("\"rpfFile\":", output);

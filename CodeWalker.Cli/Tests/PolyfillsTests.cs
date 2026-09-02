@@ -33,6 +33,7 @@ public sealed class StringExtensionsFuzzTests
             "  spaces  ", "tab\there", "new\nline",
             "straße", "STRASSE", "Straße", "café", "CAFÉ",
             "résumé", "naïve", "日本語",
+            "a\u00ADb", "a\u00ADbcd", "xa\u00ADbc", "a\0b", "he\u00ADllo",
             "abc123!@#", "path/to/file.txt", @"C:\Windows\System32",
             "\0null\0", "🎮🎲🎯", new string('x', 200),
             "aaa", "aaA", "AaA",
@@ -65,7 +66,7 @@ public sealed class StringExtensionsFuzzTests
     private static readonly string[] SearchStrings =
     [
         "a", "A", "hello", "HELLO", "llo", "World", "world",
-        "straße", "STRASSE", "ß", "SS", "café", "xyz", " ",
+        "ab", "abc", "straße", "STRASSE", "ß", "SS", "café", "xyz", " ",
         "/", "\\", "\0", "🎮", "xx",
     ];
 
@@ -177,7 +178,8 @@ public sealed class StringExtensionsFuzzTests
         s?.Replace("\0", "\\0", StringComparison.Ordinal)
          .Replace("\n", "\\n", StringComparison.Ordinal)
          .Replace("\r", "\\r", StringComparison.Ordinal)
-         .Replace("\t", "\\t", StringComparison.Ordinal) ?? "(null)";
+         .Replace("\t", "\\t", StringComparison.Ordinal)
+         .Replace("\u00AD", "\\u00AD", StringComparison.Ordinal) ?? "(null)";
 }
 
 public sealed class StringExtensionsUnitTests
