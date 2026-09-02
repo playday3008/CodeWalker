@@ -6,11 +6,19 @@ on:
     paths:
       - CodeWalker.Cli/**
       - CodeWalker.Core/**
+      - CodeWalker.ModManager/**
+      - CodeWalker.WinForms/**
+      - CodeWalker/**
+      - CodeWalker.sln
       - .github/workflows/cli.yml
   pull_request:
     paths:
       - CodeWalker.Cli/**
       - CodeWalker.Core/**
+      - CodeWalker.ModManager/**
+      - CodeWalker.WinForms/**
+      - CodeWalker/**
+      - CodeWalker.sln
       - .github/workflows/cli.yml
   workflow_dispatch:
 
@@ -66,6 +74,26 @@ jobs:
         shell: bash
         run: |
           find CodeWalker.Cli/bin -path '*TestResults*' -name '*.log' -print -exec cat {} +
+
+  solution:
+    name: solution
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: actions/setup-dotnet@v6
+        with:
+          dotnet-version: |
+            8.0.x
+            10.0.x
+
+      - uses: microsoft/setup-msbuild@v3
+
+      # The CLI jobs build one project. This is what notices when a change to
+      # CodeWalker.Core breaks the WinForms projects that also consume it.
+      # msbuild rather than dotnet build: the solution carries a C++ project.
+      - name: Build
+        run: msbuild CodeWalker.sln -restore -p:Configuration=Debug -m
 
   format:
     name: format
