@@ -92,8 +92,49 @@ jobs:
       # The CLI jobs build one project. This is what notices when a change to
       # CodeWalker.Core breaks the WinForms projects that also consume it.
       # msbuild rather than dotnet build: the solution carries a C++ project.
+      # CodeWalker.csproj sets PlatformTarget to x64 under Release|AnyCPU and the
+      # SDK then infers a win-x64 RuntimeIdentifier that restore has not produced,
+      # which fails as NETSDK1047; clearing it keeps the AnyCPU assets.
       - name: Build
-        run: msbuild CodeWalker.sln -restore -p:Configuration=Debug -m
+        run: msbuild CodeWalker.sln -restore -p:Configuration=Release -p:RuntimeIdentifier= -m
+
+      - uses: actions/upload-artifact@v7
+        with:
+          name: codewalker-solution
+          path: '*/bin/Release/net48/'
+
+  publish:
+    name: publish ${{ matrix.name }}
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: windows-latest
+            name: win-x64
+            args: -f net10.0 -r win-x64 --self-contained true -p:PublishSingleFile=true
+          - os: ubuntu-latest
+            name: linux-x64
+            args: -f net10.0 -r linux-x64 --self-contained true -p:PublishSingleFile=true
+          - os: windows-latest
+            name: net48
+            args: -f net48
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: actions/setup-dotnet@v6
+        with:
+          dotnet-version: |
+            8.0.x
+            10.0.x
+
+      - name: Publish
+        run: dotnet publish CodeWalker.Cli/CodeWalker.Cli.csproj -c Release ${{ matrix.args }} -o publish
+
+      - uses: actions/upload-artifact@v7
+        with:
+          name: codewalker-cli-${{ matrix.name }}
+          path: publish
 
   format:
     name: format
