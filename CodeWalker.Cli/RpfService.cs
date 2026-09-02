@@ -113,9 +113,7 @@ internal static class RpfService
         if (recursive && rpf.Children != null)
         {
             foreach (RpfFile child in rpf.Children)
-            {
                 CollectFilesRecursive(child, filters, recursive, files);
-            }
         }
     }
 
@@ -142,9 +140,7 @@ internal static class RpfService
         if (recursive && rpf.Children != null)
         {
             foreach (RpfFile child in rpf.Children)
-            {
                 CountNonRpfFilesRecursive(child, recursive, ref count);
-            }
         }
     }
 
