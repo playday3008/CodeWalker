@@ -27,7 +27,7 @@ public sealed class StatErrorResultTests
             Json = false,
             Recursive = false,
             Threads = 1,
-            SizeFormat = SizeFormat.IEC,
+            SizeFormat = SizeFormat.IEC
         };
 
     [Fact]
@@ -97,11 +97,16 @@ public sealed class CollectStatsTests
             Json = false,
             Recursive = false,
             Threads = 1,
-            SizeFormat = fmt,
+            SizeFormat = fmt
         };
 
     private static RpfBinaryFileEntry MakeBinary(string name, uint fileSize, uint uncompressedSize) =>
-        new() { Name = name, FileSize = fileSize, FileUncompressedSize = uncompressedSize };
+        new()
+        {
+            Name = name,
+            FileSize = fileSize,
+            FileUncompressedSize = uncompressedSize
+        };
 
     private static RpfResourceFileEntry MakeResource(string name, uint fileSize, uint sysFlags, uint gfxFlags) =>
         new()
@@ -109,13 +114,18 @@ public sealed class CollectStatsTests
             Name = name,
             FileSize = fileSize,
             SystemFlags = new RpfResourcePageFlags(sysFlags),
-            GraphicsFlags = new RpfResourcePageFlags(gfxFlags),
+            GraphicsFlags = new RpfResourcePageFlags(gfxFlags)
         };
 
     [Fact]
     public void EmptyEntries_ReturnsAllZeros()
     {
-        Json.StatResult result = StatHandler.CollectStats([], [], MakeOptions(), TestContext.Current.CancellationToken);
+        Json.StatResult result = StatHandler.CollectStats(
+            [],
+            [],
+            MakeOptions(),
+            TestContext.Current.CancellationToken
+        );
 
         Assert.True(result.Success);
         Assert.Equal(0, result.TotalFiles);
@@ -131,10 +141,22 @@ public sealed class CollectStatsTests
     [Fact]
     public void SingleBinary_CountsCorrectly()
     {
-        RpfBinaryFileEntry entry = MakeBinary("data.dat", fileSize: 200, uncompressedSize: 400);
-        List<(RpfFile, RpfFileEntry)> entries = [(null!, entry)];
+        RpfBinaryFileEntry entry = MakeBinary(
+            "data.dat",
+            fileSize: 200,
+            uncompressedSize: 400
+        );
 
-        Json.StatResult result = StatHandler.CollectStats(entries, [], MakeOptions(), TestContext.Current.CancellationToken);
+        List<(RpfFile, RpfFileEntry)> entries = [
+            (null!, entry)
+        ];
+
+        Json.StatResult result = StatHandler.CollectStats(
+            entries,
+            [],
+            MakeOptions(),
+            TestContext.Current.CancellationToken
+        );
 
         Assert.Equal(1, result.TotalFiles);
         Assert.Equal(200, result.TotalSize); // GetFileSize() returns FileSize when non-zero
@@ -148,10 +170,23 @@ public sealed class CollectStatsTests
     public void SingleResource_CountsCorrectly()
     {
         // 0x08000000 → SystemFlags.Size = 512, 0x04000000 → GraphicsFlags.Size = 1024
-        RpfResourceFileEntry entry = MakeResource("model.ydr", fileSize: 300, sysFlags: 0x08000000, gfxFlags: 0x04000000);
-        List<(RpfFile, RpfFileEntry)> entries = [(null!, entry)];
+        RpfResourceFileEntry entry = MakeResource(
+            "model.ydr",
+            fileSize: 300,
+            sysFlags: 0x08000000,
+            gfxFlags: 0x04000000
+        );
 
-        Json.StatResult result = StatHandler.CollectStats(entries, [], MakeOptions(), TestContext.Current.CancellationToken);
+        List<(RpfFile, RpfFileEntry)> entries = [
+            (null!, entry)
+        ];
+
+        Json.StatResult result = StatHandler.CollectStats(
+            entries,
+            [],
+            MakeOptions(),
+            TestContext.Current.CancellationToken
+        );
 
         Assert.Equal(1, result.TotalFiles);
         Assert.Equal(300, result.TotalSize); // GetFileSize() returns FileSize when non-zero
@@ -164,11 +199,30 @@ public sealed class CollectStatsTests
     [Fact]
     public void MixedEntries_AggregatesCorrectly()
     {
-        RpfBinaryFileEntry bin = MakeBinary("data.dat", fileSize: 200, uncompressedSize: 400);
-        RpfResourceFileEntry res = MakeResource("model.ydr", fileSize: 300, sysFlags: 0x08000000, gfxFlags: 0x04000000);
-        List<(RpfFile, RpfFileEntry)> entries = [(null!, bin), (null!, res)];
+        RpfBinaryFileEntry bin = MakeBinary(
+            "data.dat",
+            fileSize: 200,
+            uncompressedSize: 400
+        );
 
-        Json.StatResult result = StatHandler.CollectStats(entries, [], MakeOptions(), TestContext.Current.CancellationToken);
+        RpfResourceFileEntry res = MakeResource(
+            "model.ydr",
+            fileSize: 300,
+            sysFlags: 0x08000000,
+            gfxFlags: 0x04000000
+        );
+
+        List<(RpfFile, RpfFileEntry)> entries = [
+            (null!, bin),
+            (null!, res)
+        ];
+
+        Json.StatResult result = StatHandler.CollectStats(
+            entries,
+            [],
+            MakeOptions(),
+            TestContext.Current.CancellationToken
+        );
 
         Assert.Equal(2, result.TotalFiles);
         Assert.Equal(200 + 300, result.TotalSize);
@@ -181,10 +235,22 @@ public sealed class CollectStatsTests
     [Fact]
     public void CompressionRatio_CalculatedCorrectly()
     {
-        RpfBinaryFileEntry entry = MakeBinary("data.dat", fileSize: 250, uncompressedSize: 1000);
-        List<(RpfFile, RpfFileEntry)> entries = [(null!, entry)];
+        RpfBinaryFileEntry entry = MakeBinary(
+            "data.dat",
+            fileSize: 250,
+            uncompressedSize: 1000
+        );
 
-        Json.StatResult result = StatHandler.CollectStats(entries, [], MakeOptions(), TestContext.Current.CancellationToken);
+        List<(RpfFile, RpfFileEntry)> entries = [
+            (null!, entry)
+        ];
+
+        Json.StatResult result = StatHandler.CollectStats(
+            entries,
+            [],
+            MakeOptions(),
+            TestContext.Current.CancellationToken
+        );
 
         Assert.Equal(0.25, result.CompressionRatio);
     }
@@ -193,10 +259,22 @@ public sealed class CollectStatsTests
     public void CompressionRatio_ZeroWhenNoUncompressed()
     {
         // Entry with FileSize=0 and FileUncompressedSize=0 → GetFileSize() returns 0
-        RpfBinaryFileEntry entry = MakeBinary("empty.dat", fileSize: 0, uncompressedSize: 0);
-        List<(RpfFile, RpfFileEntry)> entries = [(null!, entry)];
+        RpfBinaryFileEntry entry = MakeBinary(
+            "empty.dat",
+            fileSize: 0,
+            uncompressedSize: 0
+        );
 
-        Json.StatResult result = StatHandler.CollectStats(entries, [], MakeOptions(), TestContext.Current.CancellationToken);
+        List<(RpfFile, RpfFileEntry)> entries = [
+            (null!, entry)
+        ];
+
+        Json.StatResult result = StatHandler.CollectStats(
+            entries,
+            [],
+            MakeOptions(),
+            TestContext.Current.CancellationToken
+        );
 
         Assert.Equal(0, result.CompressionRatio);
     }
@@ -204,12 +282,34 @@ public sealed class CollectStatsTests
     [Fact]
     public void ExtensionStats_GroupedAndSorted()
     {
-        RpfBinaryFileEntry small = MakeBinary("a.dat", fileSize: 100, uncompressedSize: 100);
-        RpfBinaryFileEntry large1 = MakeBinary("b.ydr", fileSize: 500, uncompressedSize: 500);
-        RpfBinaryFileEntry large2 = MakeBinary("c.ydr", fileSize: 600, uncompressedSize: 600);
-        List<(RpfFile, RpfFileEntry)> entries = [(null!, small), (null!, large1), (null!, large2)];
+        RpfBinaryFileEntry small = MakeBinary(
+            "a.dat",
+            fileSize: 100,
+            uncompressedSize: 100
+        );
+        RpfBinaryFileEntry large1 = MakeBinary(
+            "b.ydr",
+            fileSize: 500,
+            uncompressedSize: 500
+        );
+        RpfBinaryFileEntry large2 = MakeBinary(
+            "c.ydr",
+            fileSize: 600,
+            uncompressedSize: 600
+        );
 
-        Json.StatResult result = StatHandler.CollectStats(entries, [], MakeOptions(), TestContext.Current.CancellationToken);
+        List<(RpfFile, RpfFileEntry)> entries = [
+            (null!, small),
+            (null!, large1),
+            (null!, large2)
+        ];
+
+        Json.StatResult result = StatHandler.CollectStats(
+            entries,
+            [],
+            MakeOptions(),
+            TestContext.Current.CancellationToken
+        );
 
         Assert.Equal(2, result.Extensions.Count);
         // .ydr total (1100) > .dat total (100), so .ydr comes first
@@ -224,11 +324,28 @@ public sealed class CollectStatsTests
     [Fact]
     public void ExtensionStats_MinMaxAvg()
     {
-        RpfBinaryFileEntry a = MakeBinary("a.dat", fileSize: 100, uncompressedSize: 100);
-        RpfBinaryFileEntry b = MakeBinary("b.dat", fileSize: 300, uncompressedSize: 300);
-        List<(RpfFile, RpfFileEntry)> entries = [(null!, a), (null!, b)];
+        RpfBinaryFileEntry a = MakeBinary(
+            "a.dat",
+            fileSize: 100,
+            uncompressedSize: 100
+        );
+        RpfBinaryFileEntry b = MakeBinary(
+            "b.dat",
+            fileSize: 300,
+            uncompressedSize: 300
+        );
 
-        Json.StatResult result = StatHandler.CollectStats(entries, [], MakeOptions(), TestContext.Current.CancellationToken);
+        List<(RpfFile, RpfFileEntry)> entries = [
+            (null!, a),
+            (null!, b)
+        ];
+
+        Json.StatResult result = StatHandler.CollectStats(
+            entries,
+            [],
+            MakeOptions(),
+            TestContext.Current.CancellationToken
+        );
 
         Json.ExtensionStat ext = result.Extensions[0];
         Assert.Equal(".dat", ext.Extension);
@@ -240,10 +357,22 @@ public sealed class CollectStatsTests
     [Fact]
     public void NoExtension_CategorizedAsNone()
     {
-        RpfBinaryFileEntry entry = MakeBinary("README", fileSize: 50, uncompressedSize: 50);
-        List<(RpfFile, RpfFileEntry)> entries = [(null!, entry)];
+        RpfBinaryFileEntry entry = MakeBinary(
+            "README",
+            fileSize: 50,
+            uncompressedSize: 50
+        );
 
-        Json.StatResult result = StatHandler.CollectStats(entries, [], MakeOptions(), TestContext.Current.CancellationToken);
+        List<(RpfFile, RpfFileEntry)> entries = [
+            (null!, entry)
+        ];
+
+        Json.StatResult result = StatHandler.CollectStats(
+            entries,
+            [],
+            MakeOptions(),
+            TestContext.Current.CancellationToken
+        );
 
         Assert.Equal("(none)", result.Extensions[0].Extension);
     }
@@ -252,19 +381,117 @@ public sealed class CollectStatsTests
     public void ScanErrors_SetSuccessFalse()
     {
         List<string> errors = ["scan failed"];
-        Json.StatResult result = StatHandler.CollectStats([], errors, MakeOptions(), TestContext.Current.CancellationToken);
+
+        Json.StatResult result = StatHandler.CollectStats(
+            [],
+            errors,
+            MakeOptions(),
+            TestContext.Current.CancellationToken
+        );
 
         Assert.False(result.Success);
-        Assert.Equal(["scan failed"], result.ErrorMessages);
+        Assert.Equal(errors, result.ErrorMessages);
     }
 
     [Fact]
     public void ScanErrors_Empty_SetSuccessTrue()
     {
-        Json.StatResult result = StatHandler.CollectStats([], [], MakeOptions(), TestContext.Current.CancellationToken);
+        Json.StatResult result = StatHandler.CollectStats(
+            [],
+            [],
+            MakeOptions(),
+            TestContext.Current.CancellationToken
+        );
 
         Assert.True(result.Success);
         Assert.Empty(result.ErrorMessages);
+    }
+
+    [Fact]
+    public void CaseInsensitiveExtensionGrouping()
+    {
+        RpfBinaryFileEntry upper = MakeBinary(
+            "A.DAT",
+            fileSize: 100,
+            uncompressedSize: 100
+        );
+        RpfBinaryFileEntry lower = MakeBinary(
+            "b.dat",
+            fileSize: 200,
+            uncompressedSize: 200
+        );
+
+        List<(RpfFile, RpfFileEntry)> entries = [
+            (null!, upper),
+            (null!, lower)
+        ];
+
+        Json.StatResult result = StatHandler.CollectStats(entries, [], MakeOptions(), TestContext.Current.CancellationToken);
+
+        _ = Assert.Single(result.Extensions);
+        Assert.Equal(".dat", result.Extensions[0].Extension);
+        Assert.Equal(2, result.Extensions[0].Count);
+        Assert.Equal(300, result.Extensions[0].TotalSize);
+    }
+
+    [Fact]
+    public void CompressionRatio_RoundedToFourDecimals()
+    {
+        // 1 / 3 = 0.33333... → should round to 0.3333
+        RpfBinaryFileEntry entry = MakeBinary(
+            "data.dat",
+            fileSize: 1,
+            uncompressedSize: 3
+        );
+
+        List<(RpfFile, RpfFileEntry)> entries = [
+            (null!, entry)
+        ];
+
+        Json.StatResult result = StatHandler.CollectStats(
+            entries,
+            [],
+            MakeOptions(),
+            TestContext.Current.CancellationToken
+        );
+
+        Assert.Equal(0.3333, result.CompressionRatio);
+    }
+
+    [Fact]
+    public void AvgSize_TruncatedByIntegerDivision()
+    {
+        // 3 files totalling 10 bytes → avg = 10 / 3 = 3 (integer truncation, not 3.33)
+        RpfBinaryFileEntry a = MakeBinary(
+            "a.dat",
+            fileSize: 1,
+            uncompressedSize: 1
+        );
+        RpfBinaryFileEntry b = MakeBinary(
+            "b.dat",
+            fileSize: 4,
+            uncompressedSize: 4
+        );
+        RpfBinaryFileEntry c = MakeBinary(
+            "c.dat",
+            fileSize: 5,
+            uncompressedSize: 5
+        );
+
+        List<(RpfFile, RpfFileEntry)> entries = [
+            (null!, a),
+            (null!, b),
+            (null!, c)
+        ];
+
+        Json.StatResult result = StatHandler.CollectStats(
+            entries,
+            [],
+            MakeOptions(),
+            TestContext.Current.CancellationToken
+        );
+
+        Assert.Equal(3, result.Extensions[0].AvgSize); // 10 / 3 = 3, not 4
     }
 
     [Fact]
@@ -273,11 +500,23 @@ public sealed class CollectStatsTests
         using CancellationTokenSource cts = new();
         cts.Cancel();
 
-        RpfBinaryFileEntry entry = MakeBinary("data.dat", fileSize: 100, uncompressedSize: 100);
-        List<(RpfFile, RpfFileEntry)> entries = [(null!, entry)];
+        RpfBinaryFileEntry entry = MakeBinary(
+            "data.dat",
+            fileSize: 100,
+            uncompressedSize: 100
+        );
+
+        List<(RpfFile, RpfFileEntry)> entries = [
+            (null!, entry)
+        ];
 
         _ = Assert.Throws<OperationCanceledException>(
-            () => StatHandler.CollectStats(entries, [], MakeOptions(), cts.Token)
+            () => StatHandler.CollectStats(
+                entries,
+                [],
+                MakeOptions(),
+                cts.Token
+            )
         );
     }
 }
@@ -323,10 +562,10 @@ public sealed class PrintJsonStatsTests
                     MinSize = 200,
                     MinSizeFormatted = "200 B",
                     MaxSize = 300,
-                    MaxSizeFormatted = "300 B",
-                },
+                    MaxSizeFormatted = "300 B"
+                }
             ],
-            ErrorMessages = [],
+            ErrorMessages = []
         };
 
     [Fact]
@@ -460,7 +699,7 @@ public sealed class PrintStatsTests
             Json = false,
             Recursive = false,
             Threads = 1,
-            SizeFormat = fmt,
+            SizeFormat = fmt
         };
 
     private static (string stdout, string stderr) Capture(Json.StatResult result, RpfOptions? options = null)
@@ -512,10 +751,10 @@ public sealed class PrintStatsTests
                     MinSize = 200,
                     MinSizeFormatted = "200 B",
                     MaxSize = 800,
-                    MaxSizeFormatted = "800 B",
-                },
+                    MaxSizeFormatted = "800 B"
+                }
             ],
-            ErrorMessages = [],
+            ErrorMessages = []
         };
 
     [Fact]
@@ -576,6 +815,23 @@ public sealed class PrintStatsTests
         Assert.Contains("Extension", stdout);
         Assert.DoesNotContain(".ydr", stdout);
     }
+
+    [Fact]
+    public void PrintStats_SIFormat_UsesDecimalUnits()
+    {
+        Json.StatResult result = MakeResult() with
+        {
+            TotalSize = 2000,
+            TotalSizeFormatted = SizeFormat.SI.ToFormattedString(2000)
+        };
+        RpfOptions options = MakeOptions(SizeFormat.SI);
+
+        (string stdout, string stderr) = Capture(result, options);
+
+        // SI uses KB (1000-based) not KiB (1024-based); format is "0.##" so "2 KB" not "2.0 KB"
+        Assert.Contains("2 KB", stderr);
+        Assert.DoesNotContain("KiB", stdout);
+    }
 }
 
 // ── Execute (integration) ────────────────────────────────────────────
@@ -594,7 +850,7 @@ public sealed class StatExecuteTests
             Json = json,
             Recursive = false,
             Threads = 1,
-            SizeFormat = SizeFormat.IEC,
+            SizeFormat = SizeFormat.IEC
         };
 
     // ── Validation failures ────────────────────────────────────────────
@@ -610,7 +866,10 @@ public sealed class StatExecuteTests
             Console.SetOut(new StringWriter());
             Console.SetError(stderr);
 
-            int exitCode = StatHandler.Execute(MakeOptions("/nonexistent/test.rpf", json: false), TestContext.Current.CancellationToken);
+            int exitCode = StatHandler.Execute(
+                MakeOptions("/nonexistent/test.rpf", json: false),
+                TestContext.Current.CancellationToken
+            );
 
             Assert.Equal(1, exitCode);
             Assert.Contains("Error:", stderr.ToString());
@@ -633,7 +892,10 @@ public sealed class StatExecuteTests
             Console.SetOut(stdout);
             Console.SetError(new StringWriter());
 
-            int exitCode = StatHandler.Execute(MakeOptions("/nonexistent/test.rpf", json: true), TestContext.Current.CancellationToken);
+            int exitCode = StatHandler.Execute(
+                MakeOptions("/nonexistent/test.rpf", json: true),
+                TestContext.Current.CancellationToken
+            );
 
             Assert.Equal(1, exitCode);
             string output = stdout.ToString();
@@ -656,7 +918,10 @@ public sealed class StatExecuteTests
             StringWriter stdout = new();
             Console.SetOut(stdout);
 
-            _ = StatHandler.Execute(MakeOptions("/nonexistent/test.rpf", json: true), TestContext.Current.CancellationToken);
+            _ = StatHandler.Execute(
+                MakeOptions("/nonexistent/test.rpf", json: true),
+                TestContext.Current.CancellationToken
+            );
 
             string output = stdout.ToString();
             Assert.Contains("\"rpfFile\":", output);
@@ -692,7 +957,10 @@ public sealed class StatExecuteTests
                 StringWriter stderr = new();
                 Console.SetError(stderr);
 
-                int exitCode = StatHandler.Execute(MakeOptions(rpf, json: false), TestContext.Current.CancellationToken);
+                int exitCode = StatHandler.Execute(
+                    MakeOptions(rpf, json: false),
+                    TestContext.Current.CancellationToken
+                );
 
                 Assert.Equal(1, exitCode);
                 Assert.Contains("Error:", stderr.ToString());
