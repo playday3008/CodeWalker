@@ -42,7 +42,12 @@ internal static class StatHandler
             options.Json
         );
         if (initError != null)
-            return RpfService.ReportError(initError, options.Json, ErrorResult([], options));
+        {
+            return RpfService.ReportError(
+                initError,
+                options.Json,
+                ErrorResult([], options));
+        }
 
         List<string> scanErrors = [];
         try
@@ -106,7 +111,7 @@ internal static class StatHandler
             UncompressedSizeFormatted = "0 B",
             CompressionRatio = 0,
             Extensions = [],
-            ErrorMessages = errorMessages,
+            ErrorMessages = errorMessages
         };
 
     /// <summary>
@@ -123,9 +128,9 @@ internal static class StatHandler
         RpfOptions options,
         CancellationToken cancellationToken = default)
     {
-        long totalSize = 0;
         int resourceCount = 0;
         int binaryCount = 0;
+        long totalSize = 0;
         long compressedSize = 0;
         long uncompressedSize = 0;
 
@@ -134,8 +139,10 @@ internal static class StatHandler
         foreach ((RpfFile _, RpfFileEntry fileEntry) in entries)
         {
             cancellationToken.ThrowIfCancellationRequested();
+
             long size = fileEntry.GetFileSize();
             totalSize += size;
+
             string ext = Path.GetExtension(fileEntry.Name).ToLowerInvariant();
             if (string.IsNullOrEmpty(ext))
                 ext = "(none)";
@@ -151,28 +158,35 @@ internal static class StatHandler
             }
             else
             {
-                extStats[ext] = (1, size, size, size);
+                extStats[ext] = (
+                    1,
+                    size,
+                    size,
+                    size
+                );
             }
 
-            if (fileEntry is RpfResourceFileEntry rfe)
+            switch (fileEntry)
             {
-                resourceCount++;
-                compressedSize += rfe.FileSize;
-                uncompressedSize += rfe.SystemSize + rfe.GraphicsSize;
-            }
-            else if (fileEntry is RpfBinaryFileEntry bfe)
-            {
-                binaryCount++;
-                compressedSize += bfe.FileSize;
-                uncompressedSize += bfe.FileUncompressedSize;
+                case RpfResourceFileEntry rfe:
+                    resourceCount++;
+                    compressedSize += size;
+                    uncompressedSize += rfe.SystemSize + rfe.GraphicsSize;
+                    break;
+                case RpfBinaryFileEntry bfe:
+                    binaryCount++;
+                    compressedSize += size;
+                    uncompressedSize += bfe.FileUncompressedSize;
+                    break;
+                default:
+                    throw new InvalidOperationException($"Unknown file entry type: {fileEntry.GetType().FullName}");
             }
         }
 
         double compressionRatio =
             uncompressedSize > 0 ? (double)compressedSize / uncompressedSize : 0;
 
-        List<Json.ExtensionStat> extensionStats =
-        [
+        List<Json.ExtensionStat> extensionStats = [
             .. extStats
                 .OrderByDescending(kv => kv.Value.total)
                 .Select(kv => new Json.ExtensionStat
@@ -186,11 +200,11 @@ internal static class StatHandler
                     MinSize = kv.Value.min,
                     MinSizeFormatted = options.SizeFormat.ToFormattedString(kv.Value.min),
                     MaxSize = kv.Value.max,
-                    MaxSizeFormatted = options.SizeFormat.ToFormattedString(kv.Value.max),
-                }),
+                    MaxSizeFormatted = options.SizeFormat.ToFormattedString(kv.Value.max)
+                })
         ];
 
-        return new Json.StatResult()
+        return new Json.StatResult
         {
             Success = scanErrors.Count == 0,
             RpfFile = options.RpfPath,
@@ -205,7 +219,7 @@ internal static class StatHandler
             UncompressedSizeFormatted = options.SizeFormat.ToFormattedString(uncompressedSize),
             CompressionRatio = Math.Round(compressionRatio, 4),
             Extensions = extensionStats,
-            ErrorMessages = [.. scanErrors],
+            ErrorMessages = [.. scanErrors]
         };
     }
 
@@ -225,18 +239,19 @@ internal static class StatHandler
     {
         // Collect all rows for dynamic column sizing
         string[] headers = ["Extension", "Count", "Total", "Avg", "Min", "Max"];
-        List<string[]> rows = new(result.Extensions.Count);
-        foreach (Json.ExtensionStat ext in result.Extensions)
-        {
-            rows.Add([
-                ext.Extension,
-                ext.Count.ToString(CultureInfo.InvariantCulture),
-                options.SizeFormat.ToFormattedString(ext.TotalSize),
-                options.SizeFormat.ToFormattedString(ext.AvgSize),
-                options.SizeFormat.ToFormattedString(ext.MinSize),
-                options.SizeFormat.ToFormattedString(ext.MaxSize),
-            ]);
-        }
+        string[][] rows = [
+            .. result.Extensions
+                .Select(ext =>
+                    (string[])[
+                        ext.Extension,
+                        ext.Count.ToString(CultureInfo.InvariantCulture),
+                        options.SizeFormat.ToFormattedString(ext.TotalSize),
+                        options.SizeFormat.ToFormattedString(ext.AvgSize),
+                        options.SizeFormat.ToFormattedString(ext.MinSize),
+                        options.SizeFormat.ToFormattedString(ext.MaxSize)
+                    ]
+                )
+        ];
 
         // Calculate column widths from headers and data
         int[] widths = new int[headers.Length];
@@ -247,26 +262,38 @@ internal static class StatHandler
             for (int i = 0; i < row.Length; i++)
                 widths[i] = Math.Max(widths[i], row[i].Length);
 
-        // Print header — first column left-aligned, rest right-aligned
-        Console.Write($" {headers[0].PadRight(widths[0])} ");
-        for (int i = 1; i < headers.Length; i++)
-            Console.Write($"| {headers[i].PadLeft(widths[i])} ");
-        Console.WriteLine();
-
-        // Separator with column dividers
-        Console.Write(new string('-', widths[0] + 2));
+        // Top border
+        Console.Write($"+{new string('-', widths[0] + 2)}");
         for (int i = 1; i < widths.Length; i++)
             Console.Write($"+{new string('-', widths[i] + 2)}");
-        Console.WriteLine();
+        Console.WriteLine("+");
 
-        // Print data rows
+        // Header — first column left-aligned, rest right-aligned
+        Console.Write($"| {headers[0].PadRight(widths[0])} ");
+        for (int i = 1; i < headers.Length; i++)
+            Console.Write($"| {headers[i].PadLeft(widths[i])} ");
+        Console.WriteLine("|");
+
+        // Separator
+        Console.Write($"+{new string('-', widths[0] + 2)}");
+        for (int i = 1; i < widths.Length; i++)
+            Console.Write($"+{new string('-', widths[i] + 2)}");
+        Console.WriteLine("+");
+
+        // Data rows
         foreach (string[] row in rows)
         {
-            Console.Write($" {row[0].PadRight(widths[0])} ");
+            Console.Write($"| {row[0].PadRight(widths[0])} ");
             for (int i = 1; i < row.Length; i++)
                 Console.Write($"| {row[i].PadLeft(widths[i])} ");
-            Console.WriteLine();
+            Console.WriteLine("|");
         }
+
+        // Bottom border
+        Console.Write($"+{new string('-', widths[0] + 2)}");
+        for (int i = 1; i < widths.Length; i++)
+            Console.Write($"+{new string('-', widths[i] + 2)}");
+        Console.WriteLine("+");
 
         Console.Error.WriteLine();
         Console.Error.WriteLine(

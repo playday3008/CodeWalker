@@ -25,25 +25,25 @@ internal static class HashHandler
         {
             Description = "Text string(s) to hash",
             Required = true,
-            AllowMultipleArgumentsPerToken = true,
+            AllowMultipleArgumentsPerToken = true
         };
 
         Option<string> encodingOption = new("--encoding", "-e")
         {
             Description = "Encoding: utf-8 (default), ascii",
-            DefaultValueFactory = _ => HashOptions.DefaultEncoding,
+            DefaultValueFactory = _ => HashOptions.DefaultEncoding
         };
 
         Option<bool> jsonOption = new("--json")
         {
-            Description = "Output results in JSON format",
+            Description = "Output results in JSON format"
         };
 
         Command command = new("hash", "Generate Jenkins hashes for GTA V game identifiers")
         {
             inputOption,
             encodingOption,
-            jsonOption,
+            jsonOption
         };
         command.Aliases.Add("h");
 
@@ -53,7 +53,7 @@ internal static class HashHandler
             {
                 Inputs = parseResult.GetRequiredValue(inputOption),
                 Encoding = parseResult.GetRequiredValue(encodingOption),
-                Json = parseResult.GetValue(jsonOption),
+                Json = parseResult.GetValue(jsonOption)
             };
             return Execute(options, cancellationToken);
         });
@@ -105,7 +105,7 @@ internal static class HashHandler
         {
             Success = false,
             Hashes = [],
-            ErrorMessages = errorMessages,
+            ErrorMessages = errorMessages
         };
 
     /// <summary>
@@ -119,7 +119,7 @@ internal static class HashHandler
         {
             "UTF-8" => JenkHashInputEncoding.UTF8,
             "ASCII" => JenkHashInputEncoding.ASCII,
-            _ => throw new ArgumentException($"Unknown encoding: {encoding}. Use 'utf-8' or 'ascii'."),
+            _ => throw new ArgumentException($"Unknown encoding: {encoding}. Use 'utf-8' or 'ascii'.")
         };
 
     /// <summary>
@@ -141,13 +141,13 @@ internal static class HashHandler
             cancellationToken.ThrowIfCancellationRequested();
             JenkHash jenkHash = new(input, encoding);
             hashes.Add(
-                new Json.HashEntry()
+                new Json.HashEntry
                 {
                     Input = input,
                     Hash = jenkHash.HashUint,
                     HashSigned = jenkHash.HashInt,
                     HashHex = jenkHash.HashHex,
-                    Encoding = jenkHash.Encoding.ToString(),
+                    Encoding = jenkHash.Encoding.ToString()
                 }
             );
         }
@@ -164,7 +164,7 @@ internal static class HashHandler
         {
             Success = true,
             Hashes = hashes,
-            ErrorMessages = [],
+            ErrorMessages = []
         };
         Console.WriteLine(JsonSerializer.Serialize(result, RpfService.JsonSerializerOptions));
     }
