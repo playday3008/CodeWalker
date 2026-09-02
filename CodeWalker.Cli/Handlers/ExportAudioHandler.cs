@@ -4,7 +4,7 @@ using System.Threading;
 
 using CodeWalker.GameFiles;
 
-namespace CodeWalker.Cli;
+namespace CodeWalker.Cli.Handlers;
 
 internal static class ExportAudioHandler
 {

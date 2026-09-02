@@ -1,10 +1,11 @@
 using System;
 using System.IO;
 
-using Xunit;
-using Xunit.v3;
+using CodeWalker.Cli.Handlers;
 
-namespace CodeWalker.Cli.Tests;
+using Xunit;
+
+namespace CodeWalker.Cli.Tests.Handlers;
 
 [Collection("ConsoleOutput")]
 public sealed class HashHandlerTests

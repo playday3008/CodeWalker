@@ -5,7 +5,7 @@ using System.Threading;
 using CodeWalker.GameFiles;
 using CodeWalker.Utils;
 
-namespace CodeWalker.Cli;
+namespace CodeWalker.Cli.Handlers;
 
 internal static class ExportTexturesHandler
 {

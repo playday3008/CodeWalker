@@ -1,14 +1,14 @@
 using System;
 using System.IO;
 
+using CodeWalker.Cli.Handlers;
 using CodeWalker.Cli.Helpers;
 
 using SharpDX;
 
 using Xunit;
-using Xunit.v3;
 
-namespace CodeWalker.Cli.Tests;
+namespace CodeWalker.Cli.Tests.Handlers;
 
 public sealed class InspectHandlerTests
 {

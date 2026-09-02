@@ -2,7 +2,7 @@ using System.CommandLine;
 using System.IO;
 using System.Threading;
 
-namespace CodeWalker.Cli;
+namespace CodeWalker.Cli.Handlers;
 
 internal sealed record ExportOptions
 {

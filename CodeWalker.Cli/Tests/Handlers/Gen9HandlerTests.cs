@@ -1,12 +1,12 @@
 using System;
 using System.IO;
 
+using CodeWalker.Cli.Handlers;
 using CodeWalker.Cli.Helpers;
 
 using Xunit;
-using Xunit.v3;
 
-namespace CodeWalker.Cli.Tests;
+namespace CodeWalker.Cli.Tests.Handlers;
 
 [Collection("ConsoleOutput")]
 public sealed class Gen9HandlerTests
