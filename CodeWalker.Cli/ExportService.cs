@@ -110,7 +110,7 @@ internal static class ExportService
             if (errorMessage == null && jsonEntry?.Status is "exported" or "dry_run")
                 exported++;
 
-            if (jsonEntry?.Status is "unsupported" or "skipped")
+            if (errorMessage == null && jsonEntry?.Status is "unsupported" or "skipped")
                 skipped++;
 
             if (jsonEntry != null)
@@ -120,6 +120,11 @@ internal static class ExportService
             {
                 errors++;
                 errorMessages.Add(errorMessage);
+            }
+            else if (jsonEntry?.Status == "error")
+            {
+                errors++;
+                errorMessages.Add($"Error processing: {jsonEntry.Path}");
             }
         }
 
@@ -219,7 +224,6 @@ internal static class ExportService
                     new ParallelOptions { MaxDegreeOfParallelism = options.Rpf.Threads, CancellationToken = cancellationToken },
                     i =>
                     {
-                        cancellationToken.ThrowIfCancellationRequested();
                         (RpfFile sourceRpf, RpfFileEntry fileEntry) = filesToExport[i];
                         try
                         {
@@ -292,7 +296,7 @@ internal static class ExportService
 
             Json.ExportResult jsonResult = new()
             {
-                Success = agg.Errors == 0 && scanErrors.Count == 0,
+                Success = agg.ErrorMessages.Count == 0,
                 RpfFile = options.Rpf.RpfPath,
                 OutputDir = options.OutputPath,
                 Format = format,
@@ -320,7 +324,7 @@ internal static class ExportService
                 );
             }
 
-            return (agg.Errors > 0 || scanErrors.Count > 0) ? 1 : 0;
+            return agg.ErrorMessages.Count > 0 ? 1 : 0;
         }
         catch (OperationCanceledException) { throw; }
         catch (Exception ex)

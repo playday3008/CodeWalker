@@ -140,7 +140,6 @@ internal static class SearchHandler
                 new ParallelOptions { MaxDegreeOfParallelism = options.Threads, CancellationToken = cancellationToken },
                 i =>
                 {
-                    cancellationToken.ThrowIfCancellationRequested();
                     RpfEntry entry = allEntries[i];
                     if (!matcher(entry))
                         return;

@@ -15,6 +15,8 @@ internal static class Filter
     /// <summary>
     /// Normalizes filter patterns once at parse time: trims, lowercases, and strips blanks.
     /// </summary>
+    /// <param name="filters">Array of filter patterns to normalize.</param>
+    /// <returns>Normalized array of filter patterns.</returns>
     public static string[] Normalize(string[]? filters)
     {
         if (filters == null || filters.Length == 0)

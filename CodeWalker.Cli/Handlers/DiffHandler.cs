@@ -172,7 +172,6 @@ internal static class DiffHandler
                 new ParallelOptions { MaxDegreeOfParallelism = options.Common.Threads, CancellationToken = cancellationToken },
                 i =>
                 {
-                    cancellationToken.ThrowIfCancellationRequested();
                     string path = commonPaths[i];
                     (RpfFile leftRpfRef, RpfFileEntry leftEntry) = leftDict[path];
                     (RpfFile rightRpfRef, RpfFileEntry rightEntry) = rightDict[path];
