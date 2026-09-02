@@ -180,15 +180,28 @@ public sealed class RpfServiceTests
     }
 
     [Fact]
-    public void CollectFiles_SkipsRpfEntries()
+    public void CollectFiles_SkipsRpfEntries_WhenRecursive()
+    {
+        RpfBinaryFileEntry rpfEntry = MakeEntry("nested.rpf");
+        RpfBinaryFileEntry fileEntry = MakeEntry("test.ydr");
+        RpfFile rpf = new("test", "test.rpf", 0) { AllEntries = [rpfEntry, fileEntry] };
+        List<(RpfFile rpf, RpfFileEntry entry)> files =
+            RpfService.CollectFiles(rpf, null, recursive: true);
+        _ = Assert.Single(files);
+        Assert.Equal("test.ydr", files[0].entry.Name);
+    }
+
+    [Fact]
+    public void CollectFiles_IncludesRpfEntries_WhenNotRecursive()
     {
         RpfBinaryFileEntry rpfEntry = MakeEntry("nested.rpf");
         RpfBinaryFileEntry fileEntry = MakeEntry("test.ydr");
         RpfFile rpf = new("test", "test.rpf", 0) { AllEntries = [rpfEntry, fileEntry] };
         List<(RpfFile rpf, RpfFileEntry entry)> files =
             RpfService.CollectFiles(rpf, null, recursive: false);
-        _ = Assert.Single(files);
-        Assert.Equal("test.ydr", files[0].entry.Name);
+        Assert.Equal(2, files.Count);
+        Assert.Contains(files, f => f.entry.Name == "nested.rpf");
+        Assert.Contains(files, f => f.entry.Name == "test.ydr");
     }
 
     [Fact]

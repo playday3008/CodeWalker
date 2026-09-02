@@ -104,7 +104,7 @@ internal static class RpfService
                 rpf.AllEntries
                     .OfType<RpfFileEntry>()
                     .Where(fe =>
-                        !fe.NameLower.EndsWith(".rpf", StringComparison.Ordinal)
+                        (!recursive || !fe.NameLower.EndsWith(".rpf", StringComparison.Ordinal))
                         && Filter.Matches(fe.Path, filters))
                     .Select(fe => (rpf, fe))
             );
