@@ -61,9 +61,9 @@ internal static class SearchHandler
             return RpfService.ReportError(initError, options.Json, ErrorResult([]));
         }
 
+        List<string> scanErrors = [];
         try
         {
-            List<string> scanErrors = [];
             RpfFile rpf = RpfService.OpenRpf(
                 options.RpfPath,
                 options.Verbose,
@@ -100,7 +100,7 @@ internal static class SearchHandler
                     return RpfService.ReportError(
                         $"Invalid hex hash: {pattern}",
                         options.Json,
-                        ErrorResult([])
+                        ErrorResult([.. scanErrors])
                     );
                 }
                 matcher = entry => entry.NameHash == hash || entry.ShortNameHash == hash;
@@ -219,7 +219,7 @@ internal static class SearchHandler
             return RpfService.ReportError(
                 ex.Message,
                 options.Json,
-                ErrorResult([]),
+                ErrorResult([.. scanErrors]),
                 options.Verbose ? ex.StackTrace : null
             );
         }

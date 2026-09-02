@@ -100,9 +100,9 @@ internal static class ExtractHandler
             return RpfService.ReportError(initError, options.Rpf.Json, ErrorResult([]));
         }
 
+        List<string> scanErrors = [];
         try
         {
-            List<string> scanErrors = [];
             RpfFile rpf = RpfService.OpenRpf(
                 options.Rpf.RpfPath,
                 options.Rpf.Verbose,
@@ -326,7 +326,7 @@ internal static class ExtractHandler
             return RpfService.ReportError(
                 ex.Message,
                 options.Rpf.Json,
-                ErrorResult([]),
+                ErrorResult([.. scanErrors]),
                 options.Rpf.Verbose ? ex.StackTrace : null
             );
         }

@@ -44,6 +44,10 @@ internal sealed record TreeNode
     [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
     public string? FileType { get; init; }
 
+    [JsonPropertyName("version")]
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+    public int? Version { get; init; }
+
     [JsonPropertyName("children")]
     [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
     public IReadOnlyList<TreeNode>? Children { get; init; }

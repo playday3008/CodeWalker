@@ -51,10 +51,10 @@ internal sealed class RpfCommandOptions
         Description = "Process nested RPF archives",
     };
 
-    public void AddTo(Command command)
+    public void AddTo(Command command, bool includeThreads = true)
     {
         command.Add(this.Rpf);
-        this._commonOpts.AddTo(command);
+        this._commonOpts.AddTo(command, includeThreads);
         command.Add(this.Gen9);
         command.Add(this.Filter);
         command.Add(this.Recursive);

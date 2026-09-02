@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.CommandLine;
+using System.Diagnostics.CodeAnalysis;
 using System.Text.Json;
 using System.Threading;
 
@@ -8,6 +9,7 @@ using CodeWalker.GameFiles;
 
 namespace CodeWalker.Cli.Handlers;
 
+[ExcludeFromCodeCoverage]
 internal sealed record HashOptions
 {
     public required string[] Inputs { get; init; }
@@ -74,10 +76,10 @@ internal static class HashHandler
         {
             JenkHashInputEncoding encoding = ParseEncoding(options.Encoding);
             Json.HashEntry[] hashes = CollectHashes(options.Inputs, encoding, cancellationToken);
-            if (!options.Json)
-                PrintHashes(hashes, cancellationToken);
-            else
+            if (options.Json)
                 PrintJsonHashes(hashes);
+            else
+                PrintHashes(hashes, cancellationToken);
 
             return 0;
         }
@@ -91,7 +93,8 @@ internal static class HashHandler
             return RpfService.ReportError(
                 ex.Message,
                 options.Json,
-                ErrorResult([]));
+                ErrorResult([])
+            );
         }
     }
 
@@ -151,6 +154,7 @@ internal static class HashHandler
                 }
             );
         }
+
         return [.. hashes];
     }
 
