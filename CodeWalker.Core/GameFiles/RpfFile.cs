@@ -621,7 +621,9 @@ namespace CodeWalker.GameFiles
                 }
                 else
                 {
-                    entry.FileSize -= offset;
+                    //couldn't decompress it, so give back what's there. it is shorter than
+                    //the entry's flags describe, and the entry is shared, so FileSize keeps
+                    //describing what is on disk and the caller has to notice the shortfall.
                     data = decr;
                 }
 
