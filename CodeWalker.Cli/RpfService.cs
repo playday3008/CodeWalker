@@ -2,10 +2,22 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Text.Json;
+using System.Text.Json.Serialization;
 using CodeWalker.Cli.Helpers;
 using CodeWalker.GameFiles;
 
 namespace CodeWalker.Cli;
+
+public abstract record BaseResult
+{
+    [JsonPropertyName("success")]
+    [JsonPropertyOrder(-1)]
+    public required bool Success { get; init; }
+
+    [JsonPropertyName("errorMessages")]
+    [JsonPropertyOrder(100)]
+    public required IReadOnlyList<string> ErrorMessages { get; init; }
+}
 
 public static class RpfService
 {
@@ -139,5 +151,90 @@ public static class RpfService
             RpfBinaryFileEntry => "binary",
             _ => "unknown",
         };
+    }
+
+    /// <summary>
+    /// Validates inputs, loads encryption keys, and prints status to stderr.
+    /// Returns an error message on failure, or null on success.
+    /// </summary>
+    public static string? ValidateAndLoadKeys(string rpfPath, string exePath, bool gen9, bool json)
+    {
+        string? error = ValidateInputs(rpfPath, exePath, gen9);
+        if (error != null)
+            return error;
+
+        if (!json)
+            Console.Error.WriteLine("Loading encryption keys...");
+        LoadKeys(exePath, gen9);
+
+        return null;
+    }
+
+    /// <summary>
+    /// Opens an RPF file with standard verbose/json output handling.
+    /// </summary>
+    public static RpfFile OpenRpf(
+        string rpfPath,
+        bool verbose,
+        bool json,
+        List<string> errorMessages
+    )
+    {
+        if (!json)
+            Console.Error.WriteLine($"Opening RPF: {rpfPath}");
+
+        RpfFile rpf = OpenRpf(
+            rpfPath,
+            onStatus: status =>
+            {
+                if (verbose && !json)
+                    Console.Error.WriteLine(status);
+            },
+            onError: error =>
+            {
+                if (!json)
+                    Console.Error.WriteLine($"Error: {error}");
+                errorMessages.Add(error);
+            }
+        );
+
+        if (!json)
+            Console.Error.WriteLine(
+                $"Found {rpf.GrandTotalFileCount} files in {rpf.GrandTotalRpfCount} archive(s)"
+            );
+
+        return rpf;
+    }
+
+    /// <summary>
+    /// Reports an error in JSON or text format and returns exit code 1.
+    /// The <c>with</c> expression preserves the runtime (derived) type, and
+    /// <see cref="JsonSerializer"/> serialises using that type so all properties are included.
+    /// </summary>
+    public static int ReportError(
+        string message,
+        bool json,
+        BaseResult result,
+        string? stackTrace = null
+    )
+    {
+        if (json)
+        {
+            BaseResult errorResult = result with
+            {
+                Success = false,
+                ErrorMessages = [.. result.ErrorMessages, message],
+            };
+            Console.WriteLine(
+                JsonSerializer.Serialize(errorResult, errorResult.GetType(), JsonSerializerOptions)
+            );
+        }
+        else
+        {
+            Console.Error.WriteLine($"Error: {message}");
+            if (stackTrace != null)
+                Console.Error.WriteLine(stackTrace);
+        }
+        return 1;
     }
 }

@@ -131,7 +131,11 @@ public static class Gen9Handler
 
         if (!Directory.Exists(options.InputPath))
         {
-            return ReportError($"Input folder not found: {options.InputPath}", options, result);
+            return RpfService.ReportError(
+                $"Input folder not found: {options.InputPath}",
+                options.Json,
+                result
+            );
         }
 
         if (
@@ -142,9 +146,9 @@ public static class Gen9Handler
             )
         )
         {
-            return ReportError(
+            return RpfService.ReportError(
                 "Input folder and Output folder must be different.",
-                options,
+                options.Json,
                 result
             );
         }
@@ -152,7 +156,11 @@ public static class Gen9Handler
         string exeFile = "GTA5_Enhanced.exe";
         if (!File.Exists(Path.Combine(options.ExePath, exeFile)))
         {
-            return ReportError($"{exeFile} not found in: {options.ExePath}", options, result);
+            return RpfService.ReportError(
+                $"{exeFile} not found in: {options.ExePath}",
+                options.Json,
+                result
+            );
         }
 
         try
@@ -366,7 +374,12 @@ public static class Gen9Handler
         }
         catch (Exception ex)
         {
-            return ReportError(ex.Message, options, result, options.Verbose ? ex.StackTrace : null);
+            return RpfService.ReportError(
+                ex.Message,
+                options.Json,
+                result,
+                options.Verbose ? ex.StackTrace : null
+            );
         }
     }
 
@@ -505,32 +518,5 @@ public static class Gen9Handler
                 }
             }
         }
-    }
-
-    private static int ReportError(
-        string message,
-        Gen9Options options,
-        Json.Gen9Result result,
-        string? stackTrace = null
-    )
-    {
-        if (options.Json)
-        {
-            result = result with
-            {
-                Success = false,
-                ErrorMessages = [.. result.ErrorMessages, message],
-            };
-            Console.WriteLine(JsonSerializer.Serialize(result, RpfService.JsonSerializerOptions));
-        }
-        else
-        {
-            Console.Error.WriteLine($"Error: {message}");
-            if (stackTrace != null)
-            {
-                Console.Error.WriteLine(stackTrace);
-            }
-        }
-        return 1;
     }
 }

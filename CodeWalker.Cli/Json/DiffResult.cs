@@ -3,11 +3,8 @@ using System.Text.Json.Serialization;
 
 namespace CodeWalker.Cli.Json;
 
-public record DiffResult
+public record DiffResult : BaseResult
 {
-    [JsonPropertyName("success")]
-    public required bool Success { get; init; }
-
     [JsonPropertyName("leftRpf")]
     public required string LeftRpf { get; init; }
 
@@ -28,9 +25,6 @@ public record DiffResult
 
     [JsonPropertyName("summary")]
     public required DiffSummary Summary { get; init; }
-
-    [JsonPropertyName("errorMessages")]
-    public required IReadOnlyList<string> ErrorMessages { get; init; }
 }
 
 public record DiffEntry

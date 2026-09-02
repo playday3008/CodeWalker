@@ -88,9 +88,9 @@ public static class HashHandler
                 encoding = JenkHashInputEncoding.ASCII;
                 break;
             default:
-                return ReportError(
+                return RpfService.ReportError(
                     $"Unknown encoding: {options.Encoding}. Use 'utf-8' or 'ascii'.",
-                    options,
+                    options.Json,
                     result
                 );
         }
@@ -134,25 +134,7 @@ public static class HashHandler
         }
         catch (Exception ex)
         {
-            return ReportError(ex.Message, options, result);
+            return RpfService.ReportError(ex.Message, options.Json, result);
         }
-    }
-
-    private static int ReportError(string message, HashOptions options, Json.HashResult result)
-    {
-        if (options.Json)
-        {
-            result = result with
-            {
-                Success = false,
-                ErrorMessages = [.. result.ErrorMessages, message],
-            };
-            Console.WriteLine(JsonSerializer.Serialize(result, RpfService.JsonSerializerOptions));
-        }
-        else
-        {
-            Console.Error.WriteLine($"Error: {message}");
-        }
-        return 1;
     }
 }
