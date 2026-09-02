@@ -3,6 +3,8 @@ using System.Collections.Generic;
 using System.CommandLine;
 using System.IO;
 using System.Text.Json;
+using System.Threading;
+using System.Threading.Tasks;
 using CodeWalker.Cli.Helpers;
 using CodeWalker.Core.Utils;
 using CodeWalker.GameFiles;
@@ -13,19 +15,18 @@ public record Gen9Options
 {
     public required string InputPath { get; init; }
     public required string OutputPath { get; init; }
-    public required string ExePath { get; init; }
+    public required CommonOptions Common { get; init; }
     public required bool NoRecurse { get; init; }
     public required bool NoOverwrite { get; init; }
     public required bool SkipUnconverted { get; init; }
     public required bool Progress { get; init; }
-    public required bool Verbose { get; init; }
-    public required bool Json { get; init; }
 }
 
 public static class Gen9Handler
 {
     public static Command CreateCommand()
     {
+        CommonCommandOptions commonOpts = new();
         // csharpier-ignore-start
         Option<DirectoryInfo> inputOption = new("--input", "-i")
         {
@@ -36,12 +37,6 @@ public static class Gen9Handler
         Option<DirectoryInfo> outputOption = new("--output", "-o")
         {
             Description = "Output folder for converted files",
-            Required = true,
-        };
-
-        Option<DirectoryInfo> exeOption = new("--exe", "-e")
-        {
-            Description = "Path to the GTA V installation directory (containing GTA5.exe)",
             Required = true,
         };
 
@@ -64,30 +59,18 @@ public static class Gen9Handler
         {
             Description = "Show progress bar",
         };
-
-        Option<bool> verboseOption = new("--verbose", "-v")
-        {
-            Description = "Show per-file status",
-        };
-
-        Option<bool> jsonOption = new("--json")
-        {
-            Description = "Output results in JSON format",
-        };
         // csharpier-ignore-end
 
         Command command = new("gen9", "Convert files between standard and enhanced (Gen9) formats")
         {
             inputOption,
             outputOption,
-            exeOption,
             noRecurseOption,
             noOverwriteOption,
             skipUnconvertedOption,
             progressOption,
-            verboseOption,
-            jsonOption,
         };
+        commonOpts.AddTo(command);
         command.Aliases.Add("g");
 
         command.SetAction(parseResult =>
@@ -96,13 +79,11 @@ public static class Gen9Handler
             {
                 InputPath = parseResult.GetRequiredValue(inputOption).FullName,
                 OutputPath = parseResult.GetRequiredValue(outputOption).FullName,
-                ExePath = parseResult.GetRequiredValue(exeOption).FullName,
+                Common = commonOpts.Parse(parseResult),
                 NoRecurse = parseResult.GetValue(noRecurseOption),
                 NoOverwrite = parseResult.GetValue(noOverwriteOption),
                 SkipUnconverted = parseResult.GetValue(skipUnconvertedOption),
                 Progress = parseResult.GetValue(progressOption),
-                Verbose = parseResult.GetValue(verboseOption),
-                Json = parseResult.GetValue(jsonOption),
             };
             return Execute(options);
         });
@@ -112,29 +93,27 @@ public static class Gen9Handler
 
     public static int Execute(Gen9Options options)
     {
-        List<Json.Gen9FileEntry> files = [];
-        List<string> errorMessages = [];
-
-        Json.Gen9Result result = new()
-        {
-            Success = false,
-            InputFolder = options.InputPath,
-            OutputFolder = options.OutputPath,
-            TotalFiles = 0,
-            Converted = 0,
-            Skipped = 0,
-            Copied = 0,
-            Errors = 0,
-            Files = files,
-            ErrorMessages = errorMessages,
-        };
+        Json.Gen9Result ErrorResult(string[] errorMessages) =>
+            new()
+            {
+                Success = false,
+                InputFolder = options.InputPath,
+                OutputFolder = options.OutputPath,
+                TotalFiles = 0,
+                Converted = 0,
+                Skipped = 0,
+                Copied = 0,
+                Errors = 0,
+                Files = [],
+                ErrorMessages = errorMessages,
+            };
 
         if (!Directory.Exists(options.InputPath))
         {
             return RpfService.ReportError(
                 $"Input folder not found: {options.InputPath}",
-                options.Json,
-                result
+                options.Common.Json,
+                ErrorResult([])
             );
         }
 
@@ -148,29 +127,23 @@ public static class Gen9Handler
         {
             return RpfService.ReportError(
                 "Input folder and Output folder must be different.",
-                options.Json,
-                result
+                options.Common.Json,
+                ErrorResult([])
             );
         }
 
-        string exeFile = "GTA5_Enhanced.exe";
-        if (!File.Exists(Path.Combine(options.ExePath, exeFile)))
+        string? exeError = RpfService.ValidateExeAndLoadKeys(
+            options.Common.ExePath,
+            true,
+            options.Common.Json
+        );
+        if (exeError != null)
         {
-            return RpfService.ReportError(
-                $"{exeFile} not found in: {options.ExePath}",
-                options.Json,
-                result
-            );
+            return RpfService.ReportError(exeError, options.Common.Json, ErrorResult([]));
         }
 
         try
         {
-            if (!options.Json)
-            {
-                Console.Error.WriteLine("Loading encryption keys...");
-            }
-            GTA5Keys.LoadFromPath(options.ExePath, true);
-
             bool previousGen9 = RpfManager.IsGen9;
             RpfManager.IsGen9 = true;
 
@@ -193,21 +166,28 @@ public static class Gen9Handler
 
                 string[] allPaths = Directory.GetFileSystemEntries(inputFolder, "*", searchOption);
 
-                // Filter to files only
                 List<string> filePaths = [];
+                List<string> rpfPaths = [];
                 foreach (string p in allPaths)
                 {
-                    if (File.Exists(p))
+                    if (!File.Exists(p))
+                        continue;
+
+                    if (Path.GetExtension(p).Equals(".rpf", StringComparison.OrdinalIgnoreCase))
+                    {
+                        rpfPaths.Add(p);
+                    }
+                    else
                     {
                         filePaths.Add(p);
                     }
                 }
 
-                if (!options.Json)
+                int totalFileCount = filePaths.Count + rpfPaths.Count;
+
+                if (!options.Common.Json)
                 {
-                    Console.Error.WriteLine(
-                        $"Found {filePaths.Count} files in {options.InputPath}"
-                    );
+                    Console.Error.WriteLine($"Found {totalFileCount} files in {options.InputPath}");
                 }
 
                 int converted = 0;
@@ -215,12 +195,160 @@ public static class Gen9Handler
                 int copied = 0;
                 int errors = 0;
                 bool copyUnconverted = !options.SkipUnconverted;
+                List<Json.Gen9FileEntry> files = [];
+                List<string> errorMessages = [];
 
                 using (
-                    ProgressBar progress = new(filePaths.Count, options.Progress && !options.Json)
+                    ProgressBar progress = new(
+                        totalFileCount,
+                        options.Progress && !options.Common.Json
+                    )
                 )
                 {
-                    foreach (string path in filePaths)
+                    (Json.Gen9FileEntry entry, string? error)[] nonRpfResults = new (
+                        Json.Gen9FileEntry,
+                        string?
+                    )[filePaths.Count];
+
+                    Parallel.For(
+                        0,
+                        filePaths.Count,
+                        new ParallelOptions
+                        {
+                            MaxDegreeOfParallelism = Math.Max(1, options.Common.Threads),
+                        },
+                        i =>
+                        {
+                            string path = filePaths[i];
+                            string relPath = path.Substring(inputFolder.Length);
+                            string outPath = Path.Combine(options.OutputPath, relPath);
+
+                            try
+                            {
+                                if (options.NoOverwrite && File.Exists(outPath))
+                                {
+                                    nonRpfResults[i] = (
+                                        new Json.Gen9FileEntry
+                                        {
+                                            Path = relPath,
+                                            Status = "skipped",
+                                            Message = "Output file already exists",
+                                        },
+                                        null
+                                    );
+                                    if (options.Common.Verbose && !options.Common.Json)
+                                    {
+                                        Console.Error.WriteLine($"{relPath} - skipped (exists)");
+                                    }
+                                    progress.Increment(relPath);
+                                    return;
+                                }
+
+                                string? outDir = Path.GetDirectoryName(outPath);
+                                if (!string.IsNullOrEmpty(outDir) && !Directory.Exists(outDir))
+                                {
+                                    Directory.CreateDirectory(outDir);
+                                }
+
+                                string ext = Path.GetExtension(path).ToLowerInvariant();
+                                byte[] dataIn = File.ReadAllBytes(path);
+                                byte[] dataOut = Gen9Converter.TryConvert(
+                                    dataIn,
+                                    ext,
+                                    msg =>
+                                    {
+                                        if (options.Common.Verbose && !options.Common.Json)
+                                            Console.Error.WriteLine(msg);
+                                    },
+                                    relPath,
+                                    copyUnconverted,
+                                    out bool wasConverted
+                                );
+
+                                if (wasConverted)
+                                {
+                                    File.WriteAllBytes(outPath, dataOut);
+                                    nonRpfResults[i] = (
+                                        new Json.Gen9FileEntry
+                                        {
+                                            Path = relPath,
+                                            Status = "converted",
+                                        },
+                                        null
+                                    );
+                                }
+                                else if (dataOut != null)
+                                {
+                                    File.WriteAllBytes(outPath, dataOut);
+                                    nonRpfResults[i] = (
+                                        new Json.Gen9FileEntry
+                                        {
+                                            Path = relPath,
+                                            Status = "copied",
+                                        },
+                                        null
+                                    );
+                                }
+                                else
+                                {
+                                    nonRpfResults[i] = (
+                                        new Json.Gen9FileEntry
+                                        {
+                                            Path = relPath,
+                                            Status = "skipped",
+                                        },
+                                        null
+                                    );
+                                }
+
+                                progress.Increment(relPath);
+                            }
+                            catch (Exception ex)
+                            {
+                                string errorMsg = $"Error processing {relPath}: {ex.Message}";
+                                nonRpfResults[i] = (
+                                    new Json.Gen9FileEntry
+                                    {
+                                        Path = relPath,
+                                        Status = "error",
+                                        Message = ex.Message,
+                                    },
+                                    errorMsg
+                                );
+                                if (!options.Common.Json)
+                                {
+                                    Console.Error.WriteLine($"Error: {errorMsg}");
+                                }
+                                progress.Increment();
+                            }
+                        }
+                    );
+
+                    // Aggregate non-RPF results
+                    foreach (var (entry, error) in nonRpfResults)
+                    {
+                        files.Add(entry);
+                        switch (entry.Status)
+                        {
+                            case "converted":
+                                converted++;
+                                break;
+                            case "copied":
+                                copied++;
+                                break;
+                            case "skipped":
+                                skipped++;
+                                break;
+                            case "error":
+                                errors++;
+                                if (error != null)
+                                    errorMessages.Add(error);
+                                break;
+                        }
+                    }
+
+                    // Process RPF files sequentially (unsafe to parallelize)
+                    foreach (string path in rpfPaths)
                     {
                         string relPath = path.Substring(inputFolder.Length);
                         string outPath = Path.Combine(options.OutputPath, relPath);
@@ -238,7 +366,7 @@ public static class Gen9Handler
                                         Message = "Output file already exists",
                                     }
                                 );
-                                if (options.Verbose && !options.Json)
+                                if (options.Common.Verbose && !options.Common.Json)
                                 {
                                     Console.Error.WriteLine($"{relPath} - skipped (exists)");
                                 }
@@ -252,70 +380,17 @@ public static class Gen9Handler
                                 Directory.CreateDirectory(outDir);
                             }
 
-                            string ext = Path.GetExtension(path).ToLowerInvariant();
-
-                            if (ext == ".rpf")
-                            {
-                                ProcessRpfFile(
-                                    path,
-                                    outPath,
-                                    relPath,
-                                    options,
-                                    files,
-                                    errorMessages,
-                                    ref converted,
-                                    ref skipped,
-                                    ref errors
-                                );
-                            }
-                            else
-                            {
-                                byte[] dataIn = File.ReadAllBytes(path);
-                                byte[] dataOut = Gen9Converter.TryConvert(
-                                    dataIn,
-                                    ext,
-                                    msg =>
-                                    {
-                                        if (options.Verbose && !options.Json)
-                                            Console.Error.WriteLine(msg);
-                                    },
-                                    relPath,
-                                    copyUnconverted,
-                                    out bool wasConverted
-                                );
-
-                                if (wasConverted)
-                                {
-                                    File.WriteAllBytes(outPath, dataOut);
-                                    converted++;
-                                    files.Add(
-                                        new Json.Gen9FileEntry
-                                        {
-                                            Path = relPath,
-                                            Status = "converted",
-                                        }
-                                    );
-                                }
-                                else if (dataOut != null)
-                                {
-                                    File.WriteAllBytes(outPath, dataOut);
-                                    copied++;
-                                    files.Add(
-                                        new Json.Gen9FileEntry { Path = relPath, Status = "copied" }
-                                    );
-                                }
-                                else
-                                {
-                                    skipped++;
-                                    files.Add(
-                                        new Json.Gen9FileEntry
-                                        {
-                                            Path = relPath,
-                                            Status = "skipped",
-                                        }
-                                    );
-                                }
-                            }
+                            ProcessRpfFile(
+                                path,
+                                outPath,
+                                relPath,
+                                options,
+                                files,
+                                errorMessages,
+                                ref converted,
+                                ref skipped,
+                                ref errors
+                            );
 
                             progress.Increment(relPath);
                         }
@@ -332,7 +407,7 @@ public static class Gen9Handler
                                     Message = ex.Message,
                                 }
                             );
-                            if (!options.Json)
+                            if (!options.Common.Json)
                             {
                                 Console.Error.WriteLine($"Error: {errorMsg}");
                             }
@@ -341,17 +416,21 @@ public static class Gen9Handler
                     }
                 }
 
-                result = result with
+                Json.Gen9Result result = new()
                 {
                     Success = errors == 0,
-                    TotalFiles = filePaths.Count,
+                    InputFolder = options.InputPath,
+                    OutputFolder = options.OutputPath,
+                    TotalFiles = totalFileCount,
                     Converted = converted,
                     Skipped = skipped,
                     Copied = copied,
                     Errors = errors,
+                    Files = files.ToArray(),
+                    ErrorMessages = errorMessages.ToArray(),
                 };
 
-                if (options.Json)
+                if (options.Common.Json)
                 {
                     Console.WriteLine(
                         JsonSerializer.Serialize(result, RpfService.JsonSerializerOptions)
@@ -376,9 +455,9 @@ public static class Gen9Handler
         {
             return RpfService.ReportError(
                 ex.Message,
-                options.Json,
-                result,
-                options.Verbose ? ex.StackTrace : null
+                options.Common.Json,
+                ErrorResult([]),
+                options.Common.Verbose ? ex.StackTrace : null
             );
         }
     }
@@ -395,7 +474,7 @@ public static class Gen9Handler
         ref int errors
     )
     {
-        if (options.Verbose && !options.Json)
+        if (options.Common.Verbose && !options.Common.Json)
         {
             Console.Error.WriteLine($"{relPath} - Converting RPF contents...");
         }
@@ -410,12 +489,12 @@ public static class Gen9Handler
         rpf.ScanStructure(
             status =>
             {
-                if (options.Verbose && !options.Json)
+                if (options.Common.Verbose && !options.Common.Json)
                     Console.Error.WriteLine(status);
             },
             error =>
             {
-                if (!options.Json)
+                if (!options.Common.Json)
                     Console.Error.WriteLine($"Error: {error}");
                 errorMessages.Add(error);
             }
@@ -474,7 +553,7 @@ public static class Gen9Handler
                     type,
                     msg =>
                     {
-                        if (options.Verbose && !options.Json)
+                        if (options.Common.Verbose && !options.Common.Json)
                             Console.Error.WriteLine(msg);
                     },
                     rfe.Path,
@@ -506,7 +585,7 @@ public static class Gen9Handler
 
             if (changed)
             {
-                if (options.Verbose && !options.Json)
+                if (options.Common.Verbose && !options.Common.Json)
                 {
                     Console.Error.WriteLine($"{currentRpf.Path} - Defragmenting");
                 }

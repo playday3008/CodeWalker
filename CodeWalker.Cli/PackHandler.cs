@@ -12,19 +12,17 @@ public record PackOptions
 {
     public required string InputPath { get; init; }
     public required string OutputPath { get; init; }
-    public required string ExePath { get; init; }
+    public required CommonOptions Common { get; init; }
     public required bool Gen9 { get; init; }
     public required bool Force { get; init; }
     public required bool Progress { get; init; }
-    public required bool Verbose { get; init; }
-    public required bool Json { get; init; }
-    public required SizeFormat SizeFormat { get; init; }
 }
 
 public static class PackHandler
 {
     public static Command CreateCommand()
     {
+        CommonCommandOptions commonOpts = new();
         // csharpier-ignore-start
         Option<DirectoryInfo> inputOption = new("--input", "-i")
         {
@@ -35,12 +33,6 @@ public static class PackHandler
         Option<FileInfo> outputOption = new("--output", "-o")
         {
             Description = "Output RPF file path",
-            Required = true,
-        };
-
-        Option<DirectoryInfo> exeOption = new("--exe", "-e")
-        {
-            Description = "Path to the GTA V installation directory (containing GTA5.exe)",
             Required = true,
         };
 
@@ -58,35 +50,17 @@ public static class PackHandler
         {
             Description = "Show progress bar",
         };
-
-        Option<bool> verboseOption = new("--verbose", "-v")
-        {
-            Description = "Show per-file status",
-        };
-
-        Option<bool> jsonOption = new("--json")
-        {
-            Description = "Output results in JSON format",
-        };
-
-        Option<bool> siOption = new("--si")
-        {
-            Description = "Use SI units (1000-based: KB, MB) instead of IEC (1024-based: KiB, MiB)",
-        };
         // csharpier-ignore-end
 
         Command command = new("pack", "Create an RPF archive from a directory of loose files")
         {
             inputOption,
             outputOption,
-            exeOption,
             gen9Option,
             forceOption,
             progressOption,
-            verboseOption,
-            jsonOption,
-            siOption,
         };
+        commonOpts.AddTo(command);
         command.Aliases.Add("p");
 
         command.SetAction(parseResult =>
@@ -95,13 +69,10 @@ public static class PackHandler
             {
                 InputPath = parseResult.GetRequiredValue(inputOption).FullName,
                 OutputPath = parseResult.GetRequiredValue(outputOption).FullName,
-                ExePath = parseResult.GetRequiredValue(exeOption).FullName,
+                Common = commonOpts.Parse(parseResult),
                 Gen9 = parseResult.GetValue(gen9Option),
                 Force = parseResult.GetValue(forceOption),
                 Progress = parseResult.GetValue(progressOption),
-                Verbose = parseResult.GetValue(verboseOption),
-                Json = parseResult.GetValue(jsonOption),
-                SizeFormat = parseResult.GetValue(siOption) ? SizeFormat.SI : SizeFormat.IEC,
             };
             return Execute(options);
         });
@@ -111,27 +82,26 @@ public static class PackHandler
 
     public static int Execute(PackOptions options)
     {
-        List<string> errorMessages = [];
-
-        Json.PackResult result = new()
-        {
-            Success = false,
-            InputDir = options.InputPath,
-            OutputFile = options.OutputPath,
-            TotalFiles = 0,
-            TotalDirs = 0,
-            TotalSize = 0,
-            TotalSizeFormatted = "0 B",
-            Errors = 0,
-            ErrorMessages = errorMessages,
-        };
+        Json.PackResult ErrorResult(string[] errorMessages) =>
+            new()
+            {
+                Success = false,
+                InputDir = options.InputPath,
+                OutputFile = options.OutputPath,
+                TotalFiles = 0,
+                TotalDirs = 0,
+                TotalSize = 0,
+                TotalSizeFormatted = "0 B",
+                Errors = 0,
+                ErrorMessages = errorMessages,
+            };
 
         if (!Directory.Exists(options.InputPath))
         {
             return RpfService.ReportError(
                 $"Input directory not found: {options.InputPath}",
-                options.Json,
-                result
+                options.Common.Json,
+                ErrorResult([])
             );
         }
 
@@ -141,31 +111,25 @@ public static class PackHandler
             {
                 return RpfService.ReportError(
                     $"Output file already exists: {options.OutputPath}. Use --force to overwrite.",
-                    options.Json,
-                    result
+                    options.Common.Json,
+                    ErrorResult([])
                 );
             }
             File.Delete(options.OutputPath);
         }
 
-        string exeFile = options.Gen9 ? "GTA5_Enhanced.exe" : "GTA5.exe";
-        if (!File.Exists(Path.Combine(options.ExePath, exeFile)))
+        string? exeError = RpfService.ValidateExeAndLoadKeys(
+            options.Common.ExePath,
+            options.Gen9,
+            options.Common.Json
+        );
+        if (exeError != null)
         {
-            return RpfService.ReportError(
-                $"{exeFile} not found in: {options.ExePath}",
-                options.Json,
-                result
-            );
+            return RpfService.ReportError(exeError, options.Common.Json, ErrorResult([]));
         }
 
         try
         {
-            if (!options.Json)
-            {
-                Console.Error.WriteLine("Loading encryption keys...");
-            }
-            RpfService.LoadKeys(options.ExePath, options.Gen9);
-
             // Count files for progress bar
             string[] allFiles = Directory.GetFiles(
                 options.InputPath,
@@ -173,7 +137,7 @@ public static class PackHandler
                 SearchOption.AllDirectories
             );
 
-            if (!options.Json)
+            if (!options.Common.Json)
             {
                 Console.Error.WriteLine(
                     $"Packing {allFiles.Length} files from {options.InputPath}"
@@ -192,7 +156,7 @@ public static class PackHandler
 
             RpfFile rpf = RpfFile.CreateNew(outputFolder, outputFileName);
 
-            if (!options.Json)
+            if (!options.Common.Json)
             {
                 Console.Error.WriteLine($"Created RPF: {options.OutputPath}");
             }
@@ -201,8 +165,14 @@ public static class PackHandler
             int totalDirs = 0;
             long totalSize = 0;
             int errors = 0;
+            List<string> errorMessages = [];
 
-            using (ProgressBar progress = new(allFiles.Length, options.Progress && !options.Json))
+            using (
+                ProgressBar progress = new(
+                    allFiles.Length,
+                    options.Progress && !options.Common.Json
+                )
+            )
             {
                 AddDirectoryContents(
                     rpf.Root,
@@ -217,25 +187,28 @@ public static class PackHandler
                 );
             }
 
-            if (!options.Json)
+            if (!options.Common.Json)
             {
                 Console.Error.WriteLine("Defragmenting archive...");
             }
             RpfFile.Defragment(rpf);
 
-            SizeFormat sizeFormat = options.SizeFormat;
+            SizeFormat sizeFormat = options.Common.SizeFormat;
 
-            result = result with
+            Json.PackResult result = new()
             {
                 Success = errors == 0,
+                InputDir = options.InputPath,
+                OutputFile = options.OutputPath,
                 TotalFiles = totalFiles,
                 TotalDirs = totalDirs,
                 TotalSize = totalSize,
                 TotalSizeFormatted = sizeFormat.ToFormattedString(totalSize),
                 Errors = errors,
+                ErrorMessages = errorMessages.ToArray(),
             };
 
-            if (options.Json)
+            if (options.Common.Json)
             {
                 Console.WriteLine(
                     JsonSerializer.Serialize(result, RpfService.JsonSerializerOptions)
@@ -255,9 +228,9 @@ public static class PackHandler
         {
             return RpfService.ReportError(
                 ex.Message,
-                options.Json,
-                result,
-                options.Verbose ? ex.StackTrace : null
+                options.Common.Json,
+                ErrorResult([]),
+                options.Common.Verbose ? ex.StackTrace : null
             );
         }
     }
@@ -280,7 +253,7 @@ public static class PackHandler
             string dirName = Path.GetFileName(subDirPath);
             try
             {
-                if (options.Verbose && !options.Json)
+                if (options.Common.Verbose && !options.Common.Json)
                 {
                     Console.Error.WriteLine($"Creating directory: {dirName}");
                 }
@@ -305,7 +278,7 @@ public static class PackHandler
                 errors++;
                 string errorMsg = $"Error creating directory {dirName}: {ex.Message}";
                 errorMessages.Add(errorMsg);
-                if (!options.Json)
+                if (!options.Common.Json)
                 {
                     Console.Error.WriteLine($"Error: {errorMsg}");
                 }
@@ -320,7 +293,7 @@ public static class PackHandler
             {
                 byte[] data = File.ReadAllBytes(filePath);
 
-                if (options.Verbose && !options.Json)
+                if (options.Common.Verbose && !options.Common.Json)
                 {
                     Console.Error.WriteLine($"Adding file: {fileName} ({data.Length} bytes)");
                 }
@@ -335,7 +308,7 @@ public static class PackHandler
                 errors++;
                 string errorMsg = $"Error adding file {fileName}: {ex.Message}";
                 errorMessages.Add(errorMsg);
-                if (!options.Json)
+                if (!options.Common.Json)
                 {
                     Console.Error.WriteLine($"Error: {errorMsg}");
                 }

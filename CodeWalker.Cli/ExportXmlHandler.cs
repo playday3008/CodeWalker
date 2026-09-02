@@ -1,0 +1,69 @@
+using System.CommandLine;
+using System.IO;
+using System.Text;
+using CodeWalker.GameFiles;
+
+namespace CodeWalker.Cli;
+
+public static class ExportXmlHandler
+{
+    public static Command CreateCommand()
+    {
+        ExportCommandOptions exportOpts = new();
+
+        Command command = new("xml", "Export binary game files to XML");
+        exportOpts.AddTo(command);
+        command.Aliases.Add("x");
+
+        command.SetAction(parseResult =>
+        {
+            ExportOptions options = exportOpts.Parse(parseResult);
+            return ExportService.Execute(options, "xml", "XML", ProcessFile);
+        });
+
+        return command;
+    }
+
+    private static (Json.ExportFileEntry? entry, string? error) ProcessFile(
+        RpfFileEntry fileEntry,
+        byte[] data,
+        string fileOutputDir
+    )
+    {
+        string xml = MetaXml.GetXml(fileEntry, data, out string filename, fileOutputDir);
+
+        if (string.IsNullOrEmpty(xml))
+        {
+            return (
+                new Json.ExportFileEntry
+                {
+                    Path = fileEntry.Path,
+                    Name = fileEntry.Name,
+                    OutputFiles = 0,
+                    Status = "unsupported",
+                },
+                null
+            );
+        }
+
+        if (!string.IsNullOrEmpty(fileOutputDir) && !Directory.Exists(fileOutputDir))
+        {
+            Directory.CreateDirectory(fileOutputDir);
+        }
+
+        string outputPath = Path.Combine(fileOutputDir, filename);
+        File.WriteAllText(outputPath, xml, Encoding.UTF8);
+
+        return (
+            new Json.ExportFileEntry
+            {
+                Path = fileEntry.Path,
+                Name = fileEntry.Name,
+                OutputPath = outputPath,
+                OutputFiles = 1,
+                Status = "exported",
+            },
+            null
+        );
+    }
+}

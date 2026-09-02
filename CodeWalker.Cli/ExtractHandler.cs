@@ -75,22 +75,20 @@ public static class ExtractHandler
 
     public static int Execute(ExtractOptions options)
     {
-        List<Json.FileEntry> files = [];
-        List<string> errorMessages = [];
-
-        Json.ExtractResult result = new()
-        {
-            Success = false,
-            RpfFile = options.Rpf.RpfPath,
-            OutputDir = options.OutputPath ?? Directory.GetCurrentDirectory(),
-            TotalFiles = 0,
-            Extracted = 0,
-            Skipped = 0,
-            Errors = 0,
-            DryRun = options.DryRun,
-            Files = files,
-            ErrorMessages = errorMessages,
-        };
+        Json.ExtractResult ErrorResult(string[] errorMessages) =>
+            new()
+            {
+                Success = false,
+                RpfFile = options.Rpf.RpfPath,
+                OutputDir = options.OutputPath ?? Directory.GetCurrentDirectory(),
+                TotalFiles = 0,
+                Extracted = 0,
+                Skipped = 0,
+                Errors = 0,
+                DryRun = options.DryRun,
+                Files = [],
+                ErrorMessages = errorMessages,
+            };
 
         string? initError = RpfService.ValidateAndLoadKeys(
             options.Rpf.RpfPath,
@@ -100,19 +98,20 @@ public static class ExtractHandler
         );
         if (initError != null)
         {
-            return RpfService.ReportError(initError, options.Rpf.Json, result);
+            return RpfService.ReportError(initError, options.Rpf.Json, ErrorResult([]));
         }
 
         try
         {
+            List<string> scanErrors = [];
             RpfFile rpf = RpfService.OpenRpf(
                 options.Rpf.RpfPath,
                 options.Rpf.Verbose,
                 options.Rpf.Json,
-                errorMessages
+                scanErrors
             );
 
-            result = result with { TotalFiles = rpf.GrandTotalFileCount };
+            uint grandTotalFileCount = rpf.GrandTotalFileCount;
 
             if (!options.Rpf.Json && options.DryRun)
             {
@@ -285,6 +284,9 @@ public static class ExtractHandler
             // Aggregate results in order
             int extracted = 0;
             int errors = 0;
+            List<Json.FileEntry> files = [];
+            List<string> errorMessages = new(scanErrors);
+
             foreach (var (success, jsonEntry, errorMessage) in results)
             {
                 if (success)
@@ -302,12 +304,18 @@ public static class ExtractHandler
 
             skipped += overwriteSkipped;
 
-            result = result with
+            Json.ExtractResult result = new()
             {
+                Success = errors == 0,
+                RpfFile = options.Rpf.RpfPath,
+                OutputDir = options.OutputPath ?? Directory.GetCurrentDirectory(),
+                TotalFiles = grandTotalFileCount,
                 Extracted = extracted,
                 Skipped = skipped,
                 Errors = errors,
-                Success = errors == 0,
+                DryRun = options.DryRun,
+                Files = files.ToArray(),
+                ErrorMessages = errorMessages.ToArray(),
             };
 
             if (options.Rpf.Json)
@@ -332,7 +340,7 @@ public static class ExtractHandler
             return RpfService.ReportError(
                 ex.Message,
                 options.Rpf.Json,
-                result,
+                ErrorResult([]),
                 options.Rpf.Verbose ? ex.StackTrace : null
             );
         }

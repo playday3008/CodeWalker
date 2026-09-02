@@ -1,4 +1,3 @@
-using System;
 using System.CommandLine;
 using System.IO;
 using CodeWalker.Cli.Helpers;
@@ -25,16 +24,12 @@ public record RpfOptions
 /// </summary>
 public sealed class RpfCommandOptions
 {
+    private readonly CommonCommandOptions _commonOpts = new();
+
     // csharpier-ignore-start
     public Option<FileInfo> Rpf { get; } = new("--rpf", "-r")
     {
         Description = "Path to the RPF file",
-        Required = true,
-    };
-
-    public Option<DirectoryInfo> Exe { get; } = new("--exe", "-e")
-    {
-        Description = "Path to the GTA V installation directory (containing GTA5.exe)",
         Required = true,
     };
 
@@ -49,59 +44,35 @@ public sealed class RpfCommandOptions
         AllowMultipleArgumentsPerToken = true,
     };
 
-    public Option<bool> Verbose { get; } = new("--verbose", "-v")
-    {
-        Description = "Show verbose output",
-    };
-
-    public Option<bool> Json { get; } = new("--json")
-    {
-        Description = "Output results in JSON format for scripting",
-    };
-
     public Option<bool> Recursive { get; } = new("--recursive", "-R")
     {
         Description = "Process nested RPF archives",
-    };
-
-    public Option<bool> Si { get; } = new("--si")
-    {
-        Description = "Use SI units (1000-based: KB, MB) instead of IEC (1024-based: KiB, MiB)",
-    };
-
-    public Option<int> Threads { get; } = new("--threads", "-t")
-    {
-        Description = "Number of threads for parallel processing",
-        DefaultValueFactory = _ => Environment.ProcessorCount,
     };
     // csharpier-ignore-end
 
     public void AddTo(Command command)
     {
         command.Add(Rpf);
-        command.Add(Exe);
+        _commonOpts.AddTo(command);
         command.Add(Gen9);
         command.Add(Filter);
-        command.Add(Verbose);
-        command.Add(Json);
         command.Add(Recursive);
-        command.Add(Si);
-        command.Add(Threads);
     }
 
     public RpfOptions Parse(ParseResult parseResult)
     {
+        CommonOptions common = _commonOpts.Parse(parseResult);
         return new RpfOptions
         {
             RpfPath = parseResult.GetRequiredValue(Rpf).FullName,
-            ExePath = parseResult.GetRequiredValue(Exe).FullName,
+            ExePath = common.ExePath,
             Gen9 = parseResult.GetValue(Gen9),
-            Filters = parseResult.GetValue(Filter) ?? [],
-            Verbose = parseResult.GetValue(Verbose),
-            Json = parseResult.GetValue(Json),
+            Filters = Helpers.Filter.Normalize(parseResult.GetValue(Filter)),
+            Verbose = common.Verbose,
+            Json = common.Json,
             Recursive = parseResult.GetValue(Recursive),
-            Threads = parseResult.GetValue(Threads),
-            SizeFormat = parseResult.GetValue(Si) ? SizeFormat.SI : SizeFormat.IEC,
+            Threads = common.Threads,
+            SizeFormat = common.SizeFormat,
         };
     }
 }
