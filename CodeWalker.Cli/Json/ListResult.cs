@@ -1,0 +1,31 @@
+using System.Collections.Generic;
+using System.Text.Json.Serialization;
+
+namespace CodeWalker.Cli.Json;
+
+public record ListResult
+{
+    [JsonPropertyName("success")]
+    public required bool Success { get; init; }
+
+    [JsonPropertyName("rpfFile")]
+    public required string RpfFile { get; init; }
+
+    [JsonPropertyName("totalFiles")]
+    public required int TotalFiles { get; init; }
+
+    [JsonPropertyName("totalSize")]
+    public required long TotalSize { get; init; }
+
+    [JsonPropertyName("totalSizeFormatted")]
+    public required string TotalSizeFormatted { get; init; }
+
+    [JsonPropertyName("nestedRpfCount")]
+    public required uint NestedRpfCount { get; init; }
+
+    [JsonPropertyName("files")]
+    public required IReadOnlyList<FileEntry> Files { get; init; }
+
+    [JsonPropertyName("errorMessages")]
+    public required IReadOnlyList<string> ErrorMessages { get; init; }
+}
