@@ -2,7 +2,9 @@ using System;
 using System.Collections.Generic;
 using System.CommandLine;
 using System.IO;
+using System.Linq;
 using System.Text.Json;
+using System.Threading;
 
 using CodeWalker.Cli.Helpers;
 using CodeWalker.GameFiles;
@@ -17,7 +19,7 @@ internal sealed record TreeOptions
 
 internal static class TreeHandler
 {
-    public static Command CreateCommand()
+    public static Command CreateCommand(CancellationToken cancellationToken = default)
     {
         RpfCommandOptions rpfOpts = new();
         Option<int> depthOption = new("--depth", "-d")
@@ -46,13 +48,13 @@ internal static class TreeHandler
                 Rpf = rpfOpts.Parse(parseResult),
                 Depth = parseResult.GetValue(depthOption),
             };
-            return Execute(options);
+            return Execute(options, cancellationToken);
         });
 
         return command;
     }
 
-    public static int Execute(TreeOptions options)
+    public static int Execute(TreeOptions options, CancellationToken cancellationToken = default)
     {
         Json.TreeResult ErrorResult(string[] errorMessages) =>
             new()
@@ -97,7 +99,8 @@ internal static class TreeHandler
                     options,
                     0,
                     ref totalFiles,
-                    ref totalDirs
+                    ref totalDirs,
+                    cancellationToken
                 );
 
                 Json.TreeResult result = new()
@@ -117,7 +120,7 @@ internal static class TreeHandler
             else
             {
                 Console.WriteLine(Path.GetFileName(options.Rpf.RpfPath));
-                PrintTree(rpf.Root, rpf, options, "", 0, ref totalFiles, ref totalDirs);
+                PrintTree(rpf.Root, rpf, options, "", 0, ref totalFiles, ref totalDirs, cancellationToken);
 
                 Console.Error.WriteLine();
                 Console.Error.WriteLine($"{totalDirs} directories, {totalFiles} files");
@@ -125,6 +128,7 @@ internal static class TreeHandler
 
             return scanErrors.Count > 0 ? 1 : 0;
         }
+        catch (OperationCanceledException) { throw; }
         catch (Exception ex)
         {
             return RpfService.ReportError(
@@ -143,9 +147,11 @@ internal static class TreeHandler
         string prefix,
         int depth,
         ref int totalFiles,
-        ref int totalDirs
+        ref int totalDirs,
+        CancellationToken cancellationToken
     )
     {
+        cancellationToken.ThrowIfCancellationRequested();
         if (options.Depth >= 0 && depth > options.Depth)
             return;
 
@@ -178,7 +184,8 @@ internal static class TreeHandler
                         childPrefix,
                         depth + 1,
                         ref totalFiles,
-                        ref totalDirs
+                        ref totalDirs,
+                        cancellationToken
                     );
                 }
             }
@@ -213,9 +220,11 @@ internal static class TreeHandler
         TreeOptions options,
         int depth,
         ref int totalFiles,
-        ref int totalDirs
+        ref int totalDirs,
+        CancellationToken cancellationToken
     )
     {
+        cancellationToken.ThrowIfCancellationRequested();
         List<Json.TreeNode> children = [];
 
         if (options.Depth < 0 || depth < options.Depth)
@@ -237,7 +246,8 @@ internal static class TreeHandler
                                 options,
                                 depth + 1,
                                 ref totalFiles,
-                                ref totalDirs
+                                ref totalDirs,
+                                cancellationToken
                             )
                         );
                     }
@@ -299,20 +309,17 @@ internal static class TreeHandler
         }
 
         // Add nested RPFs as directories if recursive
-        if (options.Rpf.Recursive && dir.Files != null)
+        if (options.Rpf.Recursive && dir.Files != null && rpf.Children != null)
         {
             foreach (RpfFileEntry fileEntry in dir.Files)
             {
-                if (fileEntry.NameLower.EndsWith(".rpf", StringComparison.Ordinal) && rpf.Children != null)
+                if (!fileEntry.NameLower.EndsWith(".rpf", StringComparison.Ordinal))
+                    continue;
+
+                RpfFile? child = rpf.Children.FirstOrDefault(c => c.Name == fileEntry.Name && c.Root != null);
+                if (child != null)
                 {
-                    foreach (RpfFile child in rpf.Children)
-                    {
-                        if (child.Name == fileEntry.Name && child.Root != null)
-                        {
-                            items.Add((fileEntry.Name, true, child.Root, child));
-                            break;
-                        }
-                    }
+                    items.Add((fileEntry.Name, true, child.Root, child));
                 }
             }
         }
@@ -320,16 +327,12 @@ internal static class TreeHandler
         // Add files (non-RPF, matching filters)
         if (dir.Files != null)
         {
-            foreach (RpfFileEntry fileEntry in dir.Files)
-            {
-                if (fileEntry.NameLower.EndsWith(".rpf", StringComparison.Ordinal))
-                    continue;
-
-                if (!Filter.Matches(fileEntry.Path, options.Rpf.Filters))
-                    continue;
-
-                items.Add((fileEntry.Name, false, fileEntry, null));
-            }
+            items.AddRange(
+                dir.Files
+                    .Where(fe => !fe.NameLower.EndsWith(".rpf", StringComparison.Ordinal)
+                        && Filter.Matches(fe.Path, options.Rpf.Filters))
+                    .Select(fe => (fe.Name, false, (RpfEntry)fe, (RpfFile?)null))
+            );
         }
 
         return items;

@@ -1,5 +1,6 @@
 using System.CommandLine;
 using System.IO;
+using System.Threading;
 
 using CodeWalker.GameFiles;
 
@@ -9,7 +10,7 @@ internal static class ExportAudioHandler
 {
     private static readonly string[] DefaultFilters = ["*.awc"];
 
-    public static Command CreateCommand()
+    public static Command CreateCommand(CancellationToken cancellationToken = default)
     {
         ExportCommandOptions exportOpts = new();
 
@@ -25,7 +26,7 @@ internal static class ExportAudioHandler
             {
                 options = options with { Rpf = options.Rpf with { Filters = DefaultFilters } };
             }
-            return ExportService.Execute(options, "wav", "Audio", ProcessFile);
+            return ExportService.Execute(options, "wav", "Audio", ProcessFile, cancellationToken);
         });
 
         return command;
@@ -57,6 +58,7 @@ internal static class ExportAudioHandler
         int streamCount = 0;
         foreach (AwcStream stream in awc.Streams)
         {
+            // Hash 0 indicates a metadata-only stream with no playable audio data
             if (stream.Hash == 0)
                 continue;
 
@@ -69,8 +71,7 @@ internal static class ExportAudioHandler
                     continue;
                 if (!dirCreated)
                 {
-                    if (!Directory.Exists(fileOutputDir))
-                        _ = Directory.CreateDirectory(fileOutputDir);
+                    _ = Directory.CreateDirectory(fileOutputDir);
                     dirCreated = true;
                 }
                 File.WriteAllBytes(midiPath, stream.MidiChunk.Data);
@@ -84,8 +85,7 @@ internal static class ExportAudioHandler
                     continue;
                 if (!dirCreated)
                 {
-                    if (!Directory.Exists(fileOutputDir))
-                        _ = Directory.CreateDirectory(fileOutputDir);
+                    _ = Directory.CreateDirectory(fileOutputDir);
                     dirCreated = true;
                 }
                 File.WriteAllBytes(wavPath, wav);

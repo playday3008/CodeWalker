@@ -1,5 +1,6 @@
 using System.CommandLine;
 using System.IO;
+using System.Threading;
 
 using CodeWalker.GameFiles;
 using CodeWalker.Utils;
@@ -10,7 +11,7 @@ internal static class ExportTexturesHandler
 {
     private static readonly string[] DefaultFilters = ["*.ytd"];
 
-    public static Command CreateCommand()
+    public static Command CreateCommand(CancellationToken cancellationToken = default)
     {
         ExportCommandOptions exportOpts = new();
 
@@ -26,7 +27,7 @@ internal static class ExportTexturesHandler
             {
                 options = options with { Rpf = options.Rpf with { Filters = DefaultFilters } };
             }
-            return ExportService.Execute(options, "dds", "Texture", ProcessFile);
+            return ExportService.Execute(options, "dds", "Texture", ProcessFile, cancellationToken);
         });
 
         return command;
@@ -69,8 +70,7 @@ internal static class ExportTexturesHandler
 
             if (!dirCreated)
             {
-                if (!Directory.Exists(fileOutputDir))
-                    _ = Directory.CreateDirectory(fileOutputDir);
+                _ = Directory.CreateDirectory(fileOutputDir);
                 dirCreated = true;
             }
 

@@ -22,7 +22,7 @@ internal sealed record ExtractOptions
 
 internal static class ExtractHandler
 {
-    public static Command CreateCommand()
+    public static Command CreateCommand(CancellationToken cancellationToken = default)
     {
         RpfCommandOptions rpfOpts = new();
         Option<DirectoryInfo> outputOption = new("--output", "-o")
@@ -66,13 +66,13 @@ internal static class ExtractHandler
                 NoOverwrite = parseResult.GetValue(noOverwriteOption),
                 Progress = parseResult.GetValue(progressOption),
             };
-            return Execute(options);
+            return Execute(options, cancellationToken);
         });
 
         return command;
     }
 
-    public static int Execute(ExtractOptions options)
+    public static int Execute(ExtractOptions options, CancellationToken cancellationToken = default)
     {
         Json.ExtractResult ErrorResult(string[] errorMessages) =>
             new()
@@ -150,9 +150,10 @@ internal static class ExtractHandler
                 _ = Parallel.For(
                     0,
                     filesToExtract.Count,
-                    new ParallelOptions { MaxDegreeOfParallelism = options.Rpf.Threads },
+                    new ParallelOptions { MaxDegreeOfParallelism = options.Rpf.Threads, CancellationToken = cancellationToken },
                     i =>
                     {
+                        cancellationToken.ThrowIfCancellationRequested();
                         (RpfFile sourceRpf, RpfFileEntry fileEntry) = filesToExtract[i];
                         try
                         {
@@ -203,7 +204,7 @@ internal static class ExtractHandler
                             }
                             else
                             {
-                                if (!string.IsNullOrEmpty(fileDir) && !Directory.Exists(fileDir))
+                                if (!string.IsNullOrEmpty(fileDir))
                                 {
                                     _ = Directory.CreateDirectory(fileDir);
                                 }
@@ -274,7 +275,7 @@ internal static class ExtractHandler
 
             foreach ((Json.FileEntry? jsonEntry, string? errorMessage) in results)
             {
-                if (jsonEntry?.Status is "extracted" or "dry_run")
+                if (errorMessage == null && jsonEntry?.Status is "extracted" or "dry_run")
                     extracted++;
 
                 if (jsonEntry != null)
@@ -320,6 +321,7 @@ internal static class ExtractHandler
 
             return (errors > 0 || scanErrors.Count > 0) ? 1 : 0;
         }
+        catch (OperationCanceledException) { throw; }
         catch (Exception ex)
         {
             return RpfService.ReportError(

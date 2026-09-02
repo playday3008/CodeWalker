@@ -2,7 +2,9 @@ using System;
 using System.Collections.Generic;
 using System.CommandLine;
 using System.IO;
+using System.Linq;
 using System.Text.Json;
+using System.Threading;
 using System.Threading.Tasks;
 
 using CodeWalker.Cli.Helpers;
@@ -21,7 +23,7 @@ internal sealed record DiffOptions
 
 internal static class DiffHandler
 {
-    public static Command CreateCommand()
+    public static Command CreateCommand(CancellationToken cancellationToken = default)
     {
         CommonCommandOptions commonOpts = new();
         Option<FileInfo> leftOption = new("--left", "-l")
@@ -66,13 +68,13 @@ internal static class DiffHandler
                 Gen9 = parseResult.GetValue(gen9Option),
                 Recursive = parseResult.GetValue(recursiveOption),
             };
-            return Execute(options);
+            return Execute(options, cancellationToken);
         });
 
         return command;
     }
 
-    public static int Execute(DiffOptions options)
+    public static int Execute(DiffOptions options, CancellationToken cancellationToken = default)
     {
         Json.DiffResult ErrorResult(string[] errorMessages) =>
             new()
@@ -149,32 +151,17 @@ internal static class DiffHandler
             );
 
             // Build dictionaries keyed by path
-            Dictionary<string, (RpfFile rpf, RpfFileEntry entry)> leftDict = [];
-            foreach ((RpfFile rpf, RpfFileEntry entry) in leftFiles)
-            {
-                leftDict[entry.Path] = (rpf, entry);
-            }
+            Dictionary<string, (RpfFile rpf, RpfFileEntry entry)> leftDict =
+                leftFiles.ToDictionary(f => f.entry.Path, f => f);
 
-            Dictionary<string, (RpfFile rpf, RpfFileEntry entry)> rightDict = [];
-            foreach ((RpfFile rpf, RpfFileEntry entry) in rightFiles)
-            {
-                rightDict[entry.Path] = (rpf, entry);
-            }
+            Dictionary<string, (RpfFile rpf, RpfFileEntry entry)> rightDict =
+                rightFiles.ToDictionary(f => f.entry.Path, f => f);
 
             SizeFormat sizeFormat = options.Common.SizeFormat;
 
             // Find removed and modified/unchanged — entries in left that also appear in right
             // need byte comparison, so parallelize this
-            string[] commonPaths;
-            {
-                List<string> paths = [];
-                foreach (string path in leftDict.Keys)
-                {
-                    if (rightDict.ContainsKey(path))
-                        paths.Add(path);
-                }
-                commonPaths = [.. paths];
-            }
+            string[] commonPaths = leftDict.Keys.Where(rightDict.ContainsKey).ToArray();
 
             // Result per common path: null = unchanged, non-null = modified entry
             bool[] isModifiedArr = new bool[commonPaths.Length];
@@ -182,9 +169,10 @@ internal static class DiffHandler
             _ = Parallel.For(
                 0,
                 commonPaths.Length,
-                new ParallelOptions { MaxDegreeOfParallelism = options.Common.Threads },
+                new ParallelOptions { MaxDegreeOfParallelism = options.Common.Threads, CancellationToken = cancellationToken },
                 i =>
                 {
+                    cancellationToken.ThrowIfCancellationRequested();
                     string path = commonPaths[i];
                     (RpfFile leftRpfRef, RpfFileEntry leftEntry) = leftDict[path];
                     (RpfFile rightRpfRef, RpfFileEntry rightEntry) = rightDict[path];
@@ -253,42 +241,40 @@ internal static class DiffHandler
             }
 
             // Find removed (left only)
-            foreach (KeyValuePair<string, (RpfFile rpf, RpfFileEntry entry)> kvp in leftDict)
-            {
-                if (!rightDict.ContainsKey(kvp.Key))
-                {
-                    long size = kvp.Value.entry.GetFileSize();
-                    removed.Add(
-                        new Json.DiffEntry
+            removed.AddRange(
+                leftDict
+                    .Where(kvp => !rightDict.ContainsKey(kvp.Key))
+                    .Select(kvp =>
+                    {
+                        long size = kvp.Value.entry.GetFileSize();
+                        return new Json.DiffEntry
                         {
                             Path = kvp.Key,
                             Name = kvp.Value.entry.Name,
                             Type = RpfService.GetFileType(kvp.Value.entry),
                             Size = size,
                             SizeFormatted = sizeFormat.ToFormattedString(size),
-                        }
-                    );
-                }
-            }
+                        };
+                    })
+            );
 
             // Find added (right only)
-            foreach (KeyValuePair<string, (RpfFile rpf, RpfFileEntry entry)> kvp in rightDict)
-            {
-                if (!leftDict.ContainsKey(kvp.Key))
-                {
-                    long size = kvp.Value.entry.GetFileSize();
-                    added.Add(
-                        new Json.DiffEntry
+            added.AddRange(
+                rightDict
+                    .Where(kvp => !leftDict.ContainsKey(kvp.Key))
+                    .Select(kvp =>
+                    {
+                        long size = kvp.Value.entry.GetFileSize();
+                        return new Json.DiffEntry
                         {
                             Path = kvp.Key,
                             Name = kvp.Value.entry.Name,
                             Type = RpfService.GetFileType(kvp.Value.entry),
                             Size = size,
                             SizeFormatted = sizeFormat.ToFormattedString(size),
-                        }
-                    );
-                }
-            }
+                        };
+                    })
+            );
 
             // Sort alphabetically
             added.Sort((a, b) => string.CompareOrdinal(a.Path, b.Path));
@@ -374,6 +360,7 @@ internal static class DiffHandler
 
             return errorMessages.Count > 0 ? 1 : 0;
         }
+        catch (OperationCanceledException) { throw; }
         catch (Exception ex)
         {
             return RpfService.ReportError(

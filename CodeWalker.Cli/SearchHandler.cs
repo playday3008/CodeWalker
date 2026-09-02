@@ -2,7 +2,9 @@ using System;
 using System.Collections.Generic;
 using System.CommandLine;
 using System.IO;
+using System.Linq;
 using System.Text.Json;
+using System.Threading;
 using System.Threading.Tasks;
 
 using CodeWalker.Cli.Helpers;
@@ -12,7 +14,7 @@ namespace CodeWalker.Cli;
 
 internal static class SearchHandler
 {
-    public static Command CreateCommand()
+    public static Command CreateCommand(CancellationToken cancellationToken = default)
     {
         RpfCommandOptions rpfOpts = new();
         Argument<string> patternArg = new("pattern")
@@ -28,13 +30,13 @@ internal static class SearchHandler
         command.Aliases.Add("s");
 
         command.SetAction(parseResult =>
-            Execute(rpfOpts.Parse(parseResult), parseResult.GetRequiredValue(patternArg))
+            Execute(rpfOpts.Parse(parseResult), parseResult.GetRequiredValue(patternArg), cancellationToken)
         );
 
         return command;
     }
 
-    public static int Execute(RpfOptions options, string pattern)
+    public static int Execute(RpfOptions options, string pattern, CancellationToken cancellationToken = default)
     {
         Json.SearchResult ErrorResult(string[] errorMessages) =>
             new()
@@ -135,9 +137,10 @@ internal static class SearchHandler
             _ = Parallel.For(
                 0,
                 allEntries.Count,
-                new ParallelOptions { MaxDegreeOfParallelism = options.Threads },
+                new ParallelOptions { MaxDegreeOfParallelism = options.Threads, CancellationToken = cancellationToken },
                 i =>
                 {
+                    cancellationToken.ThrowIfCancellationRequested();
                     RpfEntry entry = allEntries[i];
                     if (!matcher(entry))
                         return;
@@ -167,12 +170,7 @@ internal static class SearchHandler
             );
 
             // Collect non-null results
-            List<Json.SearchMatch> matches = [];
-            foreach (Json.SearchMatch? match in results)
-            {
-                if (match != null)
-                    matches.Add(match);
-            }
+            List<Json.SearchMatch> matches = results.OfType<Json.SearchMatch>().ToList();
 
             Json.SearchResult result = new()
             {
@@ -216,6 +214,7 @@ internal static class SearchHandler
 
             return scanErrors.Count > 0 ? 1 : 0;
         }
+        catch (OperationCanceledException) { throw; }
         catch (Exception ex)
         {
             return RpfService.ReportError(

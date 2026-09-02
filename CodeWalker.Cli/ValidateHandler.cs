@@ -2,7 +2,9 @@ using System;
 using System.Collections.Generic;
 using System.CommandLine;
 using System.IO;
+using System.Linq;
 using System.Text.Json;
+using System.Threading;
 using System.Threading.Tasks;
 
 using CodeWalker.Cli.Helpers;
@@ -18,7 +20,7 @@ internal sealed record ValidateOptions
 
 internal static class ValidateHandler
 {
-    public static Command CreateCommand()
+    public static Command CreateCommand(CancellationToken cancellationToken = default)
     {
         RpfCommandOptions rpfOpts = new();
         Option<bool> progressOption = new("--progress", "-P")
@@ -40,13 +42,13 @@ internal static class ValidateHandler
                 Rpf = rpfOpts.Parse(parseResult),
                 Progress = parseResult.GetValue(progressOption),
             };
-            return Execute(options);
+            return Execute(options, cancellationToken);
         });
 
         return command;
     }
 
-    public static int Execute(ValidateOptions options)
+    public static int Execute(ValidateOptions options, CancellationToken cancellationToken = default)
     {
         Json.ValidateResult ErrorResult(string[] errorMessages) =>
             new()
@@ -102,9 +104,10 @@ internal static class ValidateHandler
                 _ = Parallel.For(
                     0,
                     entries.Count,
-                    new ParallelOptions { MaxDegreeOfParallelism = options.Rpf.Threads },
+                    new ParallelOptions { MaxDegreeOfParallelism = options.Rpf.Threads, CancellationToken = cancellationToken },
                     i =>
                     {
+                        cancellationToken.ThrowIfCancellationRequested();
                         (_, RpfFileEntry fileEntry) = entries[i];
                         string ext = Path.GetExtension(fileEntry.Name).ToLowerInvariant();
 
@@ -164,39 +167,16 @@ internal static class ValidateHandler
             }
 
             // Aggregate results
-            int valid = 0;
-            int warnings = 0;
-            int errors = 0;
-            int skipped = 0;
-            List<Json.ValidateFileEntry> files = [];
+            List<Json.ValidateFileEntry> nonNull = results.OfType<Json.ValidateFileEntry>().ToList();
+            int valid = nonNull.Count(e => e.Status == "valid");
+            int warnings = nonNull.Count(e => e.Status == "warning");
+            int errors = nonNull.Count(e => e.Status == "error");
+            int skipped = nonNull.Count(e => e.Status == "skipped");
 
-            foreach (Json.ValidateFileEntry? entry in results)
-            {
-                if (entry == null)
-                    continue;
-
-                switch (entry.Status)
-                {
-                    case "valid":
-                        valid++;
-                        break;
-                    case "warning":
-                        warnings++;
-                        break;
-                    case "error":
-                        errors++;
-                        break;
-                    case "skipped":
-                        skipped++;
-                        break;
-                }
-
-                // In verbose mode or JSON, include all; otherwise only warnings/errors
-                if (options.Rpf.Json || options.Rpf.Verbose || entry.Status is "warning" or "error")
-                {
-                    files.Add(entry);
-                }
-            }
+            // In verbose mode or JSON, include all; otherwise only warnings/errors
+            List<Json.ValidateFileEntry> files = (options.Rpf.Json || options.Rpf.Verbose)
+                ? nonNull
+                : nonNull.Where(e => e.Status is "warning" or "error").ToList();
 
             Json.ValidateResult result = new()
             {
@@ -227,6 +207,7 @@ internal static class ValidateHandler
 
             return (errors > 0 || scanErrors.Count > 0) ? 1 : 0;
         }
+        catch (OperationCanceledException) { throw; }
         catch (Exception ex)
         {
             return RpfService.ReportError(
