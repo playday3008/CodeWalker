@@ -70,10 +70,9 @@ internal static class HashHandler
     /// <returns>An integer exit code indicating success (0) or failure (1).</returns>
     public static int Execute(HashOptions options, CancellationToken cancellationToken = default)
     {
-        JenkHashInputEncoding encoding = ParseEncoding(options.Encoding);
-
         try
         {
+            JenkHashInputEncoding encoding = ParseEncoding(options.Encoding);
             Json.HashEntry[] hashes = CollectHashes(options.Inputs, encoding, cancellationToken);
             if (!options.Json)
                 PrintHashes(hashes, cancellationToken);

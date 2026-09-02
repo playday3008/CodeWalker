@@ -370,37 +370,51 @@ public sealed class HashExecuteTests
     }
 
     [Fact]
-    public void InvalidEncoding_PropagatesArgumentException()
+    public void InvalidEncoding_ReturnsOne()
     {
-        TextWriter orig = Console.Out;
+        TextWriter origOut = Console.Out;
+        TextWriter origErr = Console.Error;
         try
         {
             Console.SetOut(new StringWriter());
-            _ = Assert.Throws<ArgumentException>(
-                () => HashHandler.Execute(
-                    MakeOptions(["test"], encoding: "bad"),
-                    TestContext.Current.CancellationToken
-                )
+            StringWriter stderr = new();
+            Console.SetError(stderr);
+
+            int exitCode = HashHandler.Execute(
+                MakeOptions(["test"], encoding: "bad"),
+                TestContext.Current.CancellationToken
             );
+
+            Assert.Equal(1, exitCode);
+            Assert.Contains("Unknown encoding", stderr.ToString());
         }
-        finally { Console.SetOut(orig); }
+        finally
+        {
+            Console.SetOut(origOut);
+            Console.SetError(origErr);
+        }
     }
 
     [Fact]
-    public void Json_InvalidEncoding_PropagatesArgumentException()
+    public void Json_InvalidEncoding_ReturnsJsonError()
     {
-        TextWriter orig = Console.Out;
+        TextWriter origOut = Console.Out;
         try
         {
-            Console.SetOut(new StringWriter());
-            _ = Assert.Throws<ArgumentException>(
-                () => HashHandler.Execute(
-                    MakeOptions(["test"], encoding: "bad", json: true),
-                    TestContext.Current.CancellationToken
-                )
+            StringWriter stdout = new();
+            Console.SetOut(stdout);
+
+            int exitCode = HashHandler.Execute(
+                MakeOptions(["test"], encoding: "bad", json: true),
+                TestContext.Current.CancellationToken
             );
+
+            Assert.Equal(1, exitCode);
+            string output = stdout.ToString();
+            Assert.Contains("\"success\": false", output);
+            Assert.Contains("Unknown encoding", output);
         }
-        finally { Console.SetOut(orig); }
+        finally { Console.SetOut(origOut); }
     }
 
     [Fact]
