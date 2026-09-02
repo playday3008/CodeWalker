@@ -51,11 +51,21 @@ jobs:
       - name: Test
         shell: bash
         run: |
+          status=0
           for framework in ${{ matrix.frameworks }}; do
             echo "::group::$framework"
-            dotnet test CodeWalker.Cli/CodeWalker.Cli.Tests.csproj -f "$framework"
+            dotnet test CodeWalker.Cli/CodeWalker.Cli.Tests.csproj -f "$framework" || status=1
             echo "::endgroup::"
           done
+          exit $status
+
+      # The runner reports failures to a file rather than to stdout, so without
+      # this a failed run names no test.
+      - name: Show test logs
+        if: failure()
+        shell: bash
+        run: |
+          find CodeWalker.Cli/bin -path '*TestResults*' -name '*.log' -print -exec cat {} +
 
   format:
     name: format
