@@ -129,7 +129,9 @@ public sealed class PrintHashesTests
         cts.Cancel();
 
         Json.HashEntry[] hashes = HashHandler.CollectHashes(
-            ["test"], JenkHashInputEncoding.UTF8, CancellationToken.None
+            ["test"],
+            JenkHashInputEncoding.UTF8,
+            CancellationToken.None
         );
 
         TextWriter orig = Console.Out;
@@ -217,7 +219,6 @@ public sealed class PrintJsonHashesTests
         Assert.Equal("alpha", result.Hashes[0].Input);
         Assert.Equal("bravo", result.Hashes[1].Input);
     }
-
 }
 
 // ── CollectHashes ────────────────────────────────────────────────────
