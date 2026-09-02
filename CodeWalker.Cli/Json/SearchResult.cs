@@ -7,6 +7,9 @@ namespace CodeWalker.Cli.Json;
 [ExcludeFromCodeCoverage]
 internal sealed record SearchMatch
 {
+    [JsonPropertyName("archive")]
+    public required string Archive { get; init; }
+
     [JsonPropertyName("path")]
     public required string Path { get; init; }
 
@@ -21,12 +24,6 @@ internal sealed record SearchMatch
 
     [JsonPropertyName("extension")]
     public required string Extension { get; init; }
-
-    [JsonPropertyName("nameHash")]
-    public required uint NameHash { get; init; }
-
-    [JsonPropertyName("shortNameHash")]
-    public required uint ShortNameHash { get; init; }
 }
 
 [ExcludeFromCodeCoverage]
@@ -34,6 +31,9 @@ internal sealed record SearchResult : BaseResult
 {
     [JsonPropertyName("rpfFile")]
     public required string RpfFile { get; init; }
+
+    [JsonPropertyName("rpfFiles")]
+    public required IReadOnlyList<string> RpfFiles { get; init; }
 
     [JsonPropertyName("pattern")]
     public required string Pattern { get; init; }

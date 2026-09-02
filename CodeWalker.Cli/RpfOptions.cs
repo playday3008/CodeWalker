@@ -65,7 +65,7 @@ internal sealed class RpfCommandOptions
         CommonOptions common = this._commonOpts.Parse(parseResult);
         return new RpfOptions
         {
-            RpfPath = parseResult.GetRequiredValue(this.Rpf).FullName,
+            RpfPath = parseResult.GetValue(this.Rpf)?.FullName ?? "",
             ExePath = common.ExePath,
             Gen9 = parseResult.GetValue(this.Gen9),
             Filters = Helpers.Filter.Normalize(parseResult.GetValue(this.Filter)),

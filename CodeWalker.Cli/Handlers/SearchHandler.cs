@@ -2,10 +2,8 @@ using System;
 using System.Collections.Generic;
 using System.CommandLine;
 using System.IO;
-using System.Linq;
 using System.Text.Json;
 using System.Threading;
-using System.Threading.Tasks;
 
 using CodeWalker.Cli.Helpers;
 using CodeWalker.GameFiles;
@@ -16,39 +14,52 @@ internal static class SearchHandler
 {
     public static Command CreateCommand(CancellationToken cancellationToken = default)
     {
-        RpfCommandOptions rpfOpts = new();
-        Argument<string> patternArg = new("pattern")
+        RpfCommandOptions rpfOpts = new()
         {
-            Description = "Search pattern: glob, substring, or hash (0x hex or decimal)",
+            Rpf = { Required = false }
         };
 
-        Command command = new("search", "Search for files by name, path, or hash in an RPF archive")
+        Option<DirectoryInfo> dirOpt = new("--dir", "-D")
+        {
+            Description = "Directory to search — discovers all .rpf files recursively",
+        };
+
+        Argument<string> patternArg = new("pattern")
+        {
+            Description = "Substring to search for in file paths",
+        };
+
+        Command command = new("search", "Search for files by name or path in an RPF archive")
         {
             patternArg,
         };
-        rpfOpts.AddTo(command);
+        rpfOpts.AddTo(command, includeThreads: false);
+        command.Add(dirOpt);
         command.Aliases.Add("s");
 
+        command.Validators.Add(result =>
+        {
+            bool hasRpf = result.GetValue(rpfOpts.Rpf) != null;
+            bool hasDir = result.GetValue(dirOpt) != null;
+            if (hasRpf == hasDir)
+                result.AddError("Specify exactly one of --rpf or --dir.");
+        });
+
         command.SetAction(parseResult =>
-            Execute(rpfOpts.Parse(parseResult), parseResult.GetRequiredValue(patternArg), cancellationToken)
+            Execute(
+                rpfOpts.Parse(parseResult),
+                parseResult.GetRequiredValue(patternArg),
+                parseResult.GetValue(dirOpt)?.FullName,
+                cancellationToken)
         );
 
         return command;
     }
 
-    public static int Execute(RpfOptions options, string pattern, CancellationToken cancellationToken = default)
+    public static int Execute(RpfOptions options, string pattern, string? dirPath = null, CancellationToken cancellationToken = default)
     {
-        Json.SearchResult ErrorResult(string[] errorMessages) =>
-            new()
-            {
-                Success = false,
-                RpfFile = options.RpfPath,
-                Pattern = pattern,
-                PatternType = "unknown",
-                MatchCount = 0,
-                Matches = [],
-                ErrorMessages = errorMessages,
-            };
+        if (dirPath != null)
+            return ExecuteDirectory(options, pattern, dirPath, cancellationToken);
 
         string? initError = RpfService.ValidateAndLoadKeys(
             options.RpfPath,
@@ -58,7 +69,11 @@ internal static class SearchHandler
         );
         if (initError != null)
         {
-            return RpfService.ReportError(initError, options.Json, ErrorResult([]));
+            return RpfService.ReportError(
+                initError,
+                options.Json,
+                ErrorResult([], options, pattern)
+            );
         }
 
         List<string> scanErrors = [];
@@ -72,176 +87,262 @@ internal static class SearchHandler
             );
 
             if (!options.Json)
-            {
                 Console.Error.WriteLine();
-            }
 
-            // Collect all entries (including directories) recursively
-            List<RpfEntry> allEntries = [];
-            CollectAllEntries(rpf, options.Recursive, allEntries);
-
-            // Detect pattern type
-            string patternType;
-            Func<RpfEntry, bool> matcher;
-
-            if (pattern.StartsWith("0x", StringComparison.OrdinalIgnoreCase))
-            {
-                // Hex hash
-                patternType = "hash_hex";
-                if (
-                    !uint.TryParse(
-                        pattern[2..],
-                        System.Globalization.NumberStyles.HexNumber,
-                        null,
-                        out uint hash
-                    )
-                )
-                {
-                    return RpfService.ReportError(
-                        $"Invalid hex hash: {pattern}",
-                        options.Json,
-                        ErrorResult([.. scanErrors])
-                    );
-                }
-                matcher = entry => entry.NameHash == hash || entry.ShortNameHash == hash;
-            }
-            else if (
-                uint.TryParse(pattern, out uint decHash)
-                && pattern.Length >= 5
-                && !HasGlobChars(pattern)
-            )
-            {
-                // Decimal hash (require 5+ digits to avoid matching short filenames)
-                patternType = "hash_decimal";
-                matcher = entry => entry.NameHash == decHash || entry.ShortNameHash == decHash;
-            }
-            else if (HasGlobChars(pattern))
-            {
-                // Glob pattern — reuse Filter.Matches
-                patternType = "glob";
-                string[] filters = Filter.Normalize([pattern]);
-                matcher = entry => entry.Path != null && Filter.Matches(entry.Path, filters);
-            }
-            else
-            {
-                // Substring match
-                patternType = "substring";
-                string normalizedPattern = pattern.Replace('\\', '/');
-                matcher = entry =>
-                    entry.Path?.Replace('\\', '/').Contains(normalizedPattern, StringComparison.OrdinalIgnoreCase) == true;
-            }
-
-            // Match in parallel
-            Json.SearchMatch?[] results = new Json.SearchMatch?[allEntries.Count];
-
-            _ = Parallel.For(
-                0,
-                allEntries.Count,
-                new ParallelOptions { MaxDegreeOfParallelism = options.Threads, CancellationToken = cancellationToken },
-                i =>
-                {
-                    RpfEntry entry = allEntries[i];
-                    if (!matcher(entry))
-                        return;
-
-                    long size = 0;
-                    string type = "directory";
-                    string ext = "";
-
-                    if (entry is RpfFileEntry fileEntry)
-                    {
-                        size = fileEntry.GetFileSize();
-                        type = RpfService.GetFileType(fileEntry);
-                        ext = Path.GetExtension(fileEntry.Name).ToLowerInvariant();
-                    }
-
-                    results[i] = new Json.SearchMatch
-                    {
-                        Path = entry.Path ?? entry.Name ?? "",
-                        Name = entry.Name ?? "",
-                        Size = size,
-                        Type = type,
-                        Extension = ext,
-                        NameHash = entry.NameHash,
-                        ShortNameHash = entry.ShortNameHash,
-                    };
-                }
-            );
-
-            // Collect non-null results
-            List<Json.SearchMatch> matches = results.OfType<Json.SearchMatch>().ToList();
-
-            Json.SearchResult result = new()
-            {
-                Success = scanErrors.Count == 0,
-                RpfFile = options.RpfPath,
-                Pattern = pattern,
-                PatternType = patternType,
-                MatchCount = matches.Count,
-                Matches = matches,
-                ErrorMessages = [.. scanErrors],
-            };
+            Json.SearchResult result = CollectSearch(rpf, scanErrors, options, pattern, cancellationToken: cancellationToken);
 
             if (options.Json)
-            {
-                Console.WriteLine(
-                    JsonSerializer.Serialize(result, RpfService.JsonSerializerOptions)
-                );
-            }
+                PrintJsonSearch(result);
             else
-            {
-                foreach (Json.SearchMatch match in matches)
-                {
-                    if (options.Verbose)
-                    {
-                        string sizeStr = options
-                            .SizeFormat.ToFormattedString(match.Size)
-                            .PadLeft(12);
-                        Console.WriteLine($"{sizeStr}  {match.Path}");
-                    }
-                    else
-                    {
-                        Console.WriteLine(match.Path);
-                    }
-                }
-
-                Console.Error.WriteLine();
-                Console.Error.WriteLine(
-                    $"Found {matches.Count} matches for '{pattern}' ({patternType})"
-                );
-            }
+                PrintSearch(result, options);
 
             return scanErrors.Count > 0 ? 1 : 0;
         }
-        catch (OperationCanceledException) { throw; }
+        catch (OperationCanceledException)
+        {
+            // Gracefully handle cancellation without printing an error message
+            throw;
+        }
         catch (Exception ex)
         {
             return RpfService.ReportError(
                 ex.Message,
                 options.Json,
-                ErrorResult([.. scanErrors]),
+                ErrorResult([.. scanErrors], options, pattern),
                 options.Verbose ? ex.StackTrace : null
             );
         }
     }
 
-    internal static bool HasGlobChars(string s) =>
-        s.Contains('*', StringComparison.Ordinal) ||
-        s.Contains('?', StringComparison.Ordinal);
-
-    private static void CollectAllEntries(RpfFile rpf, bool recursive, List<RpfEntry> entries)
+    internal static int ExecuteDirectory(RpfOptions options, string pattern, string dirPath, CancellationToken cancellationToken)
     {
-        if (rpf.AllEntries != null)
+        if (!Directory.Exists(dirPath))
         {
-            entries.AddRange(rpf.AllEntries);
+            return RpfService.ReportError(
+                $"Directory not found: {dirPath}",
+                options.Json,
+                ErrorResult([], options, pattern)
+            );
         }
 
-        if (recursive && rpf.Children != null)
+        string[] rpfPaths = Directory.GetFiles(dirPath, "*.rpf", SearchOption.AllDirectories);
+        Array.Sort(rpfPaths, StringComparer.OrdinalIgnoreCase);
+
+        if (rpfPaths.Length == 0)
         {
-            foreach (RpfFile child in rpf.Children)
+            return RpfService.ReportError(
+                $"No .rpf files found in: {dirPath}",
+                options.Json,
+                ErrorResult([], options, pattern)
+            );
+        }
+
+        string? initError = RpfService.ValidateExeAndLoadKeys(
+            options.ExePath,
+            options.Gen9,
+            options.Json
+        );
+        if (initError != null)
+        {
+            return RpfService.ReportError(
+                initError,
+                options.Json,
+                ErrorResult([], options, pattern)
+            );
+        }
+
+        List<string> allScanErrors = [];
+        List<Json.SearchMatch> allMatches = [];
+        List<string> rpfFiles = [];
+
+        foreach (string rpfPath in rpfPaths)
+        {
+            cancellationToken.ThrowIfCancellationRequested();
+
+            List<string> scanErrors = [];
+            try
             {
-                CollectAllEntries(child, recursive, entries);
+                RpfFile rpf = RpfService.OpenRpf(
+                    rpfPath,
+                    options.Verbose,
+                    options.Json,
+                    scanErrors
+                );
+
+                Json.SearchResult partialResult = CollectSearch(rpf, scanErrors, options, pattern, archive: rpfPath, cancellationToken: cancellationToken);
+                rpfFiles.Add(rpfPath);
+
+                allMatches.AddRange(partialResult.Matches);
+                allScanErrors.AddRange(scanErrors);
+            }
+            catch (OperationCanceledException)
+            {
+                throw;
+            }
+            catch (Exception ex)
+            {
+                allScanErrors.Add($"{rpfPath}: {ex.Message}");
             }
         }
+
+        if (!options.Json)
+            Console.Error.WriteLine();
+
+        Json.SearchResult result = new()
+        {
+            Success = allScanErrors.Count == 0,
+            RpfFile = dirPath,
+            RpfFiles = rpfFiles,
+            Pattern = pattern,
+            PatternType = "substring",
+            MatchCount = allMatches.Count,
+            Matches = allMatches,
+            ErrorMessages = [.. allScanErrors],
+        };
+
+        if (options.Json)
+            PrintJsonSearch(result);
+        else
+            PrintSearch(result, options);
+
+        return allScanErrors.Count > 0 ? 1 : 0;
+    }
+
+    internal static Json.SearchResult ErrorResult(string[] errorMessages, RpfOptions options, string pattern) =>
+        new()
+        {
+            Success = false,
+            RpfFile = options.RpfPath,
+            RpfFiles = [],
+            Pattern = pattern,
+            PatternType = "substring",
+            MatchCount = 0,
+            Matches = [],
+            ErrorMessages = errorMessages,
+        };
+
+    internal static Json.SearchResult CollectSearch(
+        RpfFile rpf,
+        List<string> scanErrors,
+        RpfOptions options,
+        string pattern,
+        string? archive = null,
+        CancellationToken cancellationToken = default)
+    {
+        string archivePath = archive ?? options.RpfPath;
+        string normalizedPattern = pattern.Replace('\\', '/');
+
+        // Collect all entries (including directories) recursively
+        List<RpfEntry> allEntries = [];
+        CollectAllEntries(rpf, options.Recursive, allEntries);
+
+        List<Json.SearchMatch> matches = [];
+
+        foreach (RpfEntry entry in allEntries)
+        {
+            cancellationToken.ThrowIfCancellationRequested();
+
+            if (!Filter.Matches(entry.Path ?? "", options.Filters))
+                continue;
+
+            if (entry.Path?.Replace('\\', '/').Contains(normalizedPattern, StringComparison.OrdinalIgnoreCase) != true)
+                continue;
+
+            long size = 0;
+            string type = "directory";
+            string ext = "";
+
+            if (entry is RpfFileEntry fileEntry)
+            {
+                size = fileEntry.GetFileSize();
+                type = RpfService.GetFileType(fileEntry);
+                ext = Path.GetExtension(fileEntry.Name).ToLowerInvariant();
+            }
+
+            matches.Add(new Json.SearchMatch
+            {
+                Archive = archivePath,
+                Path = entry.Path ?? entry.Name ?? "",
+                Name = entry.Name ?? "",
+                Size = size,
+                Type = type,
+                Extension = ext,
+            });
+        }
+
+        return new Json.SearchResult
+        {
+            Success = scanErrors.Count == 0,
+            RpfFile = archivePath,
+            RpfFiles = [archivePath],
+            Pattern = pattern,
+            PatternType = "substring",
+            MatchCount = matches.Count,
+            Matches = matches,
+            ErrorMessages = [.. scanErrors],
+        };
+    }
+
+    internal static void PrintJsonSearch(Json.SearchResult result) =>
+        Console.WriteLine(JsonSerializer.Serialize(result, RpfService.JsonSerializerOptions));
+
+    internal static void PrintSearch(Json.SearchResult result, RpfOptions options)
+    {
+        bool multiArchive = result.RpfFiles.Count > 1;
+        string? lastArchive = null;
+
+        foreach (Json.SearchMatch match in result.Matches)
+        {
+            if (multiArchive && match.Archive != lastArchive)
+            {
+                if (lastArchive != null)
+                    Console.Error.WriteLine();
+                Console.Error.WriteLine($"== {RelativePath(result.RpfFile, match.Archive)} ==");
+                lastArchive = match.Archive;
+            }
+
+            if (options.Verbose)
+            {
+                string sizeStr = options
+                    .SizeFormat.ToFormattedString(match.Size)
+                    .PadLeft(12);
+                Console.WriteLine($"{sizeStr}  {match.Path}");
+            }
+            else
+            {
+                Console.WriteLine(match.Path);
+            }
+        }
+
+        string matchWord = result.MatchCount == 1 ? "match" : "matches";
+        Console.Error.WriteLine();
+        Console.Error.WriteLine(
+            multiArchive
+                ? $"Found {result.MatchCount} {matchWord} across {result.RpfFiles.Count} archive(s) for '{result.Pattern}' ({result.PatternType})"
+                : $"Found {result.MatchCount} {matchWord} for '{result.Pattern}' ({result.PatternType})"
+        );
+    }
+
+    internal static string RelativePath(string basePath, string fullPath)
+    {
+        // Normalize separators and ensure trailing separator on base
+        string normalizedBase = basePath.Replace('\\', '/').TrimEnd('/') + "/";
+        string normalizedFull = fullPath.Replace('\\', '/');
+
+        return normalizedFull.StartsWith(normalizedBase, StringComparison.OrdinalIgnoreCase)
+            ? normalizedFull[normalizedBase.Length..]
+            : Path.GetFileName(fullPath);
+    }
+
+    internal static void CollectAllEntries(RpfFile rpf, bool recursive, List<RpfEntry> entries)
+    {
+        if (rpf.AllEntries != null)
+            entries.AddRange(rpf.AllEntries);
+
+        if (!recursive || rpf.Children == null)
+            return;
+
+        foreach (RpfFile child in rpf.Children)
+            CollectAllEntries(child, recursive, entries);
     }
 }
