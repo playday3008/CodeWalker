@@ -41,6 +41,9 @@ internal static class SizeFormatExtensions
     /// <summary>
     /// Formats the given byte size into a human-readable string based on the size format.
     /// </summary>
+    /// <param name="format">The size format to use.</param>
+    /// <param name="bytes">The size in bytes to format.</param>
+    /// <returns>A human-readable string representation of the byte size.</returns>
     public static string ToFormattedString(this SizeFormat format, long bytes)
     {
         double divisor = format.GetDivisor();

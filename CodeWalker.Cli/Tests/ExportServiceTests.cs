@@ -1,5 +1,6 @@
 using System;
 using System.IO;
+using System.Threading;
 
 using CodeWalker.Cli.Handlers;
 using CodeWalker.Cli.Helpers;
@@ -80,6 +81,27 @@ public sealed class ExportServiceExecuteTests
     }
 
     [Fact]
+    public void Execute_WithCancelledToken_StillReturnsValidationError()
+    {
+        TextWriter origOut = Console.Out;
+        TextWriter origErr = Console.Error;
+        try
+        {
+            Console.SetOut(new StringWriter());
+            StringWriter stderr = new();
+            Console.SetError(stderr);
+            int exitCode = ExportService.Execute(MakeOptions(json: false), "xml", "XML", NoOpProcessor, new CancellationToken(canceled: true));
+            Assert.Equal(1, exitCode);
+            Assert.Contains("Error:", stderr.ToString());
+        }
+        finally
+        {
+            Console.SetOut(origOut);
+            Console.SetError(origErr);
+        }
+    }
+
+    [Fact]
     public void Execute_JsonError_ContainsExpectedFields()
     {
         TextWriter origOut = Console.Out;
@@ -98,6 +120,7 @@ public sealed class ExportServiceExecuteTests
     }
 }
 
+[Collection("ConsoleOutput")]
 public sealed class ProcessSingleFileTests
 {
     private static RpfBinaryFileEntry MakeEntry(string path, string name) =>
@@ -247,6 +270,23 @@ public sealed class ProcessSingleFileTests
     }
 
     [Fact]
+    public void ProcessorThrows_ExceptionPropagates()
+    {
+        InvalidOperationException ex = Assert.Throws<InvalidOperationException>(() =>
+            ExportService.ProcessSingleFile(
+                MakeEntry("test.ydr", "test.ydr"),
+                data: [1],
+                outputDir: "/out",
+                dryRun: false,
+                noOverwrite: false,
+                processor: (_, _, _, _) => throw new InvalidOperationException("processor crashed")
+            )
+        );
+
+        Assert.Equal("processor crashed", ex.Message);
+    }
+
+    [Fact]
     public void OutputDirectory_ComputedFromBackslashPath()
     {
         string? capturedOutputDir = null;
@@ -279,6 +319,7 @@ public sealed class ProcessSingleFileTests
     }
 }
 
+[Collection("ConsoleOutput")]
 public sealed class AggregateResultsTests
 {
     private static readonly string[] OneScanError = ["scan error 1"];
@@ -297,7 +338,7 @@ public sealed class AggregateResultsTests
     public void EmptyResults_AllZeros_OnlyScanErrors()
     {
         ExportService.ExportAggregation agg = ExportService.AggregateResults(
-            Array.Empty<(Json.ExportFileEntry?, string?)>(),
+            [],
             OneScanError,
             filterSkipped: 0
         );
@@ -320,7 +361,7 @@ public sealed class AggregateResultsTests
             (MakeFileEntry("exported"), null),
         ];
 
-        ExportService.ExportAggregation agg = ExportService.AggregateResults(results, Array.Empty<string>(), filterSkipped: 0);
+        ExportService.ExportAggregation agg = ExportService.AggregateResults(results, [], filterSkipped: 0);
 
         Assert.Equal(3, agg.Exported);
     }
@@ -334,7 +375,7 @@ public sealed class AggregateResultsTests
             (MakeFileEntry("skipped"), null),
         ];
 
-        ExportService.ExportAggregation agg = ExportService.AggregateResults(results, Array.Empty<string>(), filterSkipped: 0);
+        ExportService.ExportAggregation agg = ExportService.AggregateResults(results, [], filterSkipped: 0);
 
         Assert.Equal(2, agg.Skipped);
     }
@@ -347,7 +388,7 @@ public sealed class AggregateResultsTests
             (MakeFileEntry("skipped"), null),
         ];
 
-        ExportService.ExportAggregation agg = ExportService.AggregateResults(results, Array.Empty<string>(), filterSkipped: 5);
+        ExportService.ExportAggregation agg = ExportService.AggregateResults(results, [], filterSkipped: 5);
 
         Assert.Equal(6, agg.Skipped);
     }
@@ -362,7 +403,7 @@ public sealed class AggregateResultsTests
             (MakeFileEntry("exported"), null),
         ];
 
-        ExportService.ExportAggregation agg = ExportService.AggregateResults(results, Array.Empty<string>(), filterSkipped: 0);
+        ExportService.ExportAggregation agg = ExportService.AggregateResults(results, [], filterSkipped: 0);
 
         Assert.Equal(2, agg.Errors);
     }
@@ -380,11 +421,89 @@ public sealed class AggregateResultsTests
             (skipped, null),
         ];
 
-        ExportService.ExportAggregation agg = ExportService.AggregateResults(results, Array.Empty<string>(), filterSkipped: 0);
+        ExportService.ExportAggregation agg = ExportService.AggregateResults(results, [], filterSkipped: 0);
 
         Assert.Equal(2, agg.Files.Count);
         Assert.Same(exported, agg.Files[0]);
         Assert.Same(skipped, agg.Files[1]);
+    }
+
+    [Fact]
+    public void ErrorEntryWithMessage_CountedAsError_AndInFiles()
+    {
+        Json.ExportFileEntry errorEntry = MakeFileEntry("error");
+
+        (Json.ExportFileEntry?, string?)[] results =
+        [
+            (errorEntry, "conversion failed"),
+        ];
+
+        ExportService.ExportAggregation agg = ExportService.AggregateResults(results, [], filterSkipped: 0);
+
+        Assert.Equal(0, agg.Exported);
+        Assert.Equal(0, agg.Skipped);
+        Assert.Equal(1, agg.Errors);
+        _ = Assert.Single(agg.Files);
+        Assert.Same(errorEntry, agg.Files[0]);
+        _ = Assert.Single(agg.ErrorMessages);
+        Assert.Equal("conversion failed", agg.ErrorMessages[0]);
+    }
+
+    [Fact]
+    public void ExportedEntryWithError_NotCountedAsExported()
+    {
+        Json.ExportFileEntry entry = MakeFileEntry("exported");
+
+        (Json.ExportFileEntry?, string?)[] results =
+        [
+            (entry, "partial failure"),
+        ];
+
+        ExportService.ExportAggregation agg = ExportService.AggregateResults(results, [], filterSkipped: 0);
+
+        Assert.Equal(0, agg.Exported);
+        Assert.Equal(1, agg.Errors);
+        _ = Assert.Single(agg.Files);
+        Assert.Same(entry, agg.Files[0]);
+    }
+
+    [Fact]
+    public void SkippedEntryWithError_NotCountedAsSkipped()
+    {
+        Json.ExportFileEntry entry = MakeFileEntry("skipped");
+
+        (Json.ExportFileEntry?, string?)[] results =
+        [
+            (entry, "unexpected failure"),
+        ];
+
+        ExportService.ExportAggregation agg = ExportService.AggregateResults(results, [], filterSkipped: 0);
+
+        Assert.Equal(0, agg.Skipped);
+        Assert.Equal(1, agg.Errors);
+        _ = Assert.Single(agg.Files);
+        Assert.Same(entry, agg.Files[0]);
+    }
+
+    [Fact]
+    public void ErrorStatusWithNullError_CountedAsError()
+    {
+        Json.ExportFileEntry errorEntry = MakeFileEntry("error");
+
+        (Json.ExportFileEntry?, string?)[] results =
+        [
+            (errorEntry, null),
+        ];
+
+        ExportService.ExportAggregation agg = ExportService.AggregateResults(results, [], filterSkipped: 0);
+
+        Assert.Equal(0, agg.Exported);
+        Assert.Equal(0, agg.Skipped);
+        Assert.Equal(1, agg.Errors);
+        _ = Assert.Single(agg.Files);
+        Assert.Same(errorEntry, agg.Files[0]);
+        _ = Assert.Single(agg.ErrorMessages);
+        Assert.Contains("Error processing", agg.ErrorMessages[0]);
     }
 
     [Fact]

@@ -144,6 +144,18 @@ public sealed class RpfServiceTests
     public void GetFileType_Binary() =>
         Assert.Equal("binary", RpfService.GetFileType(new RpfBinaryFileEntry()));
 
+    private sealed class StubFileEntry : RpfFileEntry
+    {
+        public override long GetFileSize() => 0;
+        public override void SetFileSize(uint s) { }
+        public override void Read(DataReader reader) { }
+        public override void Write(DataWriter writer) { }
+    }
+
+    [Fact]
+    public void GetFileType_Unknown() =>
+        Assert.Equal("unknown", RpfService.GetFileType(new StubFileEntry()));
+
     // --- CollectFiles ---
 
     private static RpfBinaryFileEntry MakeEntry(string name, string? path = null) =>
@@ -203,6 +215,37 @@ public sealed class RpfServiceTests
             RpfService.CollectFiles(rpf, ["*.ydr"], recursive: false);
         _ = Assert.Single(files);
         Assert.Equal("test.ydr", files[0].entry.Name);
+    }
+
+    [Fact]
+    public void CollectFiles_MultipleFilters()
+    {
+        RpfBinaryFileEntry e1 = MakeEntry("a.ydr");
+        RpfBinaryFileEntry e2 = MakeEntry("b.ytd");
+        RpfBinaryFileEntry e3 = MakeEntry("c.yft");
+        RpfFile rpf = new("test", "test.rpf", 0) { AllEntries = [e1, e2, e3] };
+        List<(RpfFile rpf, RpfFileEntry entry)> files =
+            RpfService.CollectFiles(rpf, ["*.ydr", "*.ytd"], recursive: false);
+        Assert.Equal(2, files.Count);
+    }
+
+    [Fact]
+    public void CollectFiles_Recursive_WithFilter()
+    {
+        RpfBinaryFileEntry parentYdr = MakeEntry("a.ydr");
+        RpfBinaryFileEntry parentYtd = MakeEntry("b.ytd");
+        RpfBinaryFileEntry childYdr = MakeEntry("c.ydr");
+        RpfBinaryFileEntry childYtd = MakeEntry("d.ytd");
+        RpfFile child = new("child", "child.rpf", 0) { AllEntries = [childYdr, childYtd] };
+        RpfFile parent = new("parent", "parent.rpf", 0)
+        {
+            AllEntries = [parentYdr, parentYtd],
+            Children = [child],
+        };
+        List<(RpfFile rpf, RpfFileEntry entry)> files =
+            RpfService.CollectFiles(parent, ["*.ydr"], recursive: true);
+        Assert.Equal(2, files.Count);
+        Assert.All(files, f => Assert.EndsWith(".ydr", f.entry.Name));
     }
 
     [Fact]
@@ -305,6 +348,17 @@ public sealed class RpfServiceTests
         Assert.Equal(0, RpfService.CountNonRpfFiles(rpf, recursive: false));
     }
 
+    [Fact]
+    public void CountNonRpfFiles_SkipsDirectoryEntries()
+    {
+        RpfDirectoryEntry dirEntry = new() { Name = "subdir", NameLower = "subdir", Path = "subdir" };
+        RpfFile rpf = new("test", "test.rpf", 0)
+        {
+            AllEntries = [dirEntry, MakeEntry("a.ydr")],
+        };
+        Assert.Equal(1, RpfService.CountNonRpfFiles(rpf, recursive: false));
+    }
+
     // --- ReportError ---
 
     private static Json.ExportResult MakeBaseResult(string[]? errors = null) =>
@@ -367,16 +421,22 @@ public sealed class RpfServiceTests
     public void ReportError_Json_PreservesExistingErrors()
     {
         TextWriter origOut = Console.Out;
+        TextWriter origErr = Console.Error;
         try
         {
             StringWriter sw = new();
             Console.SetOut(sw);
+            Console.SetError(new StringWriter());
             _ = RpfService.ReportError("new error", json: true, MakeBaseResult(["old error"]));
             string output = sw.ToString();
             Assert.Contains("old error", output);
             Assert.Contains("new error", output);
         }
-        finally { Console.SetOut(origOut); }
+        finally
+        {
+            Console.SetOut(origOut);
+            Console.SetError(origErr);
+        }
     }
 
     [Fact]

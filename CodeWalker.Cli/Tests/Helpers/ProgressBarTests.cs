@@ -1,6 +1,4 @@
-using System;
 using System.IO;
-using System.Reflection;
 using System.Threading.Tasks;
 
 using CodeWalker.Cli.Helpers;
@@ -11,20 +9,16 @@ namespace CodeWalker.Cli.Tests.Helpers;
 
 public sealed class ProgressBarTests
 {
-    private static int GetCurrent(ProgressBar bar) =>
-        (int)typeof(ProgressBar)
-            .GetField("_current", BindingFlags.NonPublic | BindingFlags.Instance)!
-            .GetValue(bar)!;
+    // ── Helper ──────────────────────────────────────────────────────────
 
-    private static bool GetEnabled(ProgressBar bar) =>
-        (bool)typeof(ProgressBar)
-            .GetField("_enabled", BindingFlags.NonPublic | BindingFlags.Instance)!
-            .GetValue(bar)!;
-
-    private static void ResetThrottle(ProgressBar bar) =>
-        typeof(ProgressBar)
-            .GetField("_lastUpdate", BindingFlags.NonPublic | BindingFlags.Instance)!
-            .SetValue(bar, DateTime.MinValue);
+    /// <summary>Increments the bar <paramref name="count"/> times, optionally passing a file on the last call.</summary>
+    private static void IncrementTo(ProgressBar bar, int count, string? lastFile = null)
+    {
+        for (int i = 1; i < count; i++)
+            bar.Increment();
+        if (count > 0)
+            bar.Increment(lastFile);
+    }
 
     // ── Disabled-state tests ──────────────────────────────────────────
 
@@ -33,7 +27,7 @@ public sealed class ProgressBarTests
     {
         StringWriter sw = new();
         using ProgressBar bar = new(100, enabled: false, sw);
-        Assert.False(GetEnabled(bar));
+        Assert.False(bar.Enabled);
         Assert.Equal("", sw.ToString());
     }
 
@@ -42,7 +36,7 @@ public sealed class ProgressBarTests
     {
         StringWriter sw = new();
         using ProgressBar bar = new(0, enabled: true, sw);
-        Assert.False(GetEnabled(bar));
+        Assert.False(bar.Enabled);
     }
 
     [Fact]
@@ -50,7 +44,7 @@ public sealed class ProgressBarTests
     {
         StringWriter sw = new();
         using ProgressBar bar = new(-5, enabled: true, sw);
-        Assert.False(GetEnabled(bar));
+        Assert.False(bar.Enabled);
     }
 
     // ── Enabled-state tests ───────────────────────────────────────────
@@ -60,7 +54,7 @@ public sealed class ProgressBarTests
     {
         StringWriter sw = new();
         using ProgressBar bar = new(100, enabled: true, sw);
-        Assert.True(GetEnabled(bar));
+        Assert.True(bar.Enabled);
     }
 
     [Fact]
@@ -81,10 +75,11 @@ public sealed class ProgressBarTests
     {
         StringWriter sw = new();
         using ProgressBar bar = new(100, enabled: true, sw, windowWidth: 120);
+        // Increment to 49 (throttled, no renders)
+        IncrementTo(bar, 49);
         _ = sw.GetStringBuilder().Clear();
-        bar.Update(100 / 2); // 50 == total bypasses throttle? No, 50 < 100. Need to reset throttle.
-        ResetThrottle(bar);
-        bar.Update(50);
+        bar.ResetThrottle();
+        bar.Increment(); // 50th — renders after throttle reset
         string output = sw.ToString();
         // 50% => filled = (int)(0.5 * 40) = 20
         Assert.Contains(new string('=', 20) + ">", output);
@@ -97,7 +92,7 @@ public sealed class ProgressBarTests
         StringWriter sw = new();
         using ProgressBar bar = new(10, enabled: true, sw, windowWidth: 120);
         _ = sw.GetStringBuilder().Clear();
-        bar.Update(10); // == total, bypasses throttle
+        IncrementTo(bar, 10); // == total, bypasses throttle
         string output = sw.ToString();
         Assert.Contains(new string('=', 40) + "]", output);
         Assert.DoesNotContain(">", output);
@@ -112,7 +107,7 @@ public sealed class ProgressBarTests
         StringWriter sw = new();
         using ProgressBar bar = new(10, enabled: true, sw, windowWidth: 120);
         _ = sw.GetStringBuilder().Clear();
-        bar.Update(10, "textures/player.ytd"); // bypasses throttle at total
+        IncrementTo(bar, 10, "textures/player.ytd"); // bypasses throttle at total
         string output = sw.ToString();
         Assert.Contains("textures/player.ytd", output);
     }
@@ -124,10 +119,26 @@ public sealed class ProgressBarTests
         // windowWidth=80 → maxLen = Max(10, 80-40-30) = 10
         using ProgressBar bar = new(10, enabled: true, sw, windowWidth: 80);
         _ = sw.GetStringBuilder().Clear();
-        bar.Update(10, "very/long/path/to/some/deeply/nested/file.ytd");
+        IncrementTo(bar, 10, "very/long/path/to/some/deeply/nested/file.ytd");
         string output = sw.ToString();
         Assert.Contains("...", output);
         Assert.DoesNotContain("very/long/path", output);
+    }
+
+    [Fact]
+    public void Increment_renders_file_name()
+    {
+        StringWriter sw = new();
+        using ProgressBar bar = new(10, enabled: true, sw, windowWidth: 120);
+        _ = sw.GetStringBuilder().Clear();
+        // Increment 10 times to hit total (bypasses throttle)
+        for (int i = 0; i < 9; i++)
+            bar.Increment();
+        _ = sw.GetStringBuilder().Clear();
+        bar.Increment("models/vehicle.yft");
+        string output = sw.ToString();
+        Assert.Contains("models/vehicle.yft", output);
+        Assert.Contains("(10/10)", output);
     }
 
     [Fact]
@@ -136,22 +147,13 @@ public sealed class ProgressBarTests
         StringWriter sw = new();
         using ProgressBar bar = new(10, enabled: true, sw, windowWidth: 200);
         _ = sw.GetStringBuilder().Clear();
-        bar.Update(10, "short.ytd");
+        IncrementTo(bar, 10, "short.ytd");
         string output = sw.ToString();
         Assert.Contains("short.ytd", output);
         Assert.DoesNotContain("...", output);
     }
 
     // ── State tracking tests ──────────────────────────────────────────
-
-    [Fact]
-    public void Update_sets_current_value()
-    {
-        StringWriter sw = new();
-        using ProgressBar bar = new(100, enabled: true, sw);
-        bar.Update(42);
-        Assert.Equal(42, GetCurrent(bar));
-    }
 
     [Fact]
     public void Increment_advances_by_one()
@@ -161,35 +163,22 @@ public sealed class ProgressBarTests
         bar.Increment();
         bar.Increment();
         bar.Increment();
-        Assert.Equal(3, GetCurrent(bar));
-    }
-
-    [Fact]
-    public void Update_and_Increment_can_interleave()
-    {
-        StringWriter sw = new();
-        using ProgressBar bar = new(100, enabled: true, sw);
-        bar.Update(10);
-        bar.Increment();
-        Assert.Equal(11, GetCurrent(bar));
+        Assert.Equal(3, bar.Current);
     }
 
     // ── Throttle tests ────────────────────────────────────────────────
 
     [Fact]
-    public void Throttle_skips_rapid_updates()
+    public void Throttle_skips_rapid_increments()
     {
         StringWriter sw = new();
         using ProgressBar bar = new(100, enabled: true, sw, windowWidth: 80);
         _ = sw.GetStringBuilder().Clear();
-        // Rapid updates — only the first and last should render
+        // Rapid increments within the 50ms throttle window — none should render
         for (int i = 1; i <= 50; i++)
-            bar.Update(i);
+            bar.Increment();
         string output = sw.ToString();
-        // We should see (1/100) from the first un-throttled call
-        // but NOT every intermediate value
-        Assert.Contains("(1/100)", output);
-        Assert.DoesNotContain("(2/100)", output);
+        Assert.Equal("", output);
     }
 
     [Fact]
@@ -198,8 +187,8 @@ public sealed class ProgressBarTests
         StringWriter sw = new();
         using ProgressBar bar = new(10, enabled: true, sw, windowWidth: 80);
         _ = sw.GetStringBuilder().Clear();
-        // Update to total always renders even within throttle window
-        bar.Update(10);
+        // Increment to total always renders even within throttle window
+        IncrementTo(bar, 10);
         Assert.Contains("(10/10)", sw.ToString());
     }
 
@@ -209,9 +198,9 @@ public sealed class ProgressBarTests
         StringWriter sw = new();
         using ProgressBar bar = new(100, enabled: true, sw, windowWidth: 80);
         _ = sw.GetStringBuilder().Clear();
-        ResetThrottle(bar);
-        bar.Update(25);
-        Assert.Contains("(25/100)", sw.ToString());
+        bar.ResetThrottle();
+        bar.Increment();
+        Assert.Contains("(1/100)", sw.ToString());
     }
 
     // ── Dispose tests ─────────────────────────────────────────────────
@@ -251,19 +240,62 @@ public sealed class ProgressBarTests
 
         _ = Parallel.For(0, total, _ => bar.Increment());
 
-        Assert.Equal(total, GetCurrent(bar));
+        Assert.Equal(total, bar.Current);
     }
 
+    // ── Disabled-state mutation tests ──────────────────────────────────
+
     [Fact]
-    public void Concurrent_updates_do_not_throw()
+    public void Increment_on_disabled_bar_writes_nothing()
     {
         StringWriter sw = new();
-        using ProgressBar bar = new(1000, enabled: true, sw);
+        using ProgressBar bar = new(100, enabled: false, sw);
+        bar.Increment();
+        Assert.Equal("", sw.ToString());
+    }
 
-        _ = Parallel.For(0, 1000, i => bar.Update(i, $"file_{i}.txt"));
+    // ── Clamping tests ──────────────────────────────────────────────
 
-        int current = GetCurrent(bar);
-        Assert.InRange(current, 0, 999);
+    [Fact]
+    public void Increment_clamps_current_at_total()
+    {
+        StringWriter sw = new();
+        using ProgressBar bar = new(3, enabled: true, sw);
+        for (int i = 0; i < 10; i++)
+            bar.Increment();
+        Assert.Equal(3, bar.Current);
+    }
+
+    // ── Render exception handling tests ──────────────────────────────
+
+    [Fact]
+    public void Render_swallows_IOException_from_writer()
+    {
+        ThrowingWriter tw = new();
+        using ProgressBar bar = new(10, enabled: true, tw, windowWidth: 80);
+        // Constructor render hit the throwing writer and didn't propagate
+        // Further increments should also not throw
+        IncrementTo(bar, 10);
+    }
+
+    private sealed class ThrowingWriter : StringWriter
+    {
+        public override void Write(string? value) => throw new IOException("simulated");
+    }
+
+    // ── Dispose idempotency tests ───────────────────────────────────
+
+    [Fact]
+    public void Dispose_writes_exactly_one_newline()
+    {
+        StringWriter sw = new();
+        ProgressBar bar = new(10, enabled: true, sw, windowWidth: 80);
+        _ = sw.GetStringBuilder().Clear();
+        bar.Dispose();
+        bar.Dispose();
+        bar.Dispose();
+        // Only one newline despite three Dispose calls
+        Assert.Equal(sw.NewLine, sw.ToString());
     }
 
     // ── Full lifecycle test ───────────────────────────────────────────
@@ -275,11 +307,39 @@ public sealed class ProgressBarTests
         using ProgressBar bar = new(5, enabled: true, sw, windowWidth: 120);
         for (int i = 0; i < 5; i++)
         {
-            ResetThrottle(bar);
+            bar.ResetThrottle();
             bar.Increment($"step_{i}");
         }
         string output = sw.ToString();
         Assert.Contains("(5/5)", output);
-        Assert.Equal(5, GetCurrent(bar));
+        Assert.Equal(5, bar.Current);
+    }
+
+    // ── Edge case tests ──────────────────────────────────────────────
+
+    [Fact]
+    public void Increment_with_empty_file_name_does_not_display_file()
+    {
+        StringWriter sw = new();
+        using ProgressBar bar = new(10, enabled: true, sw, windowWidth: 120);
+        _ = sw.GetStringBuilder().Clear();
+        IncrementTo(bar, 10, "");
+        string output = sw.ToString();
+        Assert.Contains("(10/10)", output);
+        // Empty file name should not add extra content between stats and padding
+        Assert.DoesNotContain("...", output);
+    }
+
+    [Fact]
+    public void Render_at_narrow_window_truncates_to_fit()
+    {
+        StringWriter sw = new();
+        using ProgressBar bar = new(10, enabled: true, sw, windowWidth: 30);
+        _ = sw.GetStringBuilder().Clear();
+        IncrementTo(bar, 10, "some/path/to/file.ytd");
+        string output = sw.ToString();
+        Assert.NotEmpty(output);
+        // Output must be clamped to windowWidth - 1 to prevent wrapping
+        Assert.True(output.Length <= 29, $"Output ({output.Length} chars) should not exceed window width - 1 (29)");
     }
 }

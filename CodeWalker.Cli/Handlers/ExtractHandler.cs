@@ -153,7 +153,6 @@ internal static class ExtractHandler
                     new ParallelOptions { MaxDegreeOfParallelism = options.Rpf.Threads, CancellationToken = cancellationToken },
                     i =>
                     {
-                        cancellationToken.ThrowIfCancellationRequested();
                         (RpfFile sourceRpf, RpfFileEntry fileEntry) = filesToExtract[i];
                         try
                         {

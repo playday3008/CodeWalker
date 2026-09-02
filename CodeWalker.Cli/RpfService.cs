@@ -103,7 +103,8 @@ internal static class RpfService
             files.AddRange(
                 rpf.AllEntries
                     .OfType<RpfFileEntry>()
-                    .Where(fe => !fe.NameLower.EndsWith(".rpf", StringComparison.Ordinal)
+                    .Where(fe =>
+                        !fe.NameLower.EndsWith(".rpf", StringComparison.Ordinal)
                         && Filter.Matches(fe.Path, filters))
                     .Select(fe => (rpf, fe))
             );
@@ -132,13 +133,10 @@ internal static class RpfService
     {
         if (rpf.AllEntries != null)
         {
-            foreach (RpfEntry entry in rpf.AllEntries)
-            {
-                if (entry is RpfFileEntry && !entry.NameLower.EndsWith(".rpf", StringComparison.Ordinal))
-                {
-                    count++;
-                }
-            }
+            count += rpf.AllEntries
+                .Count(entry =>
+                    entry is RpfFileEntry
+                    && !entry.NameLower.EndsWith(".rpf", StringComparison.Ordinal));
         }
 
         if (recursive && rpf.Children != null)

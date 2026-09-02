@@ -208,7 +208,6 @@ internal static class Gen9Handler
                         new ParallelOptions { MaxDegreeOfParallelism = options.Common.Threads, CancellationToken = cancellationToken },
                         i =>
                         {
-                            cancellationToken.ThrowIfCancellationRequested();
                             string path = filePaths[i];
                             string relPath = path[inputFolder.Length..];
                             string outPath = Path.Combine(options.OutputPath, relPath);
