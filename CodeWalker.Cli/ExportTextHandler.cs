@@ -32,7 +32,7 @@ internal static class ExportTextHandler
         return command;
     }
 
-    private static (Json.ExportFileEntry? entry, string? error) ProcessFile(
+    private static (Json.ExportFileEntry entry, string? _) ProcessFile(
         RpfFileEntry fileEntry,
         byte[] data,
         string fileOutputDir,
@@ -48,7 +48,7 @@ internal static class ExportTextHandler
                     Path = fileEntry.Path,
                     Name = fileEntry.Name,
                     OutputFiles = 0,
-                    Status = "skipped",
+                    Status = "unsupported",
                 },
                 null
             );
@@ -64,15 +64,10 @@ internal static class ExportTextHandler
                     Path = fileEntry.Path,
                     Name = fileEntry.Name,
                     OutputFiles = 0,
-                    Status = "skipped",
+                    Status = "unsupported",
                 },
                 null
             );
-        }
-
-        if (!Directory.Exists(fileOutputDir))
-        {
-            Directory.CreateDirectory(fileOutputDir);
         }
 
         string outputFileName = Path.GetFileNameWithoutExtension(fileEntry.Name) + ".txt";
@@ -90,6 +85,11 @@ internal static class ExportTextHandler
                 },
                 null
             );
+        }
+
+        if (!Directory.Exists(fileOutputDir))
+        {
+            Directory.CreateDirectory(fileOutputDir);
         }
 
         File.WriteAllText(outputPath, text, Encoding.UTF8);

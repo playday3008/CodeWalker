@@ -128,9 +128,9 @@ internal static class SearchHandler
             {
                 // Substring match
                 patternType = "substring";
-                string lowerPattern = pattern.ToLowerInvariant();
+                string normalizedPattern = pattern.Replace('\\', '/');
                 matcher = entry =>
-                    entry.Path?.Replace('\\', '/').Contains(lowerPattern, StringComparison.OrdinalIgnoreCase) == true;
+                    entry.Path?.Replace('\\', '/').Contains(normalizedPattern, StringComparison.OrdinalIgnoreCase) == true;
             }
 
             // Match in parallel
@@ -218,7 +218,7 @@ internal static class SearchHandler
                 );
             }
 
-            return 0;
+            return scanErrors.Count > 0 ? 1 : 0;
         }
         catch (Exception ex)
         {
@@ -233,7 +233,7 @@ internal static class SearchHandler
 
     private static bool HasGlobChars(string s)
     {
-        return s.Contains('*', StringComparison.Ordinal) || s.Contains('?', StringComparison.Ordinal) || s.Contains('[', StringComparison.Ordinal);
+        return s.Contains('*', StringComparison.Ordinal) || s.Contains('?', StringComparison.Ordinal);
     }
 
     private static void CollectAllEntries(RpfFile rpf, bool recursive, List<RpfEntry> entries)

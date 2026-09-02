@@ -61,6 +61,7 @@ internal static class TreeHandler
                 RpfFile = options.Rpf.RpfPath,
                 TotalFiles = 0,
                 TotalDirs = 0,
+                Root = null,
                 ErrorMessages = errorMessages,
             };
 
@@ -101,7 +102,7 @@ internal static class TreeHandler
 
                 Json.TreeResult result = new()
                 {
-                    Success = true,
+                    Success = scanErrors.Count == 0,
                     RpfFile = options.Rpf.RpfPath,
                     TotalFiles = totalFiles,
                     TotalDirs = totalDirs,
@@ -122,7 +123,7 @@ internal static class TreeHandler
                 Console.Error.WriteLine($"{totalDirs} directories, {totalFiles} files");
             }
 
-            return 0;
+            return scanErrors.Count > 0 ? 1 : 0;
         }
         catch (Exception ex)
         {

@@ -552,7 +552,22 @@ internal static class Gen9Handler
                 string name = rfe.Name;
                 string type = Path.GetExtension(rfe.NameLower);
 
-                byte[] dataIn = currentRpf.ExtractFile(rfe);
+                byte[]? dataIn = currentRpf.ExtractFile(rfe);
+                if (dataIn == null)
+                {
+                    errors++;
+                    string errorMsg = $"{rfe.Path} - failed to extract";
+                    errorMessages.Add(errorMsg);
+                    files.Add(
+                        new Json.Gen9FileEntry
+                        {
+                            Path = rfe.Path,
+                            Status = "error",
+                            Message = "Failed to extract file data",
+                        }
+                    );
+                    continue;
+                }
                 dataIn = ResourceBuilder.Compress(dataIn);
                 dataIn = ResourceBuilder.AddResourceHeader(rfe, dataIn);
 

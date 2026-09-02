@@ -31,7 +31,7 @@ internal static class ExportAudioHandler
         return command;
     }
 
-    private static (Json.ExportFileEntry? entry, string? error) ProcessFile(
+    private static (Json.ExportFileEntry entry, string? _) ProcessFile(
         RpfFileEntry fileEntry,
         byte[] data,
         string fileOutputDir,
@@ -47,17 +47,13 @@ internal static class ExportAudioHandler
                     Path = fileEntry.Path,
                     Name = fileEntry.Name,
                     OutputFiles = 0,
-                    Status = "skipped",
+                    Status = "unsupported",
                 },
                 null
             );
         }
 
-        if (!Directory.Exists(fileOutputDir))
-        {
-            Directory.CreateDirectory(fileOutputDir);
-        }
-
+        bool dirCreated = false;
         int streamCount = 0;
         foreach (AwcStream stream in awc.Streams)
         {
@@ -71,6 +67,12 @@ internal static class ExportAudioHandler
                 string midiPath = Path.Combine(fileOutputDir, streamName + ".midi");
                 if (noOverwrite && File.Exists(midiPath))
                     continue;
+                if (!dirCreated)
+                {
+                    if (!Directory.Exists(fileOutputDir))
+                        Directory.CreateDirectory(fileOutputDir);
+                    dirCreated = true;
+                }
                 File.WriteAllBytes(midiPath, stream.MidiChunk.Data);
                 streamCount++;
             }
@@ -80,6 +82,12 @@ internal static class ExportAudioHandler
                 string wavPath = Path.Combine(fileOutputDir, streamName + ".wav");
                 if (noOverwrite && File.Exists(wavPath))
                     continue;
+                if (!dirCreated)
+                {
+                    if (!Directory.Exists(fileOutputDir))
+                        Directory.CreateDirectory(fileOutputDir);
+                    dirCreated = true;
+                }
                 File.WriteAllBytes(wavPath, wav);
                 streamCount++;
             }
@@ -90,9 +98,9 @@ internal static class ExportAudioHandler
             {
                 Path = fileEntry.Path,
                 Name = fileEntry.Name,
-                OutputPath = fileOutputDir,
+                OutputPath = streamCount > 0 ? fileOutputDir : null,
                 OutputFiles = streamCount,
-                Status = "exported",
+                Status = streamCount > 0 ? "exported" : "skipped",
             },
             null
         );

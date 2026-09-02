@@ -83,7 +83,7 @@ internal static class InspectHandler
             }
 
             // Find entry by normalized path
-            string normalizedPath = filePath.Replace('\\', '/').ToLowerInvariant();
+            string normalizedPath = filePath.Replace('\\', '/');
             RpfFileEntry? found = FindEntry(rpf, normalizedPath, options.Recursive);
 
             if (found == null)
@@ -99,7 +99,25 @@ internal static class InspectHandler
             string ext = Path.GetExtension(found.Name).ToLowerInvariant();
             string fileType = RpfService.GetFileType(found);
 
-            // Build base result
+            // Extract type-specific metadata
+            int? resourceVersion = null;
+            long? systemSize = null;
+            long? graphicsSize = null;
+            long? uncompressedSize = null;
+            uint? encryptionType = null;
+
+            if (found is RpfResourceFileEntry rfe)
+            {
+                resourceVersion = rfe.Version;
+                systemSize = rfe.SystemSize;
+                graphicsSize = rfe.GraphicsSize;
+            }
+            else if (found is RpfBinaryFileEntry bfe)
+            {
+                uncompressedSize = bfe.FileUncompressedSize;
+                encryptionType = bfe.EncryptionType;
+            }
+
             Json.InspectResult result = new()
             {
                 Success = scanErrors.Count == 0,
@@ -112,14 +130,12 @@ internal static class InspectHandler
                 Extension = ext,
                 NameHash = found.NameHash,
                 ShortNameHash = found.ShortNameHash,
-                ResourceVersion = found is RpfResourceFileEntry rfe1 ? rfe1.Version : null,
-                SystemSize = found is RpfResourceFileEntry rfe2 ? rfe2.SystemSize : null,
-                GraphicsSize = found is RpfResourceFileEntry rfe3 ? rfe3.GraphicsSize : null,
-                UncompressedSize = found is RpfBinaryFileEntry bfe1
-                    ? bfe1.FileUncompressedSize
-                    : null,
-                EncryptionType = found is RpfBinaryFileEntry bfe2 ? bfe2.EncryptionType : null,
-                Details = GetDetails(found, ext),
+                ResourceVersion = resourceVersion,
+                SystemSize = systemSize,
+                GraphicsSize = graphicsSize,
+                UncompressedSize = uncompressedSize,
+                EncryptionType = encryptionType,
+                Details = GetDetails(found, ext, options.Verbose),
                 ErrorMessages = [.. scanErrors],
             };
 
@@ -134,7 +150,7 @@ internal static class InspectHandler
                 PrintTextResult(result, options);
             }
 
-            return 0;
+            return scanErrors.Count > 0 ? 1 : 0;
         }
         catch (Exception ex)
         {
@@ -176,7 +192,7 @@ internal static class InspectHandler
         return null;
     }
 
-    private static object? GetDetails(RpfFileEntry entry, string ext)
+    private static object? GetDetails(RpfFileEntry entry, string ext, bool verbose)
     {
         try
         {
@@ -194,8 +210,12 @@ internal static class InspectHandler
                 _ => null,
             };
         }
-        catch
+        catch (Exception ex)
         {
+            if (verbose)
+            {
+                Console.Error.WriteLine($"Warning: Failed to read details for {entry.Path}: {ex.Message}");
+            }
             return null;
         }
     }

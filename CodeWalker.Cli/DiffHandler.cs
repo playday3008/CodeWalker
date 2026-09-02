@@ -230,7 +230,9 @@ internal static class DiffHandler
                             Name = leftEntry.Name,
                             Type = RpfService.GetFileType(leftEntry),
                             LeftSize = leftSize,
+                            LeftSizeFormatted = sizeFormat.ToFormattedString(leftSize),
                             RightSize = rightSize,
+                            RightSizeFormatted = sizeFormat.ToFormattedString(rightSize),
                         }
                     );
                 }
@@ -304,7 +306,7 @@ internal static class DiffHandler
 
             Json.DiffResult result = new()
             {
-                Success = true,
+                Success = errorMessages.Count == 0,
                 LeftRpf = options.LeftPath,
                 RightRpf = options.RightPath,
                 Added = [.. added],
@@ -349,7 +351,7 @@ internal static class DiffHandler
                     foreach (Json.DiffEntry entry in modified)
                     {
                         Console.WriteLine(
-                            $"  ~ {entry.Path}  ({sizeFormat.ToFormattedString(entry.LeftSize ?? 0)} -> {sizeFormat.ToFormattedString(entry.RightSize ?? 0)})"
+                            $"  ~ {entry.Path}  ({entry.LeftSizeFormatted} -> {entry.RightSizeFormatted})"
                         );
                     }
                     Console.WriteLine();
@@ -370,7 +372,7 @@ internal static class DiffHandler
                 );
             }
 
-            return 0;
+            return errorMessages.Count > 0 ? 1 : 0;
         }
         catch (Exception ex)
         {

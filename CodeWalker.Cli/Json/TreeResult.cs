@@ -15,7 +15,7 @@ internal sealed record TreeResult : BaseResult
     public required int TotalDirs { get; init; }
 
     [JsonPropertyName("root")]
-    public TreeNode? Root { get; init; }
+    public required TreeNode? Root { get; init; }
 }
 
 internal sealed record TreeNode

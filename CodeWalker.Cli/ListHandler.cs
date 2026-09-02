@@ -3,7 +3,6 @@ using System.Collections.Generic;
 using System.CommandLine;
 using System.IO;
 using System.Text.Json;
-using System.Threading.Tasks;
 
 using CodeWalker.Cli.Helpers;
 using CodeWalker.GameFiles;
@@ -61,7 +60,7 @@ internal static class ListHandler
                 scanErrors
             );
 
-            int nestedRpfCount = (int)rpf.GrandTotalRpfCount;
+            long nestedRpfCount = rpf.GrandTotalRpfCount;
 
             if (!options.Json)
             {
@@ -75,29 +74,19 @@ internal static class ListHandler
                 options.Recursive
             );
 
-            // Process entries in parallel, storing results by index to preserve order
-            (Json.FileEntry? jsonEntry, string? line, long size)[] results = new (
-                Json.FileEntry?,
-                string?,
-                long
-            )[entries.Count];
+            long totalSize = 0;
+            List<Json.FileEntry> files = [];
 
-            Parallel.For(
-                0,
-                entries.Count,
-                new ParallelOptions { MaxDegreeOfParallelism = options.Threads },
-                i =>
+            foreach ((RpfFile _, RpfFileEntry fileEntry) in entries)
+            {
+                long size = fileEntry.GetFileSize();
+                totalSize += size;
+                string ext = Path.GetExtension(fileEntry.Name).ToLowerInvariant();
+
+                if (options.Json)
                 {
-                    RpfFileEntry fileEntry = entries[i].entry;
-                    long size = fileEntry.GetFileSize();
-                    string ext = Path.GetExtension(fileEntry.Name).ToLowerInvariant();
-
-                    Json.FileEntry? jsonEntry = null;
-                    string? line = null;
-
-                    if (options.Json)
-                    {
-                        jsonEntry = new Json.FileEntry
+                    files.Add(
+                        new Json.FileEntry
                         {
                             Path = fileEntry.Path,
                             Name = fileEntry.Name,
@@ -105,42 +94,25 @@ internal static class ListHandler
                             SizeFormatted = options.SizeFormat.ToFormattedString(size),
                             Type = RpfService.GetFileType(fileEntry),
                             Extension = ext,
-                        };
-                    }
-                    else if (options.Verbose)
-                    {
-                        string sizeStr = options.SizeFormat.ToFormattedString(size).PadLeft(12);
-                        line = $"{sizeStr}  {fileEntry.Path}";
-                    }
-                    else
-                    {
-                        line = fileEntry.Path;
-                    }
-
-                    results[i] = (jsonEntry, line, size);
+                        }
+                    );
                 }
-            );
-
-            // Output results sequentially to preserve order
-            long totalSize = 0;
-            int fileCount = 0;
-            List<Json.FileEntry> files = [];
-            foreach (var (jsonEntry, line, size) in results)
-            {
-                totalSize += size;
-                fileCount++;
-
-                if (jsonEntry != null)
-                    files.Add(jsonEntry);
-                else if (line != null)
-                    Console.WriteLine(line);
+                else if (options.Verbose)
+                {
+                    string sizeStr = options.SizeFormat.ToFormattedString(size).PadLeft(12);
+                    Console.WriteLine($"{sizeStr}  {fileEntry.Path}");
+                }
+                else
+                {
+                    Console.WriteLine(fileEntry.Path);
+                }
             }
 
             Json.ListResult result = new()
             {
                 Success = scanErrors.Count == 0,
                 RpfFile = options.RpfPath,
-                TotalFiles = fileCount,
+                TotalFiles = entries.Count,
                 TotalSize = totalSize,
                 TotalSizeFormatted = options.SizeFormat.ToFormattedString(totalSize),
                 NestedRpfCount = nestedRpfCount,
@@ -158,11 +130,11 @@ internal static class ListHandler
             {
                 Console.Error.WriteLine();
                 Console.Error.WriteLine(
-                    $"Total: {fileCount} files, {options.SizeFormat.ToFormattedString(totalSize)}"
+                    $"Total: {entries.Count} files, {options.SizeFormat.ToFormattedString(totalSize)}"
                 );
             }
 
-            return 0;
+            return scanErrors.Count > 0 ? 1 : 0;
         }
         catch (Exception ex)
         {

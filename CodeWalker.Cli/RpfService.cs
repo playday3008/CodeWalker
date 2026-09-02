@@ -99,17 +99,20 @@ internal static class RpfService
         List<(RpfFile, RpfFileEntry)> files
     )
     {
-        foreach (RpfEntry entry in rpf.AllEntries)
+        if (rpf.AllEntries != null)
         {
-            if (entry is RpfFileEntry fileEntry)
+            foreach (RpfEntry entry in rpf.AllEntries)
             {
-                if (entry.NameLower.EndsWith(".rpf", StringComparison.Ordinal))
-                    continue;
+                if (entry is RpfFileEntry fileEntry)
+                {
+                    if (entry.NameLower.EndsWith(".rpf", StringComparison.Ordinal))
+                        continue;
 
-                if (!Filter.Matches(entry.Path, filters))
-                    continue;
+                    if (!Filter.Matches(entry.Path, filters))
+                        continue;
 
-                files.Add((rpf, fileEntry));
+                    files.Add((rpf, fileEntry));
+                }
             }
         }
 
@@ -134,11 +137,14 @@ internal static class RpfService
 
     private static void CountNonRpfFilesRecursive(RpfFile rpf, bool recursive, ref int count)
     {
-        foreach (RpfEntry entry in rpf.AllEntries)
+        if (rpf.AllEntries != null)
         {
-            if (entry is RpfFileEntry && !entry.NameLower.EndsWith(".rpf", StringComparison.Ordinal))
+            foreach (RpfEntry entry in rpf.AllEntries)
             {
-                count++;
+                if (entry is RpfFileEntry && !entry.NameLower.EndsWith(".rpf", StringComparison.Ordinal))
+                {
+                    count++;
+                }
             }
         }
 

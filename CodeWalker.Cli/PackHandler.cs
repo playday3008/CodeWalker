@@ -59,7 +59,7 @@ internal static class PackHandler
             forceOption,
             progressOption,
         };
-        commonOpts.AddTo(command);
+        commonOpts.AddTo(command, includeThreads: false);
         command.Aliases.Add("p");
 
         command.SetAction(parseResult =>
@@ -127,6 +127,8 @@ internal static class PackHandler
             return RpfService.ReportError(exeError, options.Common.Json, ErrorResult([]));
         }
 
+        bool previousGen9 = RpfManager.IsGen9;
+        RpfManager.IsGen9 = options.Gen9;
         try
         {
             // Count files for progress bar
@@ -231,6 +233,10 @@ internal static class PackHandler
                 ErrorResult([]),
                 options.Common.Verbose ? ex.StackTrace : null
             );
+        }
+        finally
+        {
+            RpfManager.IsGen9 = previousGen9;
         }
     }
 

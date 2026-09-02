@@ -221,7 +221,7 @@ internal static class ExportService
 
             foreach (var (success, jsonEntry, errorMessage) in results)
             {
-                if (success && jsonEntry?.Status == "exported")
+                if (success && jsonEntry?.Status is "exported" or "dry_run")
                     exported++;
 
                 if (jsonEntry?.Status is "unsupported" or "skipped")
@@ -241,11 +241,11 @@ internal static class ExportService
 
             Json.ExportResult result = new()
             {
-                Success = errors == 0,
+                Success = errors == 0 && scanErrors.Count == 0,
                 RpfFile = options.Rpf.RpfPath,
                 OutputDir = options.OutputPath,
                 Format = format,
-                TotalFiles = filesToExport.Count,
+                TotalFiles = totalNonRpfFiles,
                 Exported = exported,
                 Skipped = skipped,
                 Errors = errors,
@@ -269,7 +269,7 @@ internal static class ExportService
                 );
             }
 
-            return errors > 0 ? 1 : 0;
+            return (errors > 0 || scanErrors.Count > 0) ? 1 : 0;
         }
         catch (Exception ex)
         {
