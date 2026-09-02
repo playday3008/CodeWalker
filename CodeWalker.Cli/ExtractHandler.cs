@@ -5,12 +5,17 @@ using System.IO;
 using System.Text.Json;
 using System.Threading;
 using System.Threading.Tasks;
+
 using CodeWalker.Cli.Helpers;
 using CodeWalker.GameFiles;
 
+#if !NETCOREAPP
+using CodeWalker.Cli.Polyfills;
+#endif
+
 namespace CodeWalker.Cli;
 
-public record ExtractOptions
+internal sealed record ExtractOptions
 {
     public required RpfOptions Rpf { get; init; }
     public required string? OutputPath { get; init; }
@@ -19,12 +24,11 @@ public record ExtractOptions
     public required bool Progress { get; init; }
 }
 
-public static class ExtractHandler
+internal static class ExtractHandler
 {
     public static Command CreateCommand()
     {
         RpfCommandOptions rpfOpts = new();
-        // csharpier-ignore-start
         Option<DirectoryInfo> outputOption = new("--output", "-o")
         {
             Description = "Output directory",
@@ -45,7 +49,6 @@ public static class ExtractHandler
         {
             Description = "Show progress bar during extraction",
         };
-        // csharpier-ignore-end
 
         Command command = new("extract", "Extract files from an RPF archive")
         {
@@ -165,7 +168,7 @@ public static class ExtractHandler
                             string relativePath = fileEntry.Path;
                             string outputPath = Path.Combine(
                                 outputDir,
-                                relativePath.Replace("\\", Path.DirectorySeparatorChar.ToString())
+                                relativePath.Replace("\\", Path.DirectorySeparatorChar.ToString(), StringComparison.Ordinal)
                             );
                             string? fileDir = Path.GetDirectoryName(outputPath);
 
@@ -311,8 +314,8 @@ public static class ExtractHandler
                 Skipped = skipped,
                 Errors = errors,
                 DryRun = options.DryRun,
-                Files = files.ToArray(),
-                ErrorMessages = errorMessages.ToArray(),
+                Files = [.. files],
+                ErrorMessages = [.. errorMessages],
             };
 
             if (options.Rpf.Json)

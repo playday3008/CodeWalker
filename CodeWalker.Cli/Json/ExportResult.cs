@@ -3,7 +3,7 @@ using System.Text.Json.Serialization;
 
 namespace CodeWalker.Cli.Json;
 
-public record ExportFileEntry
+internal sealed record ExportFileEntry
 {
     [JsonPropertyName("path")]
     public required string Path { get; init; }
@@ -22,7 +22,7 @@ public record ExportFileEntry
     public required string Status { get; init; }
 }
 
-public record ExportResult : BaseResult
+internal sealed record ExportResult : BaseResult
 {
     [JsonPropertyName("rpfFile")]
     public required string RpfFile { get; init; }

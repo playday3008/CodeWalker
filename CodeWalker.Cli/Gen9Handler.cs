@@ -3,15 +3,15 @@ using System.Collections.Generic;
 using System.CommandLine;
 using System.IO;
 using System.Text.Json;
-using System.Threading;
 using System.Threading.Tasks;
+
 using CodeWalker.Cli.Helpers;
 using CodeWalker.Core.Utils;
 using CodeWalker.GameFiles;
 
 namespace CodeWalker.Cli;
 
-public record Gen9Options
+internal sealed record Gen9Options
 {
     public required string InputPath { get; init; }
     public required string OutputPath { get; init; }
@@ -22,12 +22,11 @@ public record Gen9Options
     public required bool Progress { get; init; }
 }
 
-public static class Gen9Handler
+internal static class Gen9Handler
 {
     public static Command CreateCommand()
     {
         CommonCommandOptions commonOpts = new();
-        // csharpier-ignore-start
         Option<DirectoryInfo> inputOption = new("--input", "-i")
         {
             Description = "Input folder containing files to convert",
@@ -59,7 +58,6 @@ public static class Gen9Handler
         {
             Description = "Show progress bar",
         };
-        // csharpier-ignore-end
 
         Command command = new("gen9", "Convert files between standard and enhanced (Gen9) formats")
         {
@@ -155,7 +153,7 @@ public static class Gen9Handler
                 }
 
                 string inputFolder = options.InputPath;
-                if (!inputFolder.EndsWith(Path.DirectorySeparatorChar.ToString()))
+                if (!inputFolder.EndsWith(Path.DirectorySeparatorChar.ToString(), StringComparison.Ordinal))
                 {
                     inputFolder += Path.DirectorySeparatorChar;
                 }
@@ -219,7 +217,7 @@ public static class Gen9Handler
                         i =>
                         {
                             string path = filePaths[i];
-                            string relPath = path.Substring(inputFolder.Length);
+                            string relPath = path[inputFolder.Length..];
                             string outPath = Path.Combine(options.OutputPath, relPath);
 
                             try
@@ -362,7 +360,7 @@ public static class Gen9Handler
                     // Process RPF files sequentially (unsafe to parallelize)
                     foreach (string path in rpfPaths)
                     {
-                        string relPath = path.Substring(inputFolder.Length);
+                        string relPath = path[inputFolder.Length..];
                         string outPath = Path.Combine(options.OutputPath, relPath);
 
                         try
@@ -400,7 +398,6 @@ public static class Gen9Handler
                                 files,
                                 errorMessages,
                                 ref converted,
-                                ref skipped,
                                 ref errors
                             );
 
@@ -438,8 +435,8 @@ public static class Gen9Handler
                     Skipped = skipped,
                     Copied = copied,
                     Errors = errors,
-                    Files = files.ToArray(),
-                    ErrorMessages = errorMessages.ToArray(),
+                    Files = [.. files],
+                    ErrorMessages = [.. errorMessages],
                 };
 
                 if (options.Common.Json)
@@ -482,7 +479,6 @@ public static class Gen9Handler
         List<Json.Gen9FileEntry> files,
         List<string> errorMessages,
         ref int converted,
-        ref int skipped,
         ref int errors
     )
     {

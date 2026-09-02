@@ -2,15 +2,16 @@ using System;
 using System.Collections.Generic;
 using System.CommandLine;
 using System.IO;
-using System.Linq;
 using System.Text.Json;
+
 using CodeWalker.Cli.Helpers;
 using CodeWalker.GameFiles;
+
 using SharpDX;
 
 namespace CodeWalker.Cli;
 
-public static class InspectHandler
+internal static class InspectHandler
 {
     public static Command CreateCommand()
     {
@@ -31,9 +32,8 @@ public static class InspectHandler
         command.Aliases.Add("i");
 
         command.SetAction(parseResult =>
-        {
-            return Execute(rpfOpts.Parse(parseResult), parseResult.GetRequiredValue(pathArg));
-        });
+            Execute(rpfOpts.Parse(parseResult), parseResult.GetRequiredValue(pathArg))
+        );
 
         return command;
     }
@@ -120,7 +120,7 @@ public static class InspectHandler
                     : null,
                 EncryptionType = found is RpfBinaryFileEntry bfe2 ? bfe2.EncryptionType : null,
                 Details = GetDetails(found, ext),
-                ErrorMessages = scanErrors.ToArray(),
+                ErrorMessages = [.. scanErrors],
             };
 
             if (options.Json)
@@ -155,8 +155,7 @@ public static class InspectHandler
             {
                 if (
                     entry is RpfFileEntry fileEntry
-                    && entry.Path != null
-                    && entry.Path.Replace('\\', '/').ToLowerInvariant() == normalizedPath
+                    && entry.Path?.Replace('\\', '/').Equals(normalizedPath, StringComparison.OrdinalIgnoreCase) == true
                 )
                 {
                     return fileEntry;
@@ -181,29 +180,19 @@ public static class InspectHandler
     {
         try
         {
-            switch (ext)
+            return ext switch
             {
-                case ".ytd":
-                    return GetYtdDetails(entry);
-                case ".ydr":
-                    return GetYdrDetails(entry);
-                case ".ydd":
-                    return GetYddDetails(entry);
-                case ".yft":
-                    return GetYftDetails(entry);
-                case ".ymap":
-                    return GetYmapDetails(entry);
-                case ".ytyp":
-                    return GetYtypDetails(entry);
-                case ".ybn":
-                    return GetYbnDetails(entry);
-                case ".awc":
-                    return GetAwcDetails(entry);
-                case ".gxt2":
-                    return GetGxt2Details(entry);
-                default:
-                    return null;
-            }
+                ".ytd" => GetYtdDetails(entry),
+                ".ydr" => GetYdrDetails(entry),
+                ".ydd" => GetYddDetails(entry),
+                ".yft" => GetYftDetails(entry),
+                ".ymap" => GetYmapDetails(entry),
+                ".ytyp" => GetYtypDetails(entry),
+                ".ybn" => GetYbnDetails(entry),
+                ".awc" => GetAwcDetails(entry),
+                ".gxt2" => GetGxt2Details(entry),
+                _ => null,
+            };
         }
         catch
         {
@@ -444,7 +433,7 @@ public static class InspectHandler
             var e = file.TextEntries[i];
             string text = e.Text ?? "";
             if (text.Length > 100)
-                text = text.Substring(0, 100) + "...";
+                text = text[..100] + "...";
 
             infos.Add(new Json.Gxt2EntryInfo { Hash = $"0x{e.Hash:X8}", Text = text });
         }

@@ -1,11 +1,12 @@
 using System;
 using System.CommandLine;
 using System.IO;
+
 using CodeWalker.Cli.Helpers;
 
 namespace CodeWalker.Cli;
 
-public record CommonOptions
+internal sealed record CommonOptions
 {
     public required string ExePath { get; init; }
     public required bool Verbose { get; init; }
@@ -19,9 +20,8 @@ public record CommonOptions
 /// Create an instance, call <see cref="AddTo"/> to register options on a command,
 /// then call <see cref="Parse"/> inside the action to build a <see cref="CommonOptions"/>.
 /// </summary>
-public sealed class CommonCommandOptions
+internal sealed class CommonCommandOptions
 {
-    // csharpier-ignore-start
     public Option<DirectoryInfo> Exe { get; } = new("--exe", "-e")
     {
         Description = "Path to the GTA V installation directory (containing GTA5.exe)",
@@ -48,7 +48,6 @@ public sealed class CommonCommandOptions
         Description = "Number of threads for parallel processing",
         DefaultValueFactory = _ => Environment.ProcessorCount,
     };
-    // csharpier-ignore-end
 
     public CommonCommandOptions()
     {

@@ -4,12 +4,13 @@ using System.CommandLine;
 using System.IO;
 using System.Linq;
 using System.Text.Json;
+
 using CodeWalker.Cli.Helpers;
 using CodeWalker.GameFiles;
 
 namespace CodeWalker.Cli;
 
-public static class StatHandler
+internal static class StatHandler
 {
     public static Command CreateCommand()
     {
@@ -19,10 +20,7 @@ public static class StatHandler
         rpfOpts.AddTo(command);
         command.Aliases.Add("S");
 
-        command.SetAction(parseResult =>
-        {
-            return Execute(rpfOpts.Parse(parseResult));
-        });
+        command.SetAction(parseResult => Execute(rpfOpts.Parse(parseResult)));
 
         return command;
     }
@@ -124,19 +122,21 @@ public static class StatHandler
             double compressionRatio =
                 uncompressedSize > 0 ? (double)compressedSize / uncompressedSize : 0;
 
-            List<Json.ExtensionStat> extensionStats = extStats
-                .OrderByDescending(kv => kv.Value.total)
-                .Select(kv => new Json.ExtensionStat
-                {
-                    Extension = kv.Key,
-                    Count = kv.Value.count,
-                    TotalSize = kv.Value.total,
-                    TotalSizeFormatted = options.SizeFormat.ToFormattedString(kv.Value.total),
-                    AvgSize = kv.Value.count > 0 ? kv.Value.total / kv.Value.count : 0,
-                    MinSize = kv.Value.min,
-                    MaxSize = kv.Value.max,
-                })
-                .ToList();
+            List<Json.ExtensionStat> extensionStats =
+            [
+                .. extStats
+                    .OrderByDescending(kv => kv.Value.total)
+                    .Select(kv => new Json.ExtensionStat
+                    {
+                        Extension = kv.Key,
+                        Count = kv.Value.count,
+                        TotalSize = kv.Value.total,
+                        TotalSizeFormatted = options.SizeFormat.ToFormattedString(kv.Value.total),
+                        AvgSize = kv.Value.count > 0 ? kv.Value.total / kv.Value.count : 0,
+                        MinSize = kv.Value.min,
+                        MaxSize = kv.Value.max,
+                    }),
+            ];
 
             Json.StatResult result = new()
             {
@@ -151,7 +151,7 @@ public static class StatHandler
                 UncompressedSize = uncompressedSize,
                 CompressionRatio = Math.Round(compressionRatio, 4),
                 Extensions = extensionStats,
-                ErrorMessages = scanErrors.ToArray(),
+                ErrorMessages = [.. scanErrors],
             };
 
             if (options.Json)
@@ -164,14 +164,14 @@ public static class StatHandler
             {
                 // Table header
                 Console.WriteLine(
-                    $"{"Extension", -12} {"Count", 8} {"Total", 14} {"Avg", 14} {"Min", 14} {"Max", 14}"
+                    $"{"Extension",-12} {"Count",8} {"Total",14} {"Avg",14} {"Min",14} {"Max",14}"
                 );
                 Console.WriteLine(new string('-', 78));
 
                 foreach (Json.ExtensionStat ext in extensionStats)
                 {
                     Console.WriteLine(
-                        $"{ext.Extension, -12} {ext.Count, 8} {options.SizeFormat.ToFormattedString(ext.TotalSize), 14} {options.SizeFormat.ToFormattedString(ext.AvgSize), 14} {options.SizeFormat.ToFormattedString(ext.MinSize), 14} {options.SizeFormat.ToFormattedString(ext.MaxSize), 14}"
+                        $"{ext.Extension,-12} {ext.Count,8} {options.SizeFormat.ToFormattedString(ext.TotalSize),14} {options.SizeFormat.ToFormattedString(ext.AvgSize),14} {options.SizeFormat.ToFormattedString(ext.MinSize),14} {options.SizeFormat.ToFormattedString(ext.MaxSize),14}"
                     );
                 }
 

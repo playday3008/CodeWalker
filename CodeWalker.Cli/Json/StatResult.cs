@@ -3,7 +3,7 @@ using System.Text.Json.Serialization;
 
 namespace CodeWalker.Cli.Json;
 
-public record ExtensionStat
+internal sealed record ExtensionStat
 {
     [JsonPropertyName("extension")]
     public required string Extension { get; init; }
@@ -27,7 +27,7 @@ public record ExtensionStat
     public required long MaxSize { get; init; }
 }
 
-public record StatResult : BaseResult
+internal sealed record StatResult : BaseResult
 {
     [JsonPropertyName("rpfFile")]
     public required string RpfFile { get; init; }

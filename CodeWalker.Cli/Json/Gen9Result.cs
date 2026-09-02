@@ -3,7 +3,7 @@ using System.Text.Json.Serialization;
 
 namespace CodeWalker.Cli.Json;
 
-public record Gen9Result : BaseResult
+internal sealed record Gen9Result : BaseResult
 {
     [JsonPropertyName("inputFolder")]
     public required string InputFolder { get; init; }
@@ -30,7 +30,7 @@ public record Gen9Result : BaseResult
     public required IReadOnlyList<Gen9FileEntry> Files { get; init; }
 }
 
-public record Gen9FileEntry
+internal sealed record Gen9FileEntry
 {
     [JsonPropertyName("path")]
     public required string Path { get; init; }

@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.IO;
 using System.Text.Json;
 using System.Threading.Tasks;
+
 using CodeWalker.Cli.Helpers;
 using CodeWalker.GameFiles;
 
@@ -16,14 +17,15 @@ namespace CodeWalker.Cli;
 /// <param name="fileEntry">The RPF file entry to process.</param>
 /// <param name="data">The raw file data extracted from the RPF.</param>
 /// <param name="fileOutputDir">The output directory for this file (includes relative path).</param>
-public delegate (Json.ExportFileEntry? entry, string? error) ExportFileProcessor(
+/// <param name="noOverwrite">When true, skip files that already exist at the output path.</param>
+internal delegate (Json.ExportFileEntry? entry, string? error) ExportFileProcessor(
     RpfFileEntry fileEntry,
     byte[] data,
     string fileOutputDir,
     bool noOverwrite
 );
 
-public static class ExportService
+internal static class ExportService
 {
     public static int Execute(
         ExportOptions options,
@@ -248,8 +250,8 @@ public static class ExportService
                 Skipped = skipped,
                 Errors = errors,
                 DryRun = options.DryRun,
-                Files = files.ToArray(),
-                ErrorMessages = errorMessages.ToArray(),
+                Files = [.. files],
+                ErrorMessages = [.. errorMessages],
             };
 
             if (options.Rpf.Json)

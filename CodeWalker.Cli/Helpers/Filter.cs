@@ -1,13 +1,18 @@
+using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Text.RegularExpressions;
+
+#if !NETCOREAPP
+using CodeWalker.Cli.Polyfills;
+#endif
 
 namespace CodeWalker.Cli.Helpers;
 
 /// <summary>
 /// Provides methods for filtering file paths based on glob patterns.
 /// </summary>
-public static class Filter
+internal static class Filter
 {
     private static readonly ConcurrentDictionary<string, Regex> RegexCache = new();
 
@@ -26,7 +31,7 @@ public static class Filter
                 continue;
             result.Add(filter.Trim().ToLowerInvariant());
         }
-        return result.ToArray();
+        return [.. result];
     }
 
     /// <summary>
@@ -58,23 +63,23 @@ public static class Filter
         input = input.Replace('\\', '/');
         pattern = pattern.Replace('\\', '/');
 
-        bool hasPathSep = pattern.Contains("/");
+        bool hasPathSep = pattern.Contains('/', StringComparison.Ordinal);
 
         // For patterns without path separators, match against filename only
         if (!hasPathSep)
         {
-            int lastSlash = input.LastIndexOf("/");
+            int lastSlash = input.LastIndexOf('/');
             if (lastSlash >= 0)
                 input = input[(lastSlash + 1)..];
         }
 
         // Handle extension-only patterns (e.g., ".ydr" or "ydr" without wildcards)
-        if (!pattern.Contains("*") && !pattern.Contains("?"))
+        if (!pattern.Contains('*', StringComparison.Ordinal) && !pattern.Contains('?', StringComparison.Ordinal))
         {
-            if (pattern.StartsWith("."))
-                return input.EndsWith(pattern);
+            if (pattern.StartsWith('.'))
+                return input.EndsWith(pattern, System.StringComparison.Ordinal);
             else
-                return input.EndsWith("." + pattern);
+                return input.EndsWith($".{pattern}", System.StringComparison.Ordinal);
         }
 
         Regex regex = RegexCache.GetOrAdd(
@@ -87,20 +92,20 @@ public static class Filter
 
                 // Handle ** (globstar) before * — order matters
                 // **/ matches zero or more directory segments
-                regexPattern = regexPattern.Replace("\\*\\*/", "(.*/)?");
+                regexPattern = regexPattern.Replace("\\*\\*/", "(.*/)?", StringComparison.Ordinal);
                 // standalone ** matches any characters including /
-                regexPattern = regexPattern.Replace("\\*\\*", ".*");
+                regexPattern = regexPattern.Replace("\\*\\*", ".*", StringComparison.Ordinal);
                 // * matches any characters except / (single path segment)
-                regexPattern = regexPattern.Replace("\\*", "[^/]*");
+                regexPattern = regexPattern.Replace("\\*", "[^/]*", StringComparison.Ordinal);
                 // ? matches any single character except /
-                regexPattern = regexPattern.Replace("\\?", "[^/]");
+                regexPattern = regexPattern.Replace("\\?", "[^/]", StringComparison.Ordinal);
 
                 // Patterns with path separators match at any path boundary;
                 // filename-only patterns are anchored to the full filename.
-                if (p.Contains("/"))
-                    regexPattern = "(?:^|/)" + regexPattern + "$";
+                if (p.Contains('/', StringComparison.Ordinal))
+                    regexPattern = $"(?:^|/){regexPattern}$";
                 else
-                    regexPattern = "^" + regexPattern + "$";
+                    regexPattern = $"^{regexPattern}$";
 
                 return new Regex(regexPattern, RegexOptions.Compiled);
             }

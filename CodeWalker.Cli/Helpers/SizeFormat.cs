@@ -5,19 +5,19 @@ namespace CodeWalker.Cli.Helpers;
 /// <summary>
 /// Defines size formatting options for human-readable file sizes.
 /// </summary>
-public enum SizeFormat
+internal enum SizeFormat
 {
     /// <summary>IEC format: 1024-based (KiB, MiB, GiB)</summary>
-    IEC,
+    IEC = 0,
 
     /// <summary>SI format: 1000-based (KB, MB, GB)</summary>
-    SI,
+    SI = 1,
 }
 
 /// <summary>
 /// Extension methods for SizeFormat to format byte sizes into human-readable strings.
 /// </summary>
-public static class SizeFormatExtensions
+internal static class SizeFormatExtensions
 {
     private static readonly string[] SiSuffixes = ["B", "KB", "MB", "GB", "TB", "PB"];
     private static readonly string[] IecSuffixes = ["B", "KiB", "MiB", "GiB", "TiB", "PiB"];

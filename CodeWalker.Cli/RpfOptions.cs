@@ -1,10 +1,11 @@
 using System.CommandLine;
 using System.IO;
+
 using CodeWalker.Cli.Helpers;
 
 namespace CodeWalker.Cli;
 
-public record RpfOptions
+internal sealed record RpfOptions
 {
     public required string RpfPath { get; init; }
     public required string ExePath { get; init; }
@@ -22,11 +23,10 @@ public record RpfOptions
 /// Create an instance, call <see cref="AddTo"/> to register options on a command,
 /// then call <see cref="Parse"/> inside the action to build an <see cref="RpfOptions"/>.
 /// </summary>
-public sealed class RpfCommandOptions
+internal sealed class RpfCommandOptions
 {
     private readonly CommonCommandOptions _commonOpts = new();
 
-    // csharpier-ignore-start
     public Option<FileInfo> Rpf { get; } = new("--rpf", "-r")
     {
         Description = "Path to the RPF file",
@@ -48,7 +48,6 @@ public sealed class RpfCommandOptions
     {
         Description = "Process nested RPF archives",
     };
-    // csharpier-ignore-end
 
     public void AddTo(Command command)
     {

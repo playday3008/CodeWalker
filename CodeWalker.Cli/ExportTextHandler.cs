@@ -1,11 +1,12 @@
 using System.CommandLine;
 using System.IO;
 using System.Text;
+
 using CodeWalker.GameFiles;
 
 namespace CodeWalker.Cli;
 
-public static class ExportTextHandler
+internal static class ExportTextHandler
 {
     private static readonly string[] DefaultFilters = ["*.gxt2"];
 

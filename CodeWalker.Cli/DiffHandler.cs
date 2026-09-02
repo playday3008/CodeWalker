@@ -4,12 +4,13 @@ using System.CommandLine;
 using System.IO;
 using System.Text.Json;
 using System.Threading.Tasks;
+
 using CodeWalker.Cli.Helpers;
 using CodeWalker.GameFiles;
 
 namespace CodeWalker.Cli;
 
-public record DiffOptions
+internal sealed record DiffOptions
 {
     public required string LeftPath { get; init; }
     public required string RightPath { get; init; }
@@ -18,12 +19,11 @@ public record DiffOptions
     public required bool Recursive { get; init; }
 }
 
-public static class DiffHandler
+internal static class DiffHandler
 {
     public static Command CreateCommand()
     {
         CommonCommandOptions commonOpts = new();
-        // csharpier-ignore-start
         Option<FileInfo> leftOption = new("--left", "-l")
         {
             Description = "First RPF archive to compare",
@@ -45,7 +45,6 @@ public static class DiffHandler
         {
             Description = "Include nested RPFs in comparison",
         };
-        // csharpier-ignore-end
 
         Command command = new("diff", "Compare two RPF archives")
         {
@@ -174,7 +173,7 @@ public static class DiffHandler
                     if (rightDict.ContainsKey(path))
                         paths.Add(path);
                 }
-                commonPaths = paths.ToArray();
+                commonPaths = [.. paths];
             }
 
             // Result per common path: null = unchanged, non-null = modified entry
@@ -308,12 +307,12 @@ public static class DiffHandler
                 Success = true,
                 LeftRpf = options.LeftPath,
                 RightRpf = options.RightPath,
-                Added = added.ToArray(),
-                Removed = removed.ToArray(),
-                Modified = modified.ToArray(),
-                Unchanged = unchanged.ToArray(),
+                Added = [.. added],
+                Removed = [.. removed],
+                Modified = [.. modified],
+                Unchanged = [.. unchanged],
                 Summary = summary,
-                ErrorMessages = errorMessages.ToArray(),
+                ErrorMessages = [.. errorMessages],
             };
 
             if (options.Common.Json)

@@ -1,10 +1,11 @@
 using System.CommandLine;
 using System.IO;
+
 using CodeWalker.GameFiles;
 
 namespace CodeWalker.Cli;
 
-public static class ExportAudioHandler
+internal static class ExportAudioHandler
 {
     private static readonly string[] DefaultFilters = ["*.awc"];
 

@@ -4,16 +4,17 @@ using System.CommandLine;
 using System.IO;
 using System.Text.Json;
 using System.Threading.Tasks;
+
 using CodeWalker.Cli.Helpers;
 using CodeWalker.GameFiles;
+
 #if !NETCOREAPP
 using CodeWalker.Cli.Polyfills;
 #endif
 
-
 namespace CodeWalker.Cli;
 
-public static class SearchHandler
+internal static class SearchHandler
 {
     public static Command CreateCommand()
     {
@@ -31,9 +32,8 @@ public static class SearchHandler
         command.Aliases.Add("s");
 
         command.SetAction(parseResult =>
-        {
-            return Execute(rpfOpts.Parse(parseResult), parseResult.GetRequiredValue(patternArg));
-        });
+            Execute(rpfOpts.Parse(parseResult), parseResult.GetRequiredValue(patternArg))
+        );
 
         return command;
     }
@@ -92,7 +92,7 @@ public static class SearchHandler
                 patternType = "hash_hex";
                 if (
                     !uint.TryParse(
-                        pattern.Substring(2),
+                        pattern[2..],
                         System.Globalization.NumberStyles.HexNumber,
                         null,
                         out uint hash
@@ -130,8 +130,7 @@ public static class SearchHandler
                 patternType = "substring";
                 string lowerPattern = pattern.ToLowerInvariant();
                 matcher = entry =>
-                    entry.Path != null
-                    && entry.Path.Replace('\\', '/').ToLowerInvariant().Contains(lowerPattern);
+                    entry.Path?.Replace('\\', '/').Contains(lowerPattern, StringComparison.OrdinalIgnoreCase) == true;
             }
 
             // Match in parallel
@@ -187,7 +186,7 @@ public static class SearchHandler
                 PatternType = patternType,
                 MatchCount = matches.Count,
                 Matches = matches,
-                ErrorMessages = scanErrors.ToArray(),
+                ErrorMessages = [.. scanErrors],
             };
 
             if (options.Json)
@@ -234,17 +233,14 @@ public static class SearchHandler
 
     private static bool HasGlobChars(string s)
     {
-        return s.Contains('*') || s.Contains('?') || s.Contains('[');
+        return s.Contains('*', StringComparison.Ordinal) || s.Contains('?', StringComparison.Ordinal) || s.Contains('[', StringComparison.Ordinal);
     }
 
     private static void CollectAllEntries(RpfFile rpf, bool recursive, List<RpfEntry> entries)
     {
         if (rpf.AllEntries != null)
         {
-            foreach (RpfEntry entry in rpf.AllEntries)
-            {
-                entries.Add(entry);
-            }
+            entries.AddRange(rpf.AllEntries);
         }
 
         if (recursive && rpf.Children != null)

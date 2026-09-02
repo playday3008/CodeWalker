@@ -3,12 +3,13 @@ using System.Collections.Generic;
 using System.IO;
 using System.Text.Json;
 using System.Text.Json.Serialization;
+
 using CodeWalker.Cli.Helpers;
 using CodeWalker.GameFiles;
 
 namespace CodeWalker.Cli;
 
-public abstract record BaseResult
+internal abstract record BaseResult
 {
     [JsonPropertyName("success")]
     [JsonPropertyOrder(-1)]
@@ -19,7 +20,7 @@ public abstract record BaseResult
     public required IReadOnlyList<string> ErrorMessages { get; init; }
 }
 
-public static class RpfService
+internal static class RpfService
 {
     public static readonly JsonSerializerOptions JsonSerializerOptions = new()
     {
@@ -102,7 +103,7 @@ public static class RpfService
         {
             if (entry is RpfFileEntry fileEntry)
             {
-                if (entry.NameLower.EndsWith(".rpf"))
+                if (entry.NameLower.EndsWith(".rpf", StringComparison.Ordinal))
                     continue;
 
                 if (!Filter.Matches(entry.Path, filters))
@@ -135,7 +136,7 @@ public static class RpfService
     {
         foreach (RpfEntry entry in rpf.AllEntries)
         {
-            if (entry is RpfFileEntry && !entry.NameLower.EndsWith(".rpf"))
+            if (entry is RpfFileEntry && !entry.NameLower.EndsWith(".rpf", StringComparison.Ordinal))
             {
                 count++;
             }

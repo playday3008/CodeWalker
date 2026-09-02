@@ -1,9 +1,8 @@
-using System.Collections.Generic;
 using System.Text.Json.Serialization;
 
 namespace CodeWalker.Cli.Json;
 
-public record PackResult : BaseResult
+internal sealed record PackResult : BaseResult
 {
     [JsonPropertyName("inputDir")]
     public required string InputDir { get; init; }

@@ -3,29 +3,28 @@ using System.Collections.Generic;
 using System.CommandLine;
 using System.IO;
 using System.Text.Json;
+
 using CodeWalker.Cli.Helpers;
 using CodeWalker.GameFiles;
 
 namespace CodeWalker.Cli;
 
-public record TreeOptions
+internal sealed record TreeOptions
 {
     public required RpfOptions Rpf { get; init; }
     public required int Depth { get; init; }
 }
 
-public static class TreeHandler
+internal static class TreeHandler
 {
     public static Command CreateCommand()
     {
         RpfCommandOptions rpfOpts = new();
-        // csharpier-ignore-start
         Option<int> depthOption = new("--depth", "-d")
         {
             Description = "Maximum depth to display (default: unlimited)",
             DefaultValueFactory = _ => -1,
         };
-        // csharpier-ignore-end
 
         depthOption.Validators.Add(result =>
         {
@@ -107,7 +106,7 @@ public static class TreeHandler
                     TotalFiles = totalFiles,
                     TotalDirs = totalDirs,
                     Root = rootNode,
-                    ErrorMessages = scanErrors.ToArray(),
+                    ErrorMessages = [.. scanErrors],
                 };
 
                 Console.WriteLine(
@@ -303,7 +302,7 @@ public static class TreeHandler
         {
             foreach (RpfFileEntry fileEntry in dir.Files)
             {
-                if (fileEntry.NameLower.EndsWith(".rpf") && rpf.Children != null)
+                if (fileEntry.NameLower.EndsWith(".rpf", StringComparison.Ordinal) && rpf.Children != null)
                 {
                     foreach (RpfFile child in rpf.Children)
                     {
@@ -322,7 +321,7 @@ public static class TreeHandler
         {
             foreach (RpfFileEntry fileEntry in dir.Files)
             {
-                if (fileEntry.NameLower.EndsWith(".rpf"))
+                if (fileEntry.NameLower.EndsWith(".rpf", StringComparison.Ordinal))
                     continue;
 
                 if (!Filter.Matches(fileEntry.Path, options.Rpf.Filters))
