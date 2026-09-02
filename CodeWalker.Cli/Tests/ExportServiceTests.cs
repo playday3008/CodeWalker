@@ -250,7 +250,7 @@ public sealed class ProcessSingleFileTests
     {
         string? capturedOutputDir = null;
 
-        ExportService.ProcessSingleFile(
+        _ = ExportService.ProcessSingleFile(
             MakeEntry("x64\\levels\\gta5\\vehicles.rpf\\adder.ydr", "adder.ydr"),
             data: [1],
             outputDir: "/out",
@@ -305,7 +305,7 @@ public sealed class AggregateResultsTests
         Assert.Equal(0, agg.Skipped);
         Assert.Equal(0, agg.Errors);
         Assert.Empty(agg.Files);
-        Assert.Single(agg.ErrorMessages);
+        _ = Assert.Single(agg.ErrorMessages);
         Assert.Equal("scan error 1", agg.ErrorMessages[0]);
     }
 

@@ -81,7 +81,7 @@ public sealed class ProgressBarTests
     {
         StringWriter sw = new();
         using ProgressBar bar = new(100, enabled: true, sw, windowWidth: 120);
-        sw.GetStringBuilder().Clear();
+        _ = sw.GetStringBuilder().Clear();
         bar.Update(100 / 2); // 50 == total bypasses throttle? No, 50 < 100. Need to reset throttle.
         ResetThrottle(bar);
         bar.Update(50);
@@ -96,7 +96,7 @@ public sealed class ProgressBarTests
     {
         StringWriter sw = new();
         using ProgressBar bar = new(10, enabled: true, sw, windowWidth: 120);
-        sw.GetStringBuilder().Clear();
+        _ = sw.GetStringBuilder().Clear();
         bar.Update(10); // == total, bypasses throttle
         string output = sw.ToString();
         Assert.Contains(new string('=', 40) + "]", output);
@@ -111,7 +111,7 @@ public sealed class ProgressBarTests
     {
         StringWriter sw = new();
         using ProgressBar bar = new(10, enabled: true, sw, windowWidth: 120);
-        sw.GetStringBuilder().Clear();
+        _ = sw.GetStringBuilder().Clear();
         bar.Update(10, "textures/player.ytd"); // bypasses throttle at total
         string output = sw.ToString();
         Assert.Contains("textures/player.ytd", output);
@@ -123,7 +123,7 @@ public sealed class ProgressBarTests
         StringWriter sw = new();
         // windowWidth=80 → maxLen = Max(10, 80-40-30) = 10
         using ProgressBar bar = new(10, enabled: true, sw, windowWidth: 80);
-        sw.GetStringBuilder().Clear();
+        _ = sw.GetStringBuilder().Clear();
         bar.Update(10, "very/long/path/to/some/deeply/nested/file.ytd");
         string output = sw.ToString();
         Assert.Contains("...", output);
@@ -135,7 +135,7 @@ public sealed class ProgressBarTests
     {
         StringWriter sw = new();
         using ProgressBar bar = new(10, enabled: true, sw, windowWidth: 200);
-        sw.GetStringBuilder().Clear();
+        _ = sw.GetStringBuilder().Clear();
         bar.Update(10, "short.ytd");
         string output = sw.ToString();
         Assert.Contains("short.ytd", output);
@@ -181,7 +181,7 @@ public sealed class ProgressBarTests
     {
         StringWriter sw = new();
         using ProgressBar bar = new(100, enabled: true, sw, windowWidth: 80);
-        sw.GetStringBuilder().Clear();
+        _ = sw.GetStringBuilder().Clear();
         // Rapid updates — only the first and last should render
         for (int i = 1; i <= 50; i++)
             bar.Update(i);
@@ -197,7 +197,7 @@ public sealed class ProgressBarTests
     {
         StringWriter sw = new();
         using ProgressBar bar = new(10, enabled: true, sw, windowWidth: 80);
-        sw.GetStringBuilder().Clear();
+        _ = sw.GetStringBuilder().Clear();
         // Update to total always renders even within throttle window
         bar.Update(10);
         Assert.Contains("(10/10)", sw.ToString());
@@ -208,7 +208,7 @@ public sealed class ProgressBarTests
     {
         StringWriter sw = new();
         using ProgressBar bar = new(100, enabled: true, sw, windowWidth: 80);
-        sw.GetStringBuilder().Clear();
+        _ = sw.GetStringBuilder().Clear();
         ResetThrottle(bar);
         bar.Update(25);
         Assert.Contains("(25/100)", sw.ToString());
@@ -249,7 +249,7 @@ public sealed class ProgressBarTests
         StringWriter sw = new();
         using ProgressBar bar = new(total, enabled: true, sw);
 
-        Parallel.For(0, total, _ => bar.Increment());
+        _ = Parallel.For(0, total, _ => bar.Increment());
 
         Assert.Equal(total, GetCurrent(bar));
     }
@@ -260,7 +260,7 @@ public sealed class ProgressBarTests
         StringWriter sw = new();
         using ProgressBar bar = new(1000, enabled: true, sw);
 
-        Parallel.For(0, 1000, i => bar.Update(i, $"file_{i}.txt"));
+        _ = Parallel.For(0, 1000, i => bar.Update(i, $"file_{i}.txt"));
 
         int current = GetCurrent(bar);
         Assert.InRange(current, 0, 999);
