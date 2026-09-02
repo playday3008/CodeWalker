@@ -226,9 +226,9 @@ internal static class InspectHandler
         if (file?.TextureDict?.Textures?.data_items == null)
             return null;
 
-        var textures = file.TextureDict.Textures.data_items;
+        Texture[] textures = file.TextureDict.Textures.data_items;
         List<Json.TextureInfo> infos = [];
-        foreach (var tex in textures)
+        foreach (Texture tex in textures)
         {
             if (tex == null)
                 continue;
@@ -263,9 +263,9 @@ internal static class InspectHandler
         if (file?.DrawableDict?.Drawables?.data_items == null)
             return null;
 
-        var drawables = file.DrawableDict.Drawables.data_items;
+        Drawable?[] drawables = file.DrawableDict.Drawables.data_items;
         List<Json.DrawableInfo> infos = [];
-        foreach (var d in drawables)
+        foreach (Drawable? d in drawables)
         {
             if (d == null)
                 continue;
@@ -273,11 +273,11 @@ internal static class InspectHandler
             long tris = 0;
             if (d.AllModels != null)
             {
-                foreach (var model in d.AllModels)
+                foreach (DrawableModel? model in d.AllModels)
                 {
                     if (model?.Geometries == null)
                         continue;
-                    foreach (var geom in model.Geometries)
+                    foreach (DrawableGeometry? geom in model.Geometries)
                     {
                         verts += geom.VerticesCount;
                         tris += geom.TrianglesCount;
@@ -359,7 +359,7 @@ internal static class InspectHandler
         int mloCount = 0;
         List<Json.MloInfo> mloDetails = [];
 
-        foreach (var arch in file.AllArchetypes)
+        foreach (Archetype? arch in file.AllArchetypes)
         {
             if (arch is MloArchetype mlo)
             {
@@ -420,12 +420,12 @@ internal static class InspectHandler
             return null;
 
         List<Json.AwcStreamInfo> infos = [];
-        foreach (var stream in file.Streams)
+        foreach (AwcStream? stream in file.Streams)
         {
             if (stream?.StreamInfo == null)
                 continue;
 
-            var fmt = stream.FormatChunk;
+            AwcFormatChunk? fmt = stream.FormatChunk;
             infos.Add(
                 new Json.AwcStreamInfo
                 {
@@ -450,7 +450,7 @@ internal static class InspectHandler
         int limit = Math.Min(file.TextEntries.Length, 50);
         for (int i = 0; i < limit; i++)
         {
-            var e = file.TextEntries[i];
+            Gxt2Entry e = file.TextEntries[i];
             string text = e.Text ?? "";
             if (text.Length > 100)
                 text = text[..100] + "...";
@@ -480,12 +480,12 @@ internal static class InspectHandler
         long totalVerts = 0;
         long totalTris = 0;
 
-        foreach (var model in models)
+        foreach (DrawableModel model in models)
         {
             if (model?.Geometries == null)
                 continue;
             geomCount += model.Geometries.Length;
-            foreach (var geom in model.Geometries)
+            foreach (DrawableGeometry? geom in model.Geometries)
             {
                 totalVerts += geom.VerticesCount;
                 totalTris += geom.TrianglesCount;
@@ -543,7 +543,7 @@ internal static class InspectHandler
         {
             case Json.YtdDetails ytd:
                 Console.WriteLine($"Textures: {ytd.TextureCount}");
-                foreach (var tex in ytd.Textures)
+                foreach (Json.TextureInfo tex in ytd.Textures)
                 {
                     Console.WriteLine(
                         $"  {tex.Name}: {tex.Width}x{tex.Height} {tex.Format} mips={tex.MipLevels} stride={tex.Stride}"
@@ -557,7 +557,7 @@ internal static class InspectHandler
 
             case Json.YddDetails ydd:
                 Console.WriteLine($"Drawables: {ydd.DrawableCount}");
-                foreach (var d in ydd.Drawables)
+                foreach (Json.DrawableInfo d in ydd.Drawables)
                 {
                     Console.WriteLine(
                         $"  {d.Name}: {d.TotalVertices} vertices, {d.TotalTriangles} triangles"
@@ -591,7 +591,7 @@ internal static class InspectHandler
                 );
                 if (ytyp.MloDetails != null)
                 {
-                    foreach (var mlo in ytyp.MloDetails)
+                    foreach (Json.MloInfo mlo in ytyp.MloDetails)
                     {
                         Console.WriteLine(
                             $"  MLO {mlo.Name}: {mlo.EntityCount} entities, {mlo.RoomCount} rooms, {mlo.PortalCount} portals"
@@ -608,7 +608,7 @@ internal static class InspectHandler
 
             case Json.AwcDetails awc:
                 Console.WriteLine($"Streams: {awc.StreamCount}");
-                foreach (var s in awc.Streams)
+                foreach (Json.AwcStreamInfo s in awc.Streams)
                 {
                     Console.WriteLine(
                         $"  Stream {s.Id}: {s.Codec} {s.SamplesPerSecond}Hz {s.Samples} samples"
@@ -618,7 +618,7 @@ internal static class InspectHandler
 
             case Json.Gxt2Details gxt2:
                 Console.WriteLine($"Text Entries: {gxt2.EntryCount}");
-                foreach (var e in gxt2.Entries)
+                foreach (Json.Gxt2EntryInfo e in gxt2.Entries)
                 {
                     Console.WriteLine($"  {e.Hash}: {e.Text}");
                 }
@@ -630,7 +630,7 @@ internal static class InspectHandler
 
     private static void PrintLods(IReadOnlyList<Json.LodInfo> lods)
     {
-        foreach (var lod in lods)
+        foreach (Json.LodInfo lod in lods)
         {
             Console.WriteLine(
                 $"  {lod.Level}: {lod.ModelCount} models, {lod.GeometryCount} geometries, {lod.TotalVertices} vertices, {lod.TotalTriangles} triangles"

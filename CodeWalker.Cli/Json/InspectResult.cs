@@ -1,8 +1,10 @@
 using System.Collections.Generic;
+using System.Diagnostics.CodeAnalysis;
 using System.Text.Json.Serialization;
 
 namespace CodeWalker.Cli.Json;
 
+[ExcludeFromCodeCoverage]
 internal sealed record InspectResult : BaseResult
 {
     [JsonPropertyName("rpfFile")]
@@ -57,6 +59,7 @@ internal sealed record InspectResult : BaseResult
     public object? Details { get; init; }
 }
 
+[ExcludeFromCodeCoverage]
 internal sealed record TextureInfo
 {
     [JsonPropertyName("name")]
@@ -78,6 +81,7 @@ internal sealed record TextureInfo
     public required ushort Stride { get; init; }
 }
 
+[ExcludeFromCodeCoverage]
 internal sealed record YtdDetails
 {
     [JsonPropertyName("textureCount")]
@@ -87,6 +91,7 @@ internal sealed record YtdDetails
     public required IReadOnlyList<TextureInfo> Textures { get; init; }
 }
 
+[ExcludeFromCodeCoverage]
 internal sealed record LodInfo
 {
     [JsonPropertyName("level")]
@@ -105,12 +110,14 @@ internal sealed record LodInfo
     public required long TotalTriangles { get; init; }
 }
 
+[ExcludeFromCodeCoverage]
 internal sealed record YdrDetails
 {
     [JsonPropertyName("lods")]
     public required IReadOnlyList<LodInfo> Lods { get; init; }
 }
 
+[ExcludeFromCodeCoverage]
 internal sealed record DrawableInfo
 {
     [JsonPropertyName("name")]
@@ -123,6 +130,7 @@ internal sealed record DrawableInfo
     public required long TotalTriangles { get; init; }
 }
 
+[ExcludeFromCodeCoverage]
 internal sealed record YddDetails
 {
     [JsonPropertyName("drawableCount")]
@@ -132,6 +140,7 @@ internal sealed record YddDetails
     public required IReadOnlyList<DrawableInfo> Drawables { get; init; }
 }
 
+[ExcludeFromCodeCoverage]
 internal sealed record YftDetails
 {
     [JsonPropertyName("lods")]
@@ -141,6 +150,7 @@ internal sealed record YftDetails
     public required bool HasDrawableCloth { get; init; }
 }
 
+[ExcludeFromCodeCoverage]
 internal sealed record YmapDetails
 {
     [JsonPropertyName("entityCount")]
@@ -169,6 +179,7 @@ internal sealed record YmapDetails
     public required bool IsScripted { get; init; }
 }
 
+[ExcludeFromCodeCoverage]
 internal sealed record YtypDetails
 {
     [JsonPropertyName("archetypeCount")]
@@ -188,6 +199,7 @@ internal sealed record YtypDetails
     public IReadOnlyList<MloInfo>? MloDetails { get; init; }
 }
 
+[ExcludeFromCodeCoverage]
 internal sealed record MloInfo
 {
     [JsonPropertyName("name")]
@@ -203,6 +215,7 @@ internal sealed record MloInfo
     public required int PortalCount { get; init; }
 }
 
+[ExcludeFromCodeCoverage]
 internal sealed record YbnDetails
 {
     [JsonPropertyName("boundsType")]
@@ -213,6 +226,7 @@ internal sealed record YbnDetails
     public int? ChildCount { get; init; }
 }
 
+[ExcludeFromCodeCoverage]
 internal sealed record AwcStreamInfo
 {
     [JsonPropertyName("id")]
@@ -228,6 +242,7 @@ internal sealed record AwcStreamInfo
     public required uint Samples { get; init; }
 }
 
+[ExcludeFromCodeCoverage]
 internal sealed record AwcDetails
 {
     [JsonPropertyName("streamCount")]
@@ -237,6 +252,7 @@ internal sealed record AwcDetails
     public required IReadOnlyList<AwcStreamInfo> Streams { get; init; }
 }
 
+[ExcludeFromCodeCoverage]
 internal sealed record Gxt2EntryInfo
 {
     [JsonPropertyName("hash")]
@@ -246,6 +262,7 @@ internal sealed record Gxt2EntryInfo
     public required string Text { get; init; }
 }
 
+[ExcludeFromCodeCoverage]
 internal sealed record Gxt2Details
 {
     [JsonPropertyName("entryCount")]

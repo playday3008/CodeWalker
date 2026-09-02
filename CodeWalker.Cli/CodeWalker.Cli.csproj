@@ -1,10 +1,6 @@
 <Project Sdk="Microsoft.NET.Sdk">
+
   <PropertyGroup>
-    <OutputType>Exe</OutputType>
-    <TargetFrameworks>net48;net8.0;net10.0</TargetFrameworks>
-    <LangVersion>latest</LangVersion>
-    <Nullable>enable</Nullable>
-    <ImplicitUsings>disable</ImplicitUsings>
     <Copyright>dexyfex</Copyright>
     <Company>dexyfex software</Company>
     <Authors>dexyfex</Authors>
@@ -12,17 +8,8 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <PackageReference Include="System.CommandLine" Version="2.0.2" />
-    <PackageReference
-      Include="System.Text.Json"
-      Version="10.0.2"
-      Condition="'$(TargetFramework)' != 'net10.0'"
-    />
-    <PackageReference
-      Include="IndexRange"
-      Version="1.1.0"
-      Condition="'$(TargetFramework)' == 'net48'"
-    />
+    <Compile Remove="Tests/**" />
+    <InternalsVisibleTo Include="CodeWalker.Cli.Tests" />
   </ItemGroup>
 
   <ItemGroup>
@@ -43,7 +30,8 @@
     <GenerateDocumentationFile>true</GenerateDocumentationFile>
   </PropertyGroup>
 
-  <ItemGroup>
-    <ProjectReference Include="..\CodeWalker.Core\CodeWalker.Core.csproj" />
-  </ItemGroup>
+  <PropertyGroup>
+    <WarningsAsErrors>$(WarningsAsErrors);CS8509</WarningsAsErrors>
+  </PropertyGroup>
+
 </Project>

@@ -27,6 +27,112 @@ internal delegate (Json.ExportFileEntry? entry, string? error) ExportFileProcess
 
 internal static class ExportService
 {
+    internal readonly record struct ExportAggregation
+    {
+        public required int Exported { get; init; }
+        public required int Skipped { get; init; }
+        public required int Errors { get; init; }
+        public required IReadOnlyList<Json.ExportFileEntry> Files { get; init; }
+        public required IReadOnlyList<string> ErrorMessages { get; init; }
+    }
+
+    internal static (Json.ExportFileEntry? entry, string? error) ProcessSingleFile(
+        RpfFileEntry fileEntry,
+        byte[]? data,
+        string outputDir,
+        bool dryRun,
+        bool noOverwrite,
+        ExportFileProcessor processor
+    )
+    {
+        string relativePath =
+            Path.GetDirectoryName(fileEntry.Path)
+                ?.Replace('\\', Path.DirectorySeparatorChar)
+            ?? "";
+
+        string fileOutputDir = Path.Combine(outputDir, relativePath);
+
+        if (dryRun)
+        {
+            return (
+                new Json.ExportFileEntry
+                {
+                    Path = fileEntry.Path,
+                    Name = fileEntry.Name,
+                    OutputFiles = 0,
+                    Status = "dry_run",
+                },
+                null
+            );
+        }
+
+        if (data == null)
+        {
+            return (null, $"Failed to extract: {fileEntry.Path}");
+        }
+
+        (Json.ExportFileEntry? entry, string? error) = processor(
+            fileEntry,
+            data,
+            fileOutputDir,
+            noOverwrite
+        );
+
+        if (error != null)
+        {
+            return (entry, error);
+        }
+
+        if (entry != null)
+        {
+            return (entry, null);
+        }
+
+        return (null, $"No result for: {fileEntry.Path}");
+    }
+
+    internal static ExportAggregation AggregateResults(
+        (Json.ExportFileEntry? jsonEntry, string? errorMessage)[] results,
+        IReadOnlyList<string> scanErrors,
+        int filterSkipped
+    )
+    {
+        int exported = 0;
+        int skipped = 0;
+        int errors = 0;
+        List<Json.ExportFileEntry> files = [];
+        List<string> errorMessages = [.. scanErrors];
+
+        foreach ((Json.ExportFileEntry? jsonEntry, string? errorMessage) in results)
+        {
+            if (errorMessage == null && jsonEntry?.Status is "exported" or "dry_run")
+                exported++;
+
+            if (jsonEntry?.Status is "unsupported" or "skipped")
+                skipped++;
+
+            if (jsonEntry != null)
+                files.Add(jsonEntry);
+
+            if (errorMessage != null)
+            {
+                errors++;
+                errorMessages.Add(errorMessage);
+            }
+        }
+
+        skipped += filterSkipped;
+
+        return new ExportAggregation
+        {
+            Exported = exported,
+            Skipped = skipped,
+            Errors = errors,
+            Files = files,
+            ErrorMessages = errorMessages,
+        };
+    }
+
     public static int Execute(
         ExportOptions options,
         string format,
@@ -92,11 +198,8 @@ internal static class ExportService
             int totalNonRpfFiles = RpfService.CountNonRpfFiles(rpf, options.Rpf.Recursive);
             int filterSkipped = totalNonRpfFiles - filesToExport.Count;
 
-            (bool success, Json.ExportFileEntry? jsonEntry, string? errorMessage)[] results = new (
-                bool,
-                Json.ExportFileEntry?,
-                string?
-            )[filesToExport.Count];
+            (Json.ExportFileEntry? jsonEntry, string? errorMessage)[] results =
+                new (Json.ExportFileEntry?, string?)[filesToExport.Count];
 
             object consoleLock = new();
 
@@ -116,77 +219,46 @@ internal static class ExportService
                         (RpfFile sourceRpf, RpfFileEntry fileEntry) = filesToExport[i];
                         try
                         {
-                            string relativePath =
-                                Path.GetDirectoryName(fileEntry.Path)
-                                    ?.Replace('\\', Path.DirectorySeparatorChar)
-                                ?? "";
+                            byte[]? data = options.DryRun
+                                ? null
+                                : sourceRpf.ExtractFile(fileEntry);
 
-                            string fileOutputDir = Path.Combine(outputDir, relativePath);
+                            (Json.ExportFileEntry? entry, string? error) result = ProcessSingleFile(
+                                fileEntry,
+                                data,
+                                outputDir,
+                                options.DryRun,
+                                options.NoOverwrite,
+                                processor
+                            );
 
-                            if (options.DryRun)
+                            results[i] = result;
+
+                            if (
+                                result.entry != null
+                                && options.Rpf.Verbose
+                                && !options.Rpf.Json
+                                && !options.Progress
+                            )
                             {
-                                if (options.Rpf.Verbose && !options.Rpf.Json)
+                                if (options.DryRun)
                                 {
                                     lock (consoleLock)
                                     {
-                                        Console.WriteLine($"Would export: {fileEntry.Path}");
+                                        Console.WriteLine(
+                                            $"Would export: {fileEntry.Path}"
+                                        );
                                     }
                                 }
-                                results[i] = (
-                                    true,
-                                    new Json.ExportFileEntry
-                                    {
-                                        Path = fileEntry.Path,
-                                        Name = fileEntry.Name,
-                                        OutputFiles = 0,
-                                        Status = "dry_run",
-                                    },
-                                    null
-                                );
-                                progress.Increment(fileEntry.Path);
-                                return;
-                            }
-
-                            byte[]? data = sourceRpf.ExtractFile(fileEntry);
-                            if (data == null)
-                            {
-                                results[i] = (false, null, $"Failed to extract: {fileEntry.Path}");
-                                progress.Increment();
-                                return;
-                            }
-
-                            (Json.ExportFileEntry? entry, string? error) = processor(
-                                fileEntry,
-                                data,
-                                fileOutputDir,
-                                options.NoOverwrite
-                            );
-
-                            if (error != null)
-                            {
-                                results[i] = (false, entry, error);
-                            }
-                            else if (entry != null)
-                            {
-                                if (
-                                    options.Rpf.Verbose
-                                    && !options.Rpf.Json
-                                    && !options.Progress
-                                    && entry.Status == "exported"
-                                )
+                                else if (result.entry.Status == "exported")
                                 {
                                     lock (consoleLock)
                                     {
                                         Console.Error.WriteLine(
-                                            $"Exported: {fileEntry.Path} -> {entry.OutputFiles} file(s)"
+                                            $"Exported: {fileEntry.Path} -> {result.entry.OutputFiles} file(s)"
                                         );
                                     }
                                 }
-                                results[i] = (true, entry, null);
-                            }
-                            else
-                            {
-                                results[i] = (false, null, $"No result for: {fileEntry.Path}");
                             }
 
                             progress.Increment(fileEntry.Path);
@@ -203,7 +275,6 @@ internal static class ExportService
                                 }
                             }
                             results[i] = (
-                                false,
                                 null,
                                 $"Error exporting {fileEntry.Path}: {ex.Message}"
                             );
@@ -213,51 +284,27 @@ internal static class ExportService
                 );
             }
 
-            int exported = 0;
-            int skipped = 0;
-            int errors = 0;
-            List<Json.ExportFileEntry> files = [];
-            List<string> errorMessages = new(scanErrors);
+            ExportAggregation agg = AggregateResults(results, scanErrors, filterSkipped);
 
-            foreach (var (success, jsonEntry, errorMessage) in results)
+            Json.ExportResult jsonResult = new()
             {
-                if (success && jsonEntry?.Status is "exported" or "dry_run")
-                    exported++;
-
-                if (jsonEntry?.Status is "unsupported" or "skipped")
-                    skipped++;
-
-                if (jsonEntry != null)
-                    files.Add(jsonEntry);
-
-                if (!success && errorMessage != null)
-                {
-                    errors++;
-                    errorMessages.Add(errorMessage);
-                }
-            }
-
-            skipped += filterSkipped;
-
-            Json.ExportResult result = new()
-            {
-                Success = errors == 0 && scanErrors.Count == 0,
+                Success = agg.Errors == 0 && scanErrors.Count == 0,
                 RpfFile = options.Rpf.RpfPath,
                 OutputDir = options.OutputPath,
                 Format = format,
                 TotalFiles = totalNonRpfFiles,
-                Exported = exported,
-                Skipped = skipped,
-                Errors = errors,
+                Exported = agg.Exported,
+                Skipped = agg.Skipped,
+                Errors = agg.Errors,
                 DryRun = options.DryRun,
-                Files = [.. files],
-                ErrorMessages = [.. errorMessages],
+                Files = agg.Files,
+                ErrorMessages = agg.ErrorMessages,
             };
 
             if (options.Rpf.Json)
             {
                 Console.WriteLine(
-                    JsonSerializer.Serialize(result, RpfService.JsonSerializerOptions)
+                    JsonSerializer.Serialize(jsonResult, RpfService.JsonSerializerOptions)
                 );
             }
             else
@@ -265,11 +312,11 @@ internal static class ExportService
                 Console.Error.WriteLine();
                 string action = options.DryRun ? "would be exported" : "exported";
                 Console.Error.WriteLine(
-                    $"{summaryLabel} export complete: {exported} files {action}, {skipped} skipped, {errors} errors"
+                    $"{summaryLabel} export complete: {agg.Exported} files {action}, {agg.Skipped} skipped, {agg.Errors} errors"
                 );
             }
 
-            return (errors > 0 || scanErrors.Count > 0) ? 1 : 0;
+            return (agg.Errors > 0 || scanErrors.Count > 0) ? 1 : 0;
         }
         catch (Exception ex)
         {

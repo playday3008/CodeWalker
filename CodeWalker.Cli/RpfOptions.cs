@@ -1,10 +1,12 @@
 using System.CommandLine;
+using System.Diagnostics.CodeAnalysis;
 using System.IO;
 
 using CodeWalker.Cli.Helpers;
 
 namespace CodeWalker.Cli;
 
+[ExcludeFromCodeCoverage]
 internal sealed record RpfOptions
 {
     public required string RpfPath { get; init; }

@@ -13,26 +13,36 @@ internal sealed class ProgressBar : IDisposable
     private int _current;
     private readonly bool _enabled;
     private readonly int _barWidth = 40;
+    private readonly TextWriter _writer;
+    private readonly bool _ownsConsole;
+    private readonly int _windowWidth;
     private DateTime _lastUpdate = DateTime.MinValue;
     private readonly object _lock = new();
-    private static TextWriter Err => Console.Error;
 
     /// <summary>
     /// Initializes a new instance of the ProgressBar class.
     /// </summary>
     /// <param name="total">Total number of items to process.</param>
     /// <param name="enabled">Whether to enable the progress bar display.</param>
-    public ProgressBar(int total, bool enabled)
+    /// <param name="writer">Optional text writer for output. When null, writes to stderr with console cursor control.</param>
+    /// <param name="windowWidth">Terminal width used for padding and truncation when a custom writer is provided.</param>
+    public ProgressBar(int total, bool enabled, TextWriter? writer = null, int windowWidth = 120)
     {
         _total = total;
-        _enabled = enabled && total > 0 && !Console.IsErrorRedirected;
+        _writer = writer ?? Console.Error;
+        _ownsConsole = writer is null;
+        _windowWidth = windowWidth;
+        _enabled = enabled && total > 0 && (!_ownsConsole || !Console.IsErrorRedirected);
         if (_enabled)
         {
-            try
+            if (_ownsConsole)
             {
-                Console.CursorVisible = false;
+                try
+                {
+                    Console.CursorVisible = false;
+                }
+                catch { }
             }
-            catch { }
             Render();
         }
     }
@@ -89,32 +99,41 @@ internal sealed class ProgressBar : IDisposable
         {
             double percent = _total > 0 ? (double)_current / _total : 0;
             int filled = Math.Min((int)(percent * _barWidth), _barWidth);
+            int winWidth = _ownsConsole ? Console.WindowWidth : _windowWidth;
 
-            Console.SetCursorPosition(0, Console.CursorTop);
-            Err.Write("[");
-            Err.Write(new string('=', filled));
+            if (_ownsConsole)
+                Console.SetCursorPosition(0, Console.CursorTop);
+
+            _writer.Write("[");
+            _writer.Write(new string('=', filled));
             if (filled < _barWidth)
             {
-                Err.Write(">");
-                Err.Write(new string(' ', _barWidth - filled - 1));
+                _writer.Write(">");
+                _writer.Write(new string(' ', _barWidth - filled - 1));
             }
-            Err.Write($"] {percent,6:P0} ({_current}/{_total})");
+
+            string stats = $"] {percent,6:P0} ({_current}/{_total})";
+            _writer.Write(stats);
+
+            int written = 1 + _barWidth + stats.Length;
 
             if (!string.IsNullOrEmpty(currentFile))
             {
-                int maxLen = Math.Max(10, Console.WindowWidth - _barWidth - 30);
+                int maxLen = Math.Max(10, winWidth - _barWidth - 30);
                 string displayFile =
                     currentFile!.Length > maxLen
                         ? $"...{currentFile[(currentFile.Length - maxLen + 3)..]}"
                         : currentFile;
-                Err.Write($" {displayFile}");
+                string fileText = $" {displayFile}";
+                _writer.Write(fileText);
+                written += fileText.Length;
             }
 
             // Clear rest of line
-            int remaining = Console.WindowWidth - Console.CursorLeft - 1;
+            int remaining = winWidth - written - 1;
             if (remaining > 0)
             {
-                Err.Write(new string(' ', remaining));
+                _writer.Write(new string(' ', remaining));
             }
         }
         catch (Exception ex)
@@ -133,8 +152,9 @@ internal sealed class ProgressBar : IDisposable
         {
             try
             {
-                Err.WriteLine();
-                Console.CursorVisible = true;
+                _writer.WriteLine();
+                if (_ownsConsole)
+                    Console.CursorVisible = true;
             }
             catch (Exception ex)
                 when (ex is IOException or InvalidOperationException or SecurityException)

@@ -1,14 +1,17 @@
 using System.Collections.Generic;
+using System.Diagnostics.CodeAnalysis;
 using System.Text.Json.Serialization;
 
 namespace CodeWalker.Cli.Json;
 
+[ExcludeFromCodeCoverage]
 internal sealed record HashResult : BaseResult
 {
     [JsonPropertyName("hashes")]
     public required IReadOnlyList<HashEntry> Hashes { get; init; }
 }
 
+[ExcludeFromCodeCoverage]
 internal sealed record HashEntry
 {
     [JsonPropertyName("input")]

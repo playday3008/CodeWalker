@@ -1,11 +1,13 @@
 using System;
 using System.CommandLine;
+using System.Diagnostics.CodeAnalysis;
 using System.IO;
 
 using CodeWalker.Cli.Helpers;
 
 namespace CodeWalker.Cli;
 
+[ExcludeFromCodeCoverage]
 internal sealed record CommonOptions
 {
     public required string ExePath { get; init; }

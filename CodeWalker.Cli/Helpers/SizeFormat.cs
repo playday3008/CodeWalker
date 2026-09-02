@@ -46,12 +46,13 @@ internal static class SizeFormatExtensions
         double divisor = format.GetDivisor();
         string[] suffixes = format.GetSuffixes();
         int i = 0;
-        double size = bytes;
+        double size = Math.Abs((double)bytes);
         while (size >= divisor && i < suffixes.Length - 1)
         {
             size /= divisor;
             i++;
         }
+        if (bytes < 0) size = -size;
         return $"{size:0.##} {suffixes[i]}";
     }
 }

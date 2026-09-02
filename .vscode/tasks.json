@@ -40,9 +40,28 @@
       "label": "format-cli",
       "type": "process",
       "command": "dotnet",
-      "args": ["format", "CodeWalker.Cli/"],
+      "args": ["format", "CodeWalker.Cli/CodeWalker.Cli.csproj"],
       "group": "build",
       "problemMatcher": []
+    },
+    {
+      "label": "format-cli-tests",
+      "type": "process",
+      "command": "dotnet",
+      "args": ["format", "CodeWalker.Cli/CodeWalker.Cli.Tests.csproj"],
+      "group": "build",
+      "problemMatcher": []
+    },
+    {
+      "label": "test-cli",
+      "type": "process",
+      "command": "dotnet",
+      "args": ["test", "CodeWalker.Cli/CodeWalker.Cli.Tests.csproj"],
+      "group": {
+        "kind": "test",
+        "isDefault": true
+      },
+      "problemMatcher": "$msCompile"
     }
   ]
 }

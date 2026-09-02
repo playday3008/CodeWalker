@@ -1,7 +1,9 @@
+using System.Diagnostics.CodeAnalysis;
 using System.Text.Json.Serialization;
 
 namespace CodeWalker.Cli.Json;
 
+[ExcludeFromCodeCoverage]
 internal sealed record FileEntry
 {
     [JsonPropertyName("path")]

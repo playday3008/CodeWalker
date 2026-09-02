@@ -1,8 +1,10 @@
 using System.Collections.Generic;
+using System.Diagnostics.CodeAnalysis;
 using System.Text.Json.Serialization;
 
 namespace CodeWalker.Cli.Json;
 
+[ExcludeFromCodeCoverage]
 internal sealed record ExtensionStat
 {
     [JsonPropertyName("extension")]
@@ -27,6 +29,7 @@ internal sealed record ExtensionStat
     public required long MaxSize { get; init; }
 }
 
+[ExcludeFromCodeCoverage]
 internal sealed record StatResult : BaseResult
 {
     [JsonPropertyName("rpfFile")]

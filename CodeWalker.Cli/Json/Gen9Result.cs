@@ -1,8 +1,10 @@
 using System.Collections.Generic;
+using System.Diagnostics.CodeAnalysis;
 using System.Text.Json.Serialization;
 
 namespace CodeWalker.Cli.Json;
 
+[ExcludeFromCodeCoverage]
 internal sealed record Gen9Result : BaseResult
 {
     [JsonPropertyName("inputFolder")]
@@ -30,6 +32,7 @@ internal sealed record Gen9Result : BaseResult
     public required IReadOnlyList<Gen9FileEntry> Files { get; init; }
 }
 
+[ExcludeFromCodeCoverage]
 internal sealed record Gen9FileEntry
 {
     [JsonPropertyName("path")]

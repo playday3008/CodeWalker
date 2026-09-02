@@ -82,7 +82,7 @@ internal static class StatHandler
             long compressedSize = 0;
             long uncompressedSize = 0;
 
-            Dictionary<string, (int count, long total, long min, long max)> extStats = new();
+            Dictionary<string, (int count, long total, long min, long max)> extStats = [];
 
             foreach ((RpfFile _, RpfFileEntry fileEntry) in entries)
             {
@@ -92,7 +92,7 @@ internal static class StatHandler
                 if (string.IsNullOrEmpty(ext))
                     ext = "(none)";
 
-                if (extStats.TryGetValue(ext, out var stat))
+                if (extStats.TryGetValue(ext, out (int count, long total, long min, long max) stat))
                 {
                     extStats[ext] = (
                         stat.count + 1,

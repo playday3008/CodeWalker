@@ -3,10 +3,6 @@ using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Text.RegularExpressions;
 
-#if !NETCOREAPP
-using CodeWalker.Cli.Polyfills;
-#endif
-
 namespace CodeWalker.Cli.Helpers;
 
 /// <summary>
