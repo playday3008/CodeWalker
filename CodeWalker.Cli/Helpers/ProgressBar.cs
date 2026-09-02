@@ -42,9 +42,7 @@ internal sealed class ProgressBar : IDisposable
     internal void ResetThrottle()
     {
         lock (this._lock)
-        {
             this._throttle.Reset();
-        }
     }
 
     /// <summary>
@@ -69,7 +67,11 @@ internal sealed class ProgressBar : IDisposable
                 {
                     Console.CursorVisible = false;
                 }
-                catch { }
+                catch
+                {
+                    // Ignore console errors (e.g. redirected output, no terminal)
+                    this._ownsConsole = false;
+                }
             }
             this.Render();
             this._throttle.Start();
@@ -91,7 +93,7 @@ internal sealed class ProgressBar : IDisposable
             return;
 
         // Throttle updates to avoid flickering
-        if (this._throttle.IsRunning && this._throttle.ElapsedMilliseconds < ThrottleMs && current < this._total)
+        if (this._throttle is { IsRunning: true, ElapsedMilliseconds: < ThrottleMs } && current < this._total)
             return;
 
         this._throttle.Restart();

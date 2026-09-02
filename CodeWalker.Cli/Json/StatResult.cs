@@ -22,11 +22,20 @@ internal sealed record ExtensionStat
     [JsonPropertyName("avgSize")]
     public required long AvgSize { get; init; }
 
+    [JsonPropertyName("avgSizeFormatted")]
+    public required string AvgSizeFormatted { get; init; }
+
     [JsonPropertyName("minSize")]
     public required long MinSize { get; init; }
 
+    [JsonPropertyName("minSizeFormatted")]
+    public required string MinSizeFormatted { get; init; }
+
     [JsonPropertyName("maxSize")]
     public required long MaxSize { get; init; }
+
+    [JsonPropertyName("maxSizeFormatted")]
+    public required string MaxSizeFormatted { get; init; }
 }
 
 [ExcludeFromCodeCoverage]
@@ -53,8 +62,14 @@ internal sealed record StatResult : BaseResult
     [JsonPropertyName("compressedSize")]
     public required long CompressedSize { get; init; }
 
+    [JsonPropertyName("compressedSizeFormatted")]
+    public required string CompressedSizeFormatted { get; init; }
+
     [JsonPropertyName("uncompressedSize")]
     public required long UncompressedSize { get; init; }
+
+    [JsonPropertyName("uncompressedSizeFormatted")]
+    public required string UncompressedSizeFormatted { get; init; }
 
     [JsonPropertyName("compressionRatio")]
     public required double CompressionRatio { get; init; }

@@ -99,10 +99,9 @@ internal static class Filter
 
                 // Patterns with path separators match at any path boundary;
                 // filename-only patterns are anchored to the full filename.
-                if (p.Contains('/', StringComparison.Ordinal))
-                    regexPattern = $"(?:^|/){regexPattern}$";
-                else
-                    regexPattern = $"^{regexPattern}$";
+                regexPattern = p.Contains('/', StringComparison.Ordinal)
+                    ? $"(?:^|/){regexPattern}$"
+                    : $"^{regexPattern}$";
 
                 return new Regex(regexPattern, RegexOptions.Compiled);
             }

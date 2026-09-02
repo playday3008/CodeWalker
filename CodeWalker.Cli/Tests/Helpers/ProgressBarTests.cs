@@ -236,7 +236,7 @@ public sealed class ProgressBarTests
     {
         const int total = 10_000;
         StringWriter sw = new();
-        using ProgressBar bar = new(total, enabled: true, sw);
+        ProgressBar bar = new(total, enabled: true, sw);
 
         _ = Parallel.For(0, total, _ => bar.Increment());
 

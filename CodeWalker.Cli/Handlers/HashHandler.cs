@@ -14,8 +14,7 @@ internal sealed record HashOptions
     public required string Encoding { get; init; }
     public required bool Json { get; init; }
 
-    public const string DefaultEncoding = "utf8";
-    public const JenkHashInputEncoding DefaultJenkHashEncoding = JenkHashInputEncoding.UTF8;
+    public const string DefaultEncoding = "UTF-8";
 }
 
 internal static class HashHandler
@@ -53,7 +52,7 @@ internal static class HashHandler
             HashOptions options = new()
             {
                 Inputs = parseResult.GetRequiredValue(inputOption),
-                Encoding = parseResult.GetValue(encodingOption) ?? HashOptions.DefaultEncoding,
+                Encoding = parseResult.GetRequiredValue(encodingOption),
                 Json = parseResult.GetValue(jsonOption),
             };
             return Execute(options, cancellationToken);
@@ -62,85 +61,132 @@ internal static class HashHandler
         return command;
     }
 
+    /// <summary>
+    /// Executes the hash generation based on the provided options.
+    /// It handles both human-readable and JSON output formats, and gracefully manages cancellation and errors.
+    /// </summary>
+    /// <param name="options">The options containing the input strings, encoding, and output format preferences.</param>
+    /// <param name="cancellationToken">A cancellation token to observe while performing the hashing operation.</param>
+    /// <returns>An integer exit code indicating success (0) or failure (1).</returns>
     public static int Execute(HashOptions options, CancellationToken cancellationToken = default)
     {
-        static Json.HashResult ErrorResult(string[] errorMessages) =>
-            new()
-            {
-                Success = false,
-                Hashes = [],
-                ErrorMessages = errorMessages,
-            };
-
-        // Validate encoding
-        JenkHashInputEncoding encoding;
-        switch (options.Encoding.ToLowerInvariant())
-        {
-            case HashOptions.DefaultEncoding:
-                encoding = HashOptions.DefaultJenkHashEncoding;
-                break;
-            case "utf-8":
-                encoding = JenkHashInputEncoding.UTF8;
-                break;
-            case "ascii":
-                encoding = JenkHashInputEncoding.ASCII;
-                break;
-            default:
-                return RpfService.ReportError(
-                    $"Unknown encoding: {options.Encoding}. Use 'utf-8' or 'ascii'.",
-                    options.Json,
-                    ErrorResult([])
-                );
-        }
+        JenkHashInputEncoding encoding = ParseEncoding(options.Encoding);
 
         try
         {
-            List<Json.HashEntry> hashes = [];
+            Json.HashEntry[] hashes = CollectHashes(options.Inputs, encoding, cancellationToken);
+            if (!options.Json)
+                PrintHashes(hashes, cancellationToken);
+            else
+                PrintJsonHashes(hashes);
 
-            foreach (string input in options.Inputs)
-            {
-                cancellationToken.ThrowIfCancellationRequested();
-                JenkHash jenkHash = new(input, encoding);
+            return 0;
+        }
+        catch (OperationCanceledException)
+        {
+            // Gracefully handle cancellation without printing an error message
+            throw;
+        }
+        catch (Exception ex)
+        {
+            return RpfService.ReportError(
+                ex.Message,
+                options.Json,
+                ErrorResult([]));
+        }
+    }
 
-                Json.HashEntry entry = new()
+    /// <summary>
+    /// Creates a JSON result object representing an error, with the provided error messages.
+    /// </summary>
+    /// <param name="errorMessages">An array of error messages to include in the result.</param>
+    /// <returns>A <see cref="Json.HashResult"/> object with success set to false and the provided error messages.</returns>
+    internal static Json.HashResult ErrorResult(string[] errorMessages) =>
+        new()
+        {
+            Success = false,
+            Hashes = [],
+            ErrorMessages = errorMessages,
+        };
+
+    /// <summary>
+    /// Parses the encoding string into a <see cref="JenkHashInputEncoding"/> enum value.
+    /// </summary>
+    /// <param name="encoding">The encoding string to parse (e.g., "utf-8", "ascii").</param>
+    /// <returns>The corresponding <see cref="JenkHashInputEncoding"/> value.</returns>
+    /// <exception cref="ArgumentException">Thrown if the encoding string is not recognized.</exception>
+    internal static JenkHashInputEncoding ParseEncoding(string encoding) =>
+        encoding.ToUpperInvariant() switch
+        {
+            "UTF-8" => JenkHashInputEncoding.UTF8,
+            "ASCII" => JenkHashInputEncoding.ASCII,
+            _ => throw new ArgumentException($"Unknown encoding: {encoding}. Use 'utf-8' or 'ascii'."),
+        };
+
+    /// <summary>
+    /// Collects the hash results for each input string and returns them as an array of <see cref="Json.HashEntry"/> objects.
+    /// </summary>
+    /// <param name="inputs">An array of input strings to hash.</param>
+    /// <param name="encoding">The encoding to use for hashing the input strings.</param>
+    /// <param name="cancellationToken">A cancellation token to observe while performing the hashing operation.</param>
+    /// <returns>An array of <see cref="Json.HashEntry"/> objects containing the hash results for each input string.</returns>
+    internal static Json.HashEntry[] CollectHashes(
+        string[] inputs,
+        JenkHashInputEncoding encoding,
+        CancellationToken cancellationToken
+    )
+    {
+        List<Json.HashEntry> hashes = [];
+        foreach (string input in inputs)
+        {
+            cancellationToken.ThrowIfCancellationRequested();
+            JenkHash jenkHash = new(input, encoding);
+            hashes.Add(
+                new Json.HashEntry()
                 {
                     Input = input,
                     Hash = jenkHash.HashUint,
                     HashSigned = jenkHash.HashInt,
                     HashHex = jenkHash.HashHex,
                     Encoding = jenkHash.Encoding.ToString(),
-                };
-
-                hashes.Add(entry);
-
-                if (!options.Json)
-                {
-                    Console.WriteLine($"Input: {input}");
-                    Console.WriteLine($"  Hash (uint): {jenkHash.HashUint}");
-                    Console.WriteLine($"  Hash (int):  {jenkHash.HashInt}");
-                    Console.WriteLine($"  Hash (hex):  {jenkHash.HashHex}");
                 }
-            }
-
-            if (options.Json)
-            {
-                Json.HashResult result = new()
-                {
-                    Success = true,
-                    Hashes = [.. hashes],
-                    ErrorMessages = [],
-                };
-                Console.WriteLine(
-                    JsonSerializer.Serialize(result, RpfService.JsonSerializerOptions)
-                );
-            }
-
-            return 0;
+            );
         }
-        catch (OperationCanceledException) { throw; }
-        catch (Exception ex)
+        return [.. hashes];
+    }
+
+    /// <summary>
+    /// Prints the hash results to the console in JSON format, including the input, hash values, and encoding used.
+    /// </summary>
+    /// <param name="hashes">An array of pre-computed hash entries to serialize.</param>
+    internal static void PrintJsonHashes(Json.HashEntry[] hashes)
+    {
+        Json.HashResult result = new()
         {
-            return RpfService.ReportError(ex.Message, options.Json, ErrorResult([]));
+            Success = true,
+            Hashes = hashes,
+            ErrorMessages = [],
+        };
+        Console.WriteLine(JsonSerializer.Serialize(result, RpfService.JsonSerializerOptions));
+    }
+
+    /// <summary>
+    /// Prints the hash results to the console in a human-readable format.
+    /// </summary>
+    /// <param name="entries">An array of pre-computed hash entries to print.</param>
+    /// <param name="cancellationToken">A cancellation token to observe while printing.</param>
+    internal static void PrintHashes(
+        Json.HashEntry[] entries,
+        CancellationToken cancellationToken
+    )
+    {
+        foreach (Json.HashEntry entry in entries)
+        {
+            cancellationToken.ThrowIfCancellationRequested();
+            Console.WriteLine($"Input ({entry.Encoding}): {entry.Input}");
+            Console.WriteLine($"  Hash (uint): {entry.Hash}");
+            Console.WriteLine($"  Hash (int):  {entry.HashSigned}");
+            Console.WriteLine($"  Hash (hex):  {entry.HashHex}");
         }
     }
 }

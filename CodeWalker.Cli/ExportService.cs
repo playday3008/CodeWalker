@@ -69,9 +69,7 @@ internal static class ExportService
         }
 
         if (data == null)
-        {
             return (null, $"Failed to extract: {fileEntry.Path}");
-        }
 
         (Json.ExportFileEntry? entry, string? error) = processor(
             fileEntry,
@@ -81,14 +79,10 @@ internal static class ExportService
         );
 
         if (error != null)
-        {
             return (entry, error);
-        }
 
         if (entry != null)
-        {
             return (entry, null);
-        }
 
         return (null, $"No result for: {fileEntry.Path}");
     }
@@ -171,9 +165,7 @@ internal static class ExportService
             options.Rpf.Json
         );
         if (initError != null)
-        {
             return RpfService.ReportError(initError, options.Rpf.Json, ErrorResult([]));
-        }
 
         try
         {
@@ -186,16 +178,12 @@ internal static class ExportService
             );
 
             if (!options.Rpf.Json && options.DryRun)
-            {
                 Console.Error.WriteLine("Dry run mode - no files will be exported");
-            }
 
             string outputDir = options.OutputPath;
 
             if (!options.DryRun && !Directory.Exists(outputDir))
-            {
                 _ = Directory.CreateDirectory(outputDir);
-            }
 
             List<(RpfFile rpf, RpfFileEntry entry)> filesToExport = RpfService.CollectFiles(
                 rpf,
@@ -214,7 +202,7 @@ internal static class ExportService
             using (
                 ProgressBar progress = new(
                     filesToExport.Count,
-                    options.Progress && !options.Rpf.Json
+                    options is { Progress: true, Rpf.Json: false }
                 )
             )
             {
@@ -244,9 +232,7 @@ internal static class ExportService
 
                             if (
                                 result.entry != null
-                                && options.Rpf.Verbose
-                                && !options.Rpf.Json
-                                && !options.Progress
+                                && options is { Rpf: { Verbose: true, Json: false }, Progress: false }
                             )
                             {
                                 if (options.DryRun)

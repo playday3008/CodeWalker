@@ -163,16 +163,12 @@ public sealed class StringExtensionsFuzzTests
 
     // ─── Helpers ────────────────────────────────────────────────────
 
-    private static void AssertBool(bool expected, bool actual, string label)
-    {
+    private static void AssertBool(bool expected, bool actual, string label) =>
         Assert.True(expected == actual, $"{label}: expected={expected} actual={actual}");
-    }
 
-    private static void AssertString(string expected, string actual, string label)
-    {
+    private static void AssertString(string expected, string actual, string label) =>
         Assert.True(string.Equals(expected, actual, StringComparison.Ordinal),
             $"{label}: expected=\"{Esc(expected)}\" actual=\"{Esc(actual)}\"");
-    }
 
     private static string Esc(string? s) =>
         s?.Replace("\0", "\\0", StringComparison.Ordinal)
@@ -187,13 +183,22 @@ public sealed class StringExtensionsUnitTests
     [Fact]
     public void Replace_NullOldValue_Throws()
     {
-        _ = Assert.Throws<ArgumentNullException>(() => StringExtensions.Replace("input", null!, "new", StringComparison.Ordinal));
+        _ = Assert.Throws<ArgumentNullException>(() =>
+            StringExtensions.Replace("input", null!, "new", StringComparison.Ordinal));
     }
 
     [Fact]
     public void Replace_EmptyOldValue_Throws()
     {
-        _ = Assert.Throws<ArgumentException>(() => StringExtensions.Replace("input", "", "new", StringComparison.Ordinal));
+        _ = Assert.Throws<ArgumentException>(() =>
+            StringExtensions.Replace("input", "", "new", StringComparison.Ordinal));
+    }
+
+    [Fact]
+    public void Replace_UnsupportedComparison_Throws()
+    {
+        _ = Assert.Throws<ArgumentException>(() =>
+            StringExtensions.Replace("input", "in", "new", (StringComparison)999));
     }
 
     [Fact]
@@ -201,11 +206,5 @@ public sealed class StringExtensionsUnitTests
     {
         string result = StringExtensions.Replace("input", "in", null, StringComparison.Ordinal);
         Assert.Equal("input".Replace("in", null), result);
-    }
-
-    [Fact]
-    public void Replace_UnsupportedComparison_Throws()
-    {
-        _ = Assert.Throws<ArgumentException>(() => StringExtensions.Replace("input", "in", "new", (StringComparison)999));
     }
 }
