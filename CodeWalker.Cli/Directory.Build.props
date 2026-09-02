@@ -37,4 +37,8 @@
     <ProjectReference Include="..\CodeWalker.Core\CodeWalker.Core.csproj" />
   </ItemGroup>
 
+  <PropertyGroup>
+    <WarningsAsErrors>$(WarningsAsErrors);CS8509</WarningsAsErrors>
+  </PropertyGroup>
+
 </Project>

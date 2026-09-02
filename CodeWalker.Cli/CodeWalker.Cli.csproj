@@ -30,8 +30,4 @@
     <GenerateDocumentationFile>true</GenerateDocumentationFile>
   </PropertyGroup>
 
-  <PropertyGroup>
-    <WarningsAsErrors>$(WarningsAsErrors);CS8509</WarningsAsErrors>
-  </PropertyGroup>
-
 </Project>
