@@ -1,0 +1,73 @@
+name: CLI
+
+on:
+  push:
+    branches: [main, master, cli]
+    paths:
+      - CodeWalker.Cli/**
+      - CodeWalker.Core/**
+      - .github/workflows/cli.yml
+  pull_request:
+    paths:
+      - CodeWalker.Cli/**
+      - CodeWalker.Core/**
+      - .github/workflows/cli.yml
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+env:
+  DOTNET_NOLOGO: true
+  DOTNET_CLI_TELEMETRY_OPTOUT: true
+  DOTNET_SKIP_FIRST_TIME_EXPERIENCE: true
+
+jobs:
+  test:
+    name: ${{ matrix.os }}
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          # Windows covers net48 natively. Linux is not redundant: two of the
+          # path bugs this project has hit only reproduce off Windows.
+          - os: windows-latest
+            frameworks: net48 net8.0 net10.0
+          - os: ubuntu-latest
+            frameworks: net8.0 net10.0
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: actions/setup-dotnet@v6
+        with:
+          dotnet-version: |
+            8.0.x
+            10.0.x
+
+      - name: Build
+        run: dotnet build CodeWalker.Cli/CodeWalker.Cli.csproj -warnaserror
+
+      - name: Test
+        shell: bash
+        run: |
+          for framework in ${{ matrix.frameworks }}; do
+            echo "::group::$framework"
+            dotnet test CodeWalker.Cli/CodeWalker.Cli.Tests.csproj -f "$framework"
+            echo "::endgroup::"
+          done
+
+  format:
+    name: format
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: actions/setup-dotnet@v6
+        with:
+          dotnet-version: 10.0.x
+
+      - name: Verify formatting
+        run: |
+          dotnet format CodeWalker.Cli/CodeWalker.Cli.csproj --verify-no-changes
+          dotnet format CodeWalker.Cli/CodeWalker.Cli.Tests.csproj --verify-no-changes
