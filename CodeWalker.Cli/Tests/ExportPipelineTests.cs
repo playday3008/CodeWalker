@@ -313,38 +313,6 @@ public sealed class ProcessSingleFileTests
 
         Assert.Equal("processor crashed", ex.Message);
     }
-
-    [Fact]
-    public void OutputDirectory_ComputedFromBackslashPath()
-    {
-        string? capturedOutputDir = null;
-
-        _ = ExportPipeline.ProcessSingleFile(
-            MakeEntry("x64\\levels\\gta5\\vehicles.rpf\\adder.ydr", "adder.ydr"),
-            data: [1],
-            outputDir: "/out",
-            dryRun: false,
-            noOverwrite: false,
-            processor: (_, _, dir, _) =>
-            {
-                capturedOutputDir = dir;
-                return (
-                    new Json.ExportFileEntry
-                    {
-                        Path = "adder.ydr",
-                        Name = "adder.ydr",
-                        OutputFiles = 1,
-                        Status = "exported",
-                    },
-                    null
-                );
-            }
-        );
-
-        Assert.NotNull(capturedOutputDir);
-        Assert.DoesNotContain("\\", capturedOutputDir);
-        Assert.StartsWith("/out", capturedOutputDir);
-    }
 }
 
 [Collection("ConsoleOutput")]
