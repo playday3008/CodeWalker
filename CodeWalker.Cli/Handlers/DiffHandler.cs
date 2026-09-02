@@ -16,9 +16,16 @@ internal sealed record DiffOptions
 {
     public required string LeftPath { get; init; }
     public required string RightPath { get; init; }
-    public required CommonOptions Common { get; init; }
-    public required bool Gen9 { get; init; }
+    public required string LeftExePath { get; init; }
+    public required string RightExePath { get; init; }
+    public required bool LeftGen9 { get; init; }
+    public required bool RightGen9 { get; init; }
     public required bool Recursive { get; init; }
+    public required bool Progress { get; init; }
+    public required bool Verbose { get; init; }
+    public required bool Json { get; init; }
+    public required SizeFormat SizeFormat { get; init; }
+    public required int Threads { get; init; }
 }
 
 internal static class DiffHandler
@@ -38,9 +45,26 @@ internal static class DiffHandler
             Required = true,
         };
 
-        Option<bool> gen9Option = new("--gen9", "-g")
+        Option<DirectoryInfo> leftExeOption = new("--left-exe", "-le")
         {
-            Description = "Use GTA V Enhanced (Gen9) mode",
+            Description = "Path to the GTA V installation for the left archive",
+            Required = true,
+        };
+
+        Option<DirectoryInfo> rightExeOption = new("--right-exe", "-re")
+        {
+            Description = "Path to the GTA V installation for the right archive",
+            Required = true,
+        };
+
+        Option<bool> leftGen9Option = new("--left-gen9", "-lg")
+        {
+            Description = "Use GTA V Enhanced (Gen9) mode for the left archive",
+        };
+
+        Option<bool> rightGen9Option = new("--right-gen9", "-rg")
+        {
+            Description = "Use GTA V Enhanced (Gen9) mode for the right archive",
         };
 
         Option<bool> recursiveOption = new("--recursive", "-R")
@@ -48,14 +72,23 @@ internal static class DiffHandler
             Description = "Include nested RPFs in comparison",
         };
 
+        Option<bool> progressOption = new("--progress", "-P")
+        {
+            Description = "Show progress bar",
+        };
+
         Command command = new("diff", "Compare two RPF archives")
         {
             leftOption,
             rightOption,
-            gen9Option,
+            leftExeOption,
+            rightExeOption,
+            leftGen9Option,
+            rightGen9Option,
             recursiveOption,
+            progressOption,
         };
-        commonOpts.AddTo(command);
+        commonOpts.AddTo(command, includeExe: false);
         command.Aliases.Add("d");
 
         command.SetAction(parseResult =>
@@ -64,9 +97,16 @@ internal static class DiffHandler
             {
                 LeftPath = parseResult.GetRequiredValue(leftOption).FullName,
                 RightPath = parseResult.GetRequiredValue(rightOption).FullName,
-                Common = commonOpts.Parse(parseResult),
-                Gen9 = parseResult.GetValue(gen9Option),
+                LeftExePath = parseResult.GetRequiredValue(leftExeOption).FullName,
+                RightExePath = parseResult.GetRequiredValue(rightExeOption).FullName,
+                LeftGen9 = parseResult.GetValue(leftGen9Option),
+                RightGen9 = parseResult.GetValue(rightGen9Option),
                 Recursive = parseResult.GetValue(recursiveOption),
+                Progress = parseResult.GetValue(progressOption),
+                Verbose = parseResult.GetValue(commonOpts.Verbose),
+                Json = parseResult.GetValue(commonOpts.Json),
+                SizeFormat = parseResult.GetValue(commonOpts.Si) ? SizeFormat.SI : SizeFormat.IEC,
+                Threads = parseResult.GetValue(commonOpts.Threads),
             };
             return Execute(options, cancellationToken);
         });
@@ -76,100 +116,141 @@ internal static class DiffHandler
 
     public static int Execute(DiffOptions options, CancellationToken cancellationToken = default)
     {
-        Json.DiffResult ErrorResult(string[] errorMessages) =>
-            new()
-            {
-                Success = false,
-                LeftRpf = options.LeftPath,
-                RightRpf = options.RightPath,
-                Added = [],
-                Removed = [],
-                Modified = [],
-                Unchanged = [],
-                Summary = new Json.DiffSummary
-                {
-                    AddedCount = 0,
-                    RemovedCount = 0,
-                    ModifiedCount = 0,
-                    UnchangedCount = 0,
-                },
-                ErrorMessages = errorMessages,
-            };
-
-        // Validate both RPF files exist before loading keys
+        // Validate both RPF files and exe paths before loading keys
         string? leftError = RpfService.ValidateInputs(
             options.LeftPath,
-            options.Common.ExePath,
-            options.Gen9
+            options.LeftExePath,
+            options.LeftGen9
         );
         if (leftError != null)
         {
-            return RpfService.ReportError(leftError, options.Common.Json, ErrorResult([]));
-        }
-
-        if (!File.Exists(options.RightPath))
-        {
             return RpfService.ReportError(
-                $"RPF file not found: {options.RightPath}",
-                options.Common.Json,
-                ErrorResult([])
+                leftError,
+                options.Json,
+                ErrorResult([], options)
             );
         }
 
+        string? rightError = RpfService.ValidateInputs(
+            options.RightPath,
+            options.RightExePath,
+            options.RightGen9
+        );
+        if (rightError != null)
+        {
+            return RpfService.ReportError(
+                rightError,
+                options.Json,
+                ErrorResult([], options)
+            );
+        }
+
+        List<string> errorMessages = [];
         try
         {
-            if (!options.Common.Json)
+            if (!options.Json)
                 Console.Error.WriteLine("Loading encryption keys...");
-            RpfService.LoadKeys(options.Common.ExePath, options.Gen9);
-
-            List<string> errorMessages = [];
+            RpfService.LoadKeys(options.LeftExePath, options.LeftGen9);
+            if (options.RightExePath != options.LeftExePath || options.RightGen9 != options.LeftGen9)
+                RpfService.LoadKeys(options.RightExePath, options.RightGen9);
 
             RpfFile leftRpf = RpfService.OpenRpf(
                 options.LeftPath,
-                options.Common.Verbose,
-                options.Common.Json,
+                options.Verbose,
+                options.Json,
                 errorMessages
             );
 
             RpfFile rightRpf = RpfService.OpenRpf(
                 options.RightPath,
-                options.Common.Verbose,
-                options.Common.Json,
+                options.Verbose,
+                options.Json,
                 errorMessages
             );
 
-            // Collect files from both archives
-            List<(RpfFile rpf, RpfFileEntry entry)> leftFiles = RpfService.CollectFiles(
-                leftRpf,
-                null,
-                options.Recursive
+            Json.DiffResult result = CollectDiff(leftRpf, rightRpf, errorMessages, options, cancellationToken);
+
+            if (options.Json)
+                PrintJsonDiff(result);
+            else
+                PrintDiff(result, options);
+
+            return errorMessages.Count > 0 ? 1 : 0;
+        }
+        catch (OperationCanceledException) { throw; }
+        catch (Exception ex)
+        {
+            return RpfService.ReportError(
+                ex.Message,
+                options.Json,
+                ErrorResult([.. errorMessages], options),
+                options.Verbose ? ex.StackTrace : null
             );
-            List<(RpfFile rpf, RpfFileEntry entry)> rightFiles = RpfService.CollectFiles(
-                rightRpf,
-                null,
-                options.Recursive
-            );
+        }
+    }
 
-            // Build dictionaries keyed by path
-            Dictionary<string, (RpfFile rpf, RpfFileEntry entry)> leftDict =
-                leftFiles.ToDictionary(f => f.entry.Path, f => f);
+    internal static Json.DiffResult ErrorResult(string[] errorMessages, DiffOptions options) =>
+        new()
+        {
+            Success = false,
+            LeftRpf = options.LeftPath,
+            RightRpf = options.RightPath,
+            Added = [],
+            Removed = [],
+            Modified = [],
+            Unchanged = [],
+            Summary = new Json.DiffSummary
+            {
+                AddedCount = 0,
+                RemovedCount = 0,
+                ModifiedCount = 0,
+                UnchangedCount = 0,
+            },
+            ErrorMessages = errorMessages,
+        };
 
-            Dictionary<string, (RpfFile rpf, RpfFileEntry entry)> rightDict =
-                rightFiles.ToDictionary(f => f.entry.Path, f => f);
+    internal static Json.DiffResult CollectDiff(
+        RpfFile leftRpf,
+        RpfFile rightRpf,
+        List<string> errorMessages,
+        DiffOptions options,
+        CancellationToken cancellationToken = default)
+    {
+        // Collect files from both archives
+        List<(RpfFile rpf, RpfFileEntry entry)> leftFiles = RpfService.CollectFiles(
+            leftRpf,
+            null,
+            options.Recursive
+        );
+        List<(RpfFile rpf, RpfFileEntry entry)> rightFiles = RpfService.CollectFiles(
+            rightRpf,
+            null,
+            options.Recursive
+        );
 
-            SizeFormat sizeFormat = options.Common.SizeFormat;
+        // Build dictionaries keyed by path
+        Dictionary<string, (RpfFile rpf, RpfFileEntry entry)> leftDict =
+            leftFiles.ToDictionary(f => f.entry.Path, f => f);
 
-            // Find removed and modified/unchanged — entries in left that also appear in right
-            // need byte comparison, so parallelize this
-            string[] commonPaths = leftDict.Keys.Where(rightDict.ContainsKey).ToArray();
+        Dictionary<string, (RpfFile rpf, RpfFileEntry entry)> rightDict =
+            rightFiles.ToDictionary(f => f.entry.Path, f => f);
 
-            // Result per common path: null = unchanged, non-null = modified entry
-            bool[] isModifiedArr = new bool[commonPaths.Length];
+        SizeFormat sizeFormat = options.SizeFormat;
 
+        // Find removed and modified/unchanged — entries in left that also appear in right
+        // need byte comparison, so parallelize this
+        string[] commonPaths = leftDict.Keys.Where(rightDict.ContainsKey).ToArray();
+
+        // Result per common path: false = unchanged, true = modified
+        bool[] isModifiedArr = new bool[commonPaths.Length];
+        object errorLock = new();
+
+        using (ProgressBar progress = new(commonPaths.Length, options.Progress && !options.Json))
+        {
             _ = Parallel.For(
                 0,
                 commonPaths.Length,
-                new ParallelOptions { MaxDegreeOfParallelism = options.Common.Threads, CancellationToken = cancellationToken },
+                new ParallelOptions { MaxDegreeOfParallelism = options.Threads, CancellationToken = cancellationToken },
                 i =>
                 {
                     string path = commonPaths[i];
@@ -189,186 +270,184 @@ internal static class DiffHandler
                     {
                         byte[]? leftData = leftRpfRef.ExtractFile(leftEntry);
                         byte[]? rightData = rightRpfRef.ExtractFile(rightEntry);
-                        isModifiedArr[i] = !ContentEquals(leftData, rightData);
+
+                        if (leftData == null || rightData == null)
+                        {
+                            string side = leftData == null ? "left" : "right";
+                            lock (errorLock)
+                                errorMessages.Add($"Failed to extract {side} entry: {path}");
+                            isModifiedArr[i] = true;
+                        }
+                        else
+                        {
+                            isModifiedArr[i] = !ContentEquals(leftData, rightData);
+                        }
                     }
+
+                    progress.Increment(path);
                 }
             );
+        }
 
-            List<Json.DiffEntry> added = [];
-            List<Json.DiffEntry> removed = [];
-            List<Json.DiffEntry> modified = [];
-            List<Json.DiffEntry> unchanged = [];
+        List<Json.DiffEntry> added = [];
+        List<Json.DiffEntry> removed = [];
+        List<Json.DiffEntry> modified = [];
+        List<Json.DiffEntry> unchanged = [];
 
-            // Aggregate common path results
-            for (int i = 0; i < commonPaths.Length; i++)
+        // Aggregate common path results
+        for (int i = 0; i < commonPaths.Length; i++)
+        {
+            string path = commonPaths[i];
+            (_, RpfFileEntry leftEntry) = leftDict[path];
+            (_, RpfFileEntry rightEntry) = rightDict[path];
+
+            if (isModifiedArr[i])
             {
-                string path = commonPaths[i];
-                (_, RpfFileEntry leftEntry) = leftDict[path];
-                (_, RpfFileEntry rightEntry) = rightDict[path];
-
-                if (isModifiedArr[i])
-                {
-                    long leftSize = leftEntry.GetFileSize();
-                    long rightSize = rightEntry.GetFileSize();
-                    modified.Add(
-                        new Json.DiffEntry
-                        {
-                            Path = path,
-                            Name = leftEntry.Name,
-                            Type = RpfService.GetFileType(leftEntry),
-                            LeftSize = leftSize,
-                            LeftSizeFormatted = sizeFormat.ToFormattedString(leftSize),
-                            RightSize = rightSize,
-                            RightSizeFormatted = sizeFormat.ToFormattedString(rightSize),
-                        }
-                    );
-                }
-                else
-                {
-                    long size = leftEntry.GetFileSize();
-                    unchanged.Add(
-                        new Json.DiffEntry
-                        {
-                            Path = path,
-                            Name = leftEntry.Name,
-                            Type = RpfService.GetFileType(leftEntry),
-                            Size = size,
-                            SizeFormatted = sizeFormat.ToFormattedString(size),
-                        }
-                    );
-                }
-            }
-
-            // Find removed (left only)
-            removed.AddRange(
-                leftDict
-                    .Where(kvp => !rightDict.ContainsKey(kvp.Key))
-                    .Select(kvp =>
+                long leftSize = leftEntry.GetFileSize();
+                long rightSize = rightEntry.GetFileSize();
+                modified.Add(
+                    new Json.DiffEntry
                     {
-                        long size = kvp.Value.entry.GetFileSize();
-                        return new Json.DiffEntry
-                        {
-                            Path = kvp.Key,
-                            Name = kvp.Value.entry.Name,
-                            Type = RpfService.GetFileType(kvp.Value.entry),
-                            Size = size,
-                            SizeFormatted = sizeFormat.ToFormattedString(size),
-                        };
-                    })
-            );
-
-            // Find added (right only)
-            added.AddRange(
-                rightDict
-                    .Where(kvp => !leftDict.ContainsKey(kvp.Key))
-                    .Select(kvp =>
-                    {
-                        long size = kvp.Value.entry.GetFileSize();
-                        return new Json.DiffEntry
-                        {
-                            Path = kvp.Key,
-                            Name = kvp.Value.entry.Name,
-                            Type = RpfService.GetFileType(kvp.Value.entry),
-                            Size = size,
-                            SizeFormatted = sizeFormat.ToFormattedString(size),
-                        };
-                    })
-            );
-
-            // Sort alphabetically
-            added.Sort((a, b) => string.CompareOrdinal(a.Path, b.Path));
-            removed.Sort((a, b) => string.CompareOrdinal(a.Path, b.Path));
-            modified.Sort((a, b) => string.CompareOrdinal(a.Path, b.Path));
-            unchanged.Sort((a, b) => string.CompareOrdinal(a.Path, b.Path));
-
-            Json.DiffSummary summary = new()
-            {
-                AddedCount = added.Count,
-                RemovedCount = removed.Count,
-                ModifiedCount = modified.Count,
-                UnchangedCount = unchanged.Count,
-            };
-
-            Json.DiffResult result = new()
-            {
-                Success = errorMessages.Count == 0,
-                LeftRpf = options.LeftPath,
-                RightRpf = options.RightPath,
-                Added = [.. added],
-                Removed = [.. removed],
-                Modified = [.. modified],
-                Unchanged = [.. unchanged],
-                Summary = summary,
-                ErrorMessages = [.. errorMessages],
-            };
-
-            if (options.Common.Json)
-            {
-                Console.WriteLine(
-                    JsonSerializer.Serialize(result, RpfService.JsonSerializerOptions)
+                        Path = path,
+                        Name = leftEntry.Name,
+                        Type = RpfService.GetFileType(leftEntry),
+                        LeftSize = leftSize,
+                        LeftSizeFormatted = sizeFormat.ToFormattedString(leftSize),
+                        RightSize = rightSize,
+                        RightSizeFormatted = sizeFormat.ToFormattedString(rightSize),
+                    }
                 );
             }
             else
             {
-                if (added.Count > 0)
-                {
-                    Console.WriteLine($"Added ({added.Count}):");
-                    foreach (Json.DiffEntry entry in added)
+                long size = leftEntry.GetFileSize();
+                unchanged.Add(
+                    new Json.DiffEntry
                     {
-                        Console.WriteLine($"  + {entry.Path}");
+                        Path = path,
+                        Name = leftEntry.Name,
+                        Type = RpfService.GetFileType(leftEntry),
+                        Size = size,
+                        SizeFormatted = sizeFormat.ToFormattedString(size),
                     }
-                    Console.WriteLine();
-                }
-
-                if (removed.Count > 0)
-                {
-                    Console.WriteLine($"Removed ({removed.Count}):");
-                    foreach (Json.DiffEntry entry in removed)
-                    {
-                        Console.WriteLine($"  - {entry.Path}");
-                    }
-                    Console.WriteLine();
-                }
-
-                if (modified.Count > 0)
-                {
-                    Console.WriteLine($"Modified ({modified.Count}):");
-                    foreach (Json.DiffEntry entry in modified)
-                    {
-                        Console.WriteLine(
-                            $"  ~ {entry.Path}  ({entry.LeftSizeFormatted} -> {entry.RightSizeFormatted})"
-                        );
-                    }
-                    Console.WriteLine();
-                }
-
-                if (options.Common.Verbose && unchanged.Count > 0)
-                {
-                    Console.WriteLine($"Unchanged ({unchanged.Count}):");
-                    foreach (Json.DiffEntry entry in unchanged)
-                    {
-                        Console.WriteLine($"  = {entry.Path}");
-                    }
-                    Console.WriteLine();
-                }
-
-                Console.Error.WriteLine(
-                    $"Summary: {added.Count} added, {removed.Count} removed, {modified.Count} modified, {unchanged.Count} unchanged"
                 );
             }
+        }
 
-            return errorMessages.Count > 0 ? 1 : 0;
-        }
-        catch (OperationCanceledException) { throw; }
-        catch (Exception ex)
+        // Find removed (left only)
+        removed.AddRange(
+            leftDict
+                .Where(kvp => !rightDict.ContainsKey(kvp.Key))
+                .Select(kvp =>
+                {
+                    long size = kvp.Value.entry.GetFileSize();
+                    return new Json.DiffEntry
+                    {
+                        Path = kvp.Key,
+                        Name = kvp.Value.entry.Name,
+                        Type = RpfService.GetFileType(kvp.Value.entry),
+                        Size = size,
+                        SizeFormatted = sizeFormat.ToFormattedString(size),
+                    };
+                })
+        );
+
+        // Find added (right only)
+        added.AddRange(
+            rightDict
+                .Where(kvp => !leftDict.ContainsKey(kvp.Key))
+                .Select(kvp =>
+                {
+                    long size = kvp.Value.entry.GetFileSize();
+                    return new Json.DiffEntry
+                    {
+                        Path = kvp.Key,
+                        Name = kvp.Value.entry.Name,
+                        Type = RpfService.GetFileType(kvp.Value.entry),
+                        Size = size,
+                        SizeFormatted = sizeFormat.ToFormattedString(size),
+                    };
+                })
+        );
+
+        // Sort alphabetically
+        added.Sort((a, b) => string.CompareOrdinal(a.Path, b.Path));
+        removed.Sort((a, b) => string.CompareOrdinal(a.Path, b.Path));
+        modified.Sort((a, b) => string.CompareOrdinal(a.Path, b.Path));
+        unchanged.Sort((a, b) => string.CompareOrdinal(a.Path, b.Path));
+
+        Json.DiffSummary summary = new()
         {
-            return RpfService.ReportError(
-                ex.Message,
-                options.Common.Json,
-                ErrorResult([]),
-                options.Common.Verbose ? ex.StackTrace : null
-            );
+            AddedCount = added.Count,
+            RemovedCount = removed.Count,
+            ModifiedCount = modified.Count,
+            UnchangedCount = unchanged.Count,
+        };
+
+        return new Json.DiffResult
+        {
+            Success = errorMessages.Count == 0,
+            LeftRpf = options.LeftPath,
+            RightRpf = options.RightPath,
+            Added = [.. added],
+            Removed = [.. removed],
+            Modified = [.. modified],
+            Unchanged = [.. unchanged],
+            Summary = summary,
+            ErrorMessages = [.. errorMessages],
+        };
+    }
+
+    internal static void PrintJsonDiff(Json.DiffResult result) =>
+        Console.WriteLine(JsonSerializer.Serialize(result, RpfService.JsonSerializerOptions));
+
+    internal static void PrintDiff(Json.DiffResult result, DiffOptions options)
+    {
+        if (result.Added.Count > 0)
+        {
+            Console.WriteLine($"Added ({result.Added.Count}):");
+            foreach (Json.DiffEntry entry in result.Added)
+            {
+                Console.WriteLine($"  + {entry.Path}");
+            }
+            Console.WriteLine();
         }
+
+        if (result.Removed.Count > 0)
+        {
+            Console.WriteLine($"Removed ({result.Removed.Count}):");
+            foreach (Json.DiffEntry entry in result.Removed)
+            {
+                Console.WriteLine($"  - {entry.Path}");
+            }
+            Console.WriteLine();
+        }
+
+        if (result.Modified.Count > 0)
+        {
+            Console.WriteLine($"Modified ({result.Modified.Count}):");
+            foreach (Json.DiffEntry entry in result.Modified)
+            {
+                Console.WriteLine(
+                    $"  ~ {entry.Path}  ({entry.LeftSizeFormatted} -> {entry.RightSizeFormatted})"
+                );
+            }
+            Console.WriteLine();
+        }
+
+        if (options.Verbose && result.Unchanged.Count > 0)
+        {
+            Console.WriteLine($"Unchanged ({result.Unchanged.Count}):");
+            foreach (Json.DiffEntry entry in result.Unchanged)
+            {
+                Console.WriteLine($"  = {entry.Path}");
+            }
+            Console.WriteLine();
+        }
+
+        Console.Error.WriteLine(
+            $"Summary: {result.Summary.AddedCount} added, {result.Summary.RemovedCount} removed, {result.Summary.ModifiedCount} modified, {result.Summary.UnchangedCount} unchanged"
+        );
     }
 
     internal static bool ContentEquals(byte[]? a, byte[]? b)
