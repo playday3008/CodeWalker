@@ -53,25 +53,25 @@ internal sealed class RpfCommandOptions
 
     public void AddTo(Command command)
     {
-        command.Add(Rpf);
-        _commonOpts.AddTo(command);
-        command.Add(Gen9);
-        command.Add(Filter);
-        command.Add(Recursive);
+        command.Add(this.Rpf);
+        this._commonOpts.AddTo(command);
+        command.Add(this.Gen9);
+        command.Add(this.Filter);
+        command.Add(this.Recursive);
     }
 
     public RpfOptions Parse(ParseResult parseResult)
     {
-        CommonOptions common = _commonOpts.Parse(parseResult);
+        CommonOptions common = this._commonOpts.Parse(parseResult);
         return new RpfOptions
         {
-            RpfPath = parseResult.GetRequiredValue(Rpf).FullName,
+            RpfPath = parseResult.GetRequiredValue(this.Rpf).FullName,
             ExePath = common.ExePath,
-            Gen9 = parseResult.GetValue(Gen9),
-            Filters = Helpers.Filter.Normalize(parseResult.GetValue(Filter)),
+            Gen9 = parseResult.GetValue(this.Gen9),
+            Filters = Helpers.Filter.Normalize(parseResult.GetValue(this.Filter)),
             Verbose = common.Verbose,
             Json = common.Json,
-            Recursive = parseResult.GetValue(Recursive),
+            Recursive = parseResult.GetValue(this.Recursive),
             Threads = common.Threads,
             SizeFormat = common.SizeFormat,
         };

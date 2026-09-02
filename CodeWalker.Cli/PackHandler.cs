@@ -149,7 +149,7 @@ internal static class PackHandler
             string? outputDir = Path.GetDirectoryName(options.OutputPath);
             if (!string.IsNullOrEmpty(outputDir) && !Directory.Exists(outputDir))
             {
-                Directory.CreateDirectory(outputDir);
+                _ = Directory.CreateDirectory(outputDir);
             }
 
             string outputFolder = outputDir ?? Directory.GetCurrentDirectory();
@@ -303,7 +303,7 @@ internal static class PackHandler
                     Console.Error.WriteLine($"Adding file: {fileName} ({data.Length} bytes)");
                 }
 
-                RpfFile.CreateFile(parentDir, fileName, data);
+                _ = RpfFile.CreateFile(parentDir, fileName, data);
                 totalFiles++;
                 totalSize += data.Length;
                 progress.Increment(fileName);

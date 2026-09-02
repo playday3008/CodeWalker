@@ -132,7 +132,7 @@ internal static class SearchHandler
             // Match in parallel
             Json.SearchMatch?[] results = new Json.SearchMatch?[allEntries.Count];
 
-            Parallel.For(
+            _ = Parallel.For(
                 0,
                 allEntries.Count,
                 new ParallelOptions { MaxDegreeOfParallelism = options.Threads },
@@ -227,10 +227,9 @@ internal static class SearchHandler
         }
     }
 
-    private static bool HasGlobChars(string s)
-    {
-        return s.Contains('*', StringComparison.Ordinal) || s.Contains('?', StringComparison.Ordinal);
-    }
+    private static bool HasGlobChars(string s) =>
+        s.Contains('*', StringComparison.Ordinal) ||
+        s.Contains('?', StringComparison.Ordinal);
 
     private static void CollectAllEntries(RpfFile rpf, bool recursive, List<RpfEntry> entries)
     {

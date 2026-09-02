@@ -327,13 +327,13 @@ internal static class InspectHandler
         string? strExtMin = null;
         string? strExtMax = null;
 
-        if (file._CMapData.entitiesExtentsMin != default(Vector3))
+        if (file._CMapData.entitiesExtentsMin != default)
             entExtMin = FormatVector3(file._CMapData.entitiesExtentsMin);
-        if (file._CMapData.entitiesExtentsMax != default(Vector3))
+        if (file._CMapData.entitiesExtentsMax != default)
             entExtMax = FormatVector3(file._CMapData.entitiesExtentsMax);
-        if (file._CMapData.streamingExtentsMin != default(Vector3))
+        if (file._CMapData.streamingExtentsMin != default)
             strExtMin = FormatVector3(file._CMapData.streamingExtentsMin);
-        if (file._CMapData.streamingExtentsMax != default(Vector3))
+        if (file._CMapData.streamingExtentsMax != default)
             strExtMax = FormatVector3(file._CMapData.streamingExtentsMax);
 
         return new Json.YmapDetails
@@ -504,10 +504,8 @@ internal static class InspectHandler
         );
     }
 
-    private static string FormatVector3(Vector3 v)
-    {
-        return $"{v.X:F2}, {v.Y:F2}, {v.Z:F2}";
-    }
+    private static string FormatVector3(Vector3 v) =>
+        $"{v.X:F2}, {v.Y:F2}, {v.Z:F2}";
 
     private static void PrintTextResult(Json.InspectResult result, RpfOptions options)
     {
@@ -574,13 +572,17 @@ internal static class InspectHandler
                 Console.WriteLine($"Entities:       {ymap.EntityCount}");
                 Console.WriteLine($"Car Generators: {ymap.CarGeneratorCount}");
                 if (ymap.EntitiesExtentsMin != null)
+                {
                     Console.WriteLine(
                         $"Entity Extents: [{ymap.EntitiesExtentsMin}] to [{ymap.EntitiesExtentsMax}]"
                     );
+                }
                 if (ymap.StreamingExtentsMin != null)
+                {
                     Console.WriteLine(
                         $"Stream Extents: [{ymap.StreamingExtentsMin}] to [{ymap.StreamingExtentsMax}]"
                     );
+                }
                 Console.WriteLine($"Scripted:       {(ymap.IsScripted ? "yes" : "no")}");
                 break;
 

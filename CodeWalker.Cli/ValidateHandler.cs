@@ -99,7 +99,7 @@ internal static class ValidateHandler
 
             using (ProgressBar progress = new(entries.Count, options.Progress && !options.Rpf.Json))
             {
-                Parallel.For(
+                _ = Parallel.For(
                     0,
                     entries.Count,
                     new ParallelOptions { MaxDegreeOfParallelism = options.Rpf.Threads },
@@ -250,10 +250,7 @@ internal static class ValidateHandler
                     YtdFile file = RpfFile.GetFile<YtdFile>(fileEntry);
                     if (file == null)
                         return ("error", "Failed to load YTD file");
-                    if (
-                        file.TextureDict?.Textures?.data_items == null
-                        || file.TextureDict.Textures.data_items.Length == 0
-                    )
+                    if (file.TextureDict?.Textures?.data_items == null || file.TextureDict.Textures.data_items.Length == 0)
                         return ("warning", "Texture dictionary is empty");
                     return ("valid", null);
                 }

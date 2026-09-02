@@ -70,7 +70,7 @@ internal static class ExportAudioHandler
                 if (!dirCreated)
                 {
                     if (!Directory.Exists(fileOutputDir))
-                        Directory.CreateDirectory(fileOutputDir);
+                        _ = Directory.CreateDirectory(fileOutputDir);
                     dirCreated = true;
                 }
                 File.WriteAllBytes(midiPath, stream.MidiChunk.Data);
@@ -85,7 +85,7 @@ internal static class ExportAudioHandler
                 if (!dirCreated)
                 {
                     if (!Directory.Exists(fileOutputDir))
-                        Directory.CreateDirectory(fileOutputDir);
+                        _ = Directory.CreateDirectory(fileOutputDir);
                     dirCreated = true;
                 }
                 File.WriteAllBytes(wavPath, wav);

@@ -53,32 +53,29 @@ internal sealed class CommonCommandOptions
 
     public CommonCommandOptions()
     {
-        Threads.Validators.Add(result =>
+        this.Threads.Validators.Add(result =>
         {
-            if (result.GetValue(Threads) < 1)
+            if (result.GetValue(this.Threads) < 1)
                 result.AddError("--threads must be at least 1.");
         });
     }
 
     public void AddTo(Command command, bool includeThreads = true)
     {
-        command.Add(Exe);
-        command.Add(Verbose);
-        command.Add(Json);
-        command.Add(Si);
+        command.Add(this.Exe);
+        command.Add(this.Verbose);
+        command.Add(this.Json);
+        command.Add(this.Si);
         if (includeThreads)
-            command.Add(Threads);
+            command.Add(this.Threads);
     }
 
-    public CommonOptions Parse(ParseResult parseResult)
+    public CommonOptions Parse(ParseResult parseResult) => new()
     {
-        return new CommonOptions
-        {
-            ExePath = parseResult.GetRequiredValue(Exe).FullName,
-            Verbose = parseResult.GetValue(Verbose),
-            Json = parseResult.GetValue(Json),
-            SizeFormat = parseResult.GetValue(Si) ? SizeFormat.SI : SizeFormat.IEC,
-            Threads = parseResult.GetValue(Threads),
-        };
-    }
+        ExePath = parseResult.GetRequiredValue(this.Exe).FullName,
+        Verbose = parseResult.GetValue(this.Verbose),
+        Json = parseResult.GetValue(this.Json),
+        SizeFormat = parseResult.GetValue(this.Si) ? SizeFormat.SI : SizeFormat.IEC,
+        Threads = parseResult.GetValue(this.Threads),
+    };
 }

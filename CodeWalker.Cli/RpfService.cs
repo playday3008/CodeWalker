@@ -73,10 +73,8 @@ internal static class RpfService
     /// <summary>
     /// Loads GTA V encryption keys from the installation directory.
     /// </summary>
-    public static void LoadKeys(string exePath, bool gen9)
-    {
+    public static void LoadKeys(string exePath, bool gen9) =>
         GTA5Keys.LoadFromPath(exePath, gen9);
-    }
 
     /// <summary>
     /// Recursively collects file entries from an RPF archive, applying glob filters.
@@ -160,15 +158,12 @@ internal static class RpfService
     /// <summary>
     /// Returns the file type string for a given RPF file entry.
     /// </summary>
-    public static string GetFileType(RpfFileEntry fileEntry)
+    public static string GetFileType(RpfFileEntry fileEntry) => fileEntry switch
     {
-        return fileEntry switch
-        {
-            RpfResourceFileEntry => "resource",
-            RpfBinaryFileEntry => "binary",
-            _ => "unknown",
-        };
-    }
+        RpfResourceFileEntry => "resource",
+        RpfBinaryFileEntry => "binary",
+        _ => "unknown",
+    };
 
     /// <summary>
     /// Validates inputs, loads encryption keys, and prints status to stderr.
@@ -217,9 +212,11 @@ internal static class RpfService
         );
 
         if (!json)
+        {
             Console.Error.WriteLine(
                 $"Found {rpf.GrandTotalFileCount} files in {rpf.GrandTotalRpfCount} archive(s)"
             );
+        }
 
         return rpf;
     }

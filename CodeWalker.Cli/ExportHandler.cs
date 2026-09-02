@@ -39,24 +39,21 @@ internal sealed class ExportCommandOptions
 
     public void AddTo(Command command)
     {
-        _rpfOpts.AddTo(command);
-        command.Add(Output);
-        command.Add(DryRun);
-        command.Add(NoOverwrite);
-        command.Add(Progress);
+        this._rpfOpts.AddTo(command);
+        command.Add(this.Output);
+        command.Add(this.DryRun);
+        command.Add(this.NoOverwrite);
+        command.Add(this.Progress);
     }
 
-    public ExportOptions Parse(ParseResult parseResult)
+    public ExportOptions Parse(ParseResult parseResult) => new()
     {
-        return new ExportOptions
-        {
-            Rpf = _rpfOpts.Parse(parseResult),
-            OutputPath = parseResult.GetValue(Output)?.FullName ?? Directory.GetCurrentDirectory(),
-            DryRun = parseResult.GetValue(DryRun),
-            NoOverwrite = parseResult.GetValue(NoOverwrite),
-            Progress = parseResult.GetValue(Progress),
-        };
-    }
+        Rpf = this._rpfOpts.Parse(parseResult),
+        OutputPath = parseResult.GetValue(this.Output)?.FullName ?? Directory.GetCurrentDirectory(),
+        DryRun = parseResult.GetValue(this.DryRun),
+        NoOverwrite = parseResult.GetValue(this.NoOverwrite),
+        Progress = parseResult.GetValue(this.Progress),
+    };
 }
 
 internal static class ExportHandler
