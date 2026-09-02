@@ -69,6 +69,7 @@ internal sealed record InspectResult : BaseResult
 [JsonDerivedType(typeof(YbnDetails))]
 [JsonDerivedType(typeof(AwcDetails))]
 [JsonDerivedType(typeof(Gxt2Details))]
+[ExcludeFromCodeCoverage]
 internal abstract record InspectDetailBase;
 
 [ExcludeFromCodeCoverage]

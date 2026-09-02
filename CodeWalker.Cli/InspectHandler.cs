@@ -455,7 +455,7 @@ internal static class InspectHandler
         );
     }
 
-    private static string FormatVector3(Vector3 v) =>
+    internal static string FormatVector3(Vector3 v) =>
         $"{v.X:F2}, {v.Y:F2}, {v.Z:F2}";
 
     private static void PrintTextResult(Json.InspectResult result, RpfOptions options)
