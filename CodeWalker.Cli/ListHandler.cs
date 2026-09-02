@@ -38,7 +38,7 @@ public static class ListHandler
             RpfFile = null!,
             TotalFiles = 0,
             TotalSize = 0,
-            TotalSizeFormatted = null!,
+            TotalSizeFormatted = "0 B",
             NestedRpfCount = 0,
             Files = files,
             ErrorMessages = errorMessages,

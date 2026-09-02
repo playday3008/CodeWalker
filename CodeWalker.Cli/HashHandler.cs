@@ -65,11 +65,13 @@ public static class HashHandler
     {
         List<Json.HashEntry> hashes = [];
 
+        List<string> errorMessages = [];
+
         Json.HashResult result = new()
         {
             Success = false,
             Hashes = hashes,
-            ErrorMessage = null,
+            ErrorMessages = errorMessages,
         };
 
         // Validate encoding
@@ -140,7 +142,11 @@ public static class HashHandler
     {
         if (options.Json)
         {
-            result = result with { Success = false, ErrorMessage = message };
+            result = result with
+            {
+                Success = false,
+                ErrorMessages = [.. result.ErrorMessages, message],
+            };
             Console.WriteLine(JsonSerializer.Serialize(result, RpfService.JsonSerializerOptions));
         }
         else
