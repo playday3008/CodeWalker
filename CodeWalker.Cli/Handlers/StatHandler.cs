@@ -44,9 +44,9 @@ internal static class StatHandler
         if (initError != null)
             return RpfService.ReportError(initError, options.Json, ErrorResult([], options));
 
+        List<string> scanErrors = [];
         try
         {
-            List<string> scanErrors = [];
             RpfFile rpf = RpfService.OpenRpf(
                 options.RpfPath,
                 options.Verbose,
@@ -78,7 +78,7 @@ internal static class StatHandler
             return RpfService.ReportError(
                 ex.Message,
                 options.Json,
-                ErrorResult([], options),
+                ErrorResult([.. scanErrors], options),
                 options.Verbose ? ex.StackTrace : null
             );
         }
