@@ -78,23 +78,6 @@ public static class RpfService
     }
 
     /// <summary>
-    /// Opens an RPF file and scans its structure.
-    /// </summary>
-    public static RpfFile OpenRpf(
-        string rpfPath,
-        Action<string>? onStatus = null,
-        Action<string>? onError = null
-    )
-    {
-        string rpfName = Path.GetFileName(rpfPath);
-        RpfFile rpf = new(rpfPath, rpfName);
-
-        rpf.ScanStructure(status => onStatus?.Invoke(status), error => onError?.Invoke(error));
-
-        return rpf;
-    }
-
-    /// <summary>
     /// Recursively collects file entries from an RPF archive, applying glob filters.
     /// </summary>
     public static List<(RpfFile rpf, RpfFileEntry entry)> CollectFiles(
@@ -210,14 +193,15 @@ public static class RpfService
         if (!json)
             Console.Error.WriteLine($"Opening RPF: {rpfPath}");
 
-        RpfFile rpf = OpenRpf(
-            rpfPath,
-            onStatus: status =>
+        string rpfName = Path.GetFileName(rpfPath);
+        RpfFile rpf = new(rpfPath, rpfName);
+        rpf.ScanStructure(
+            status =>
             {
                 if (verbose && !json)
                     Console.Error.WriteLine(status);
             },
-            onError: error =>
+            error =>
             {
                 if (!json)
                     Console.Error.WriteLine($"Error: {error}");

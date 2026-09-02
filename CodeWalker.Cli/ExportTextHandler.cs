@@ -34,10 +34,25 @@ public static class ExportTextHandler
     private static (Json.ExportFileEntry? entry, string? error) ProcessFile(
         RpfFileEntry fileEntry,
         byte[] data,
-        string fileOutputDir
+        string fileOutputDir,
+        bool noOverwrite
     )
     {
         Gxt2File gxt = RpfFile.GetFile<Gxt2File>(fileEntry, data);
+        if (gxt == null)
+        {
+            return (
+                new Json.ExportFileEntry
+                {
+                    Path = fileEntry.Path,
+                    Name = fileEntry.Name,
+                    OutputFiles = 0,
+                    Status = "skipped",
+                },
+                null
+            );
+        }
+
         string text = gxt.ToText();
 
         if (string.IsNullOrEmpty(text))
@@ -61,6 +76,20 @@ public static class ExportTextHandler
 
         string outputFileName = Path.GetFileNameWithoutExtension(fileEntry.Name) + ".txt";
         string outputPath = Path.Combine(fileOutputDir, outputFileName);
+
+        if (noOverwrite && File.Exists(outputPath))
+        {
+            return (
+                new Json.ExportFileEntry
+                {
+                    Path = fileEntry.Path,
+                    Name = fileEntry.Name,
+                    OutputFiles = 0,
+                    Status = "skipped",
+                },
+                null
+            );
+        }
 
         File.WriteAllText(outputPath, text, Encoding.UTF8);
 

@@ -27,7 +27,8 @@ public static class ExportXmlHandler
     private static (Json.ExportFileEntry? entry, string? error) ProcessFile(
         RpfFileEntry fileEntry,
         byte[] data,
-        string fileOutputDir
+        string fileOutputDir,
+        bool noOverwrite
     )
     {
         string xml = MetaXml.GetXml(fileEntry, data, out string filename, fileOutputDir);
@@ -52,6 +53,21 @@ public static class ExportXmlHandler
         }
 
         string outputPath = Path.Combine(fileOutputDir, filename);
+
+        if (noOverwrite && File.Exists(outputPath))
+        {
+            return (
+                new Json.ExportFileEntry
+                {
+                    Path = fileEntry.Path,
+                    Name = fileEntry.Name,
+                    OutputFiles = 0,
+                    Status = "skipped",
+                },
+                null
+            );
+        }
+
         File.WriteAllText(outputPath, xml, Encoding.UTF8);
 
         return (

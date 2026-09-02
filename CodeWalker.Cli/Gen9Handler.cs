@@ -210,13 +210,12 @@ public static class Gen9Handler
                         string?
                     )[filePaths.Count];
 
+                    object consoleLock = new();
+
                     Parallel.For(
                         0,
                         filePaths.Count,
-                        new ParallelOptions
-                        {
-                            MaxDegreeOfParallelism = Math.Max(1, options.Common.Threads),
-                        },
+                        new ParallelOptions { MaxDegreeOfParallelism = options.Common.Threads },
                         i =>
                         {
                             string path = filePaths[i];
@@ -238,7 +237,12 @@ public static class Gen9Handler
                                     );
                                     if (options.Common.Verbose && !options.Common.Json)
                                     {
-                                        Console.Error.WriteLine($"{relPath} - skipped (exists)");
+                                        lock (consoleLock)
+                                        {
+                                            Console.Error.WriteLine(
+                                                $"{relPath} - skipped (exists)"
+                                            );
+                                        }
                                     }
                                     progress.Increment(relPath);
                                     return;
@@ -252,20 +256,25 @@ public static class Gen9Handler
 
                                 string ext = Path.GetExtension(path).ToLowerInvariant();
                                 byte[] dataIn = File.ReadAllBytes(path);
-                                byte[] dataOut = Gen9Converter.TryConvert(
+                                byte[]? dataOut = Gen9Converter.TryConvert(
                                     dataIn,
                                     ext,
                                     msg =>
                                     {
                                         if (options.Common.Verbose && !options.Common.Json)
-                                            Console.Error.WriteLine(msg);
+                                        {
+                                            lock (consoleLock)
+                                            {
+                                                Console.Error.WriteLine(msg);
+                                            }
+                                        }
                                     },
                                     relPath,
                                     copyUnconverted,
                                     out bool wasConverted
                                 );
 
-                                if (wasConverted)
+                                if (wasConverted && dataOut != null)
                                 {
                                     File.WriteAllBytes(outPath, dataOut);
                                     nonRpfResults[i] = (
@@ -317,7 +326,10 @@ public static class Gen9Handler
                                 );
                                 if (!options.Common.Json)
                                 {
-                                    Console.Error.WriteLine($"Error: {errorMsg}");
+                                    lock (consoleLock)
+                                    {
+                                        Console.Error.WriteLine($"Error: {errorMsg}");
+                                    }
                                 }
                                 progress.Increment();
                             }
@@ -548,7 +560,7 @@ public static class Gen9Handler
                 dataIn = ResourceBuilder.Compress(dataIn);
                 dataIn = ResourceBuilder.AddResourceHeader(rfe, dataIn);
 
-                byte[] dataOut = Gen9Converter.TryConvert(
+                byte[]? dataOut = Gen9Converter.TryConvert(
                     dataIn,
                     type,
                     msg =>

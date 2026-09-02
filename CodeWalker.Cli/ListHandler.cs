@@ -63,7 +63,7 @@ public static class ListHandler
                 scanErrors
             );
 
-            uint nestedRpfCount = rpf.GrandTotalRpfCount;
+            int nestedRpfCount = (int)rpf.GrandTotalRpfCount;
 
             if (!options.Json)
             {
@@ -87,7 +87,7 @@ public static class ListHandler
             Parallel.For(
                 0,
                 entries.Count,
-                new ParallelOptions { MaxDegreeOfParallelism = Math.Max(1, options.Threads) },
+                new ParallelOptions { MaxDegreeOfParallelism = options.Threads },
                 i =>
                 {
                     RpfFileEntry fileEntry = entries[i].entry;

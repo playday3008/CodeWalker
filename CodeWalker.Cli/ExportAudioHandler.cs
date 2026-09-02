@@ -33,7 +33,8 @@ public static class ExportAudioHandler
     private static (Json.ExportFileEntry? entry, string? error) ProcessFile(
         RpfFileEntry fileEntry,
         byte[] data,
-        string fileOutputDir
+        string fileOutputDir,
+        bool noOverwrite
     )
     {
         AwcFile awc = RpfFile.GetFile<AwcFile>(fileEntry, data);
@@ -67,6 +68,8 @@ public static class ExportAudioHandler
             if (stream.MidiChunk?.Data != null)
             {
                 string midiPath = Path.Combine(fileOutputDir, streamName + ".midi");
+                if (noOverwrite && File.Exists(midiPath))
+                    continue;
                 File.WriteAllBytes(midiPath, stream.MidiChunk.Data);
                 streamCount++;
             }
@@ -74,6 +77,8 @@ public static class ExportAudioHandler
             {
                 byte[] wav = stream.GetWavFile();
                 string wavPath = Path.Combine(fileOutputDir, streamName + ".wav");
+                if (noOverwrite && File.Exists(wavPath))
+                    continue;
                 File.WriteAllBytes(wavPath, wav);
                 streamCount++;
             }

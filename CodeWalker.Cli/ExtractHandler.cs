@@ -111,7 +111,7 @@ public static class ExtractHandler
                 scanErrors
             );
 
-            uint grandTotalFileCount = rpf.GrandTotalFileCount;
+            int grandTotalFileCount = (int)rpf.GrandTotalFileCount;
 
             if (!options.Rpf.Json && options.DryRun)
             {
@@ -156,10 +156,7 @@ public static class ExtractHandler
                 Parallel.For(
                     0,
                     filesToExtract.Count,
-                    new ParallelOptions
-                    {
-                        MaxDegreeOfParallelism = Math.Max(1, options.Rpf.Threads),
-                    },
+                    new ParallelOptions { MaxDegreeOfParallelism = options.Rpf.Threads },
                     i =>
                     {
                         (RpfFile sourceRpf, RpfFileEntry fileEntry) = filesToExtract[i];
