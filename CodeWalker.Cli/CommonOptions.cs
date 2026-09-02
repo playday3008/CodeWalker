@@ -60,9 +60,10 @@ internal sealed class CommonCommandOptions
         });
     }
 
-    public void AddTo(Command command, bool includeThreads = true)
+    public void AddTo(Command command, bool includeThreads = true, bool includeExe = true)
     {
-        command.Add(this.Exe);
+        if (includeExe)
+            command.Add(this.Exe);
         command.Add(this.Verbose);
         command.Add(this.Json);
         command.Add(this.Si);

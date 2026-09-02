@@ -88,16 +88,16 @@ public sealed class DiffHandlerExecuteTests
         {
             LeftPath = leftPath,
             RightPath = rightPath,
-            Common = new CommonOptions
-            {
-                ExePath = "/nonexistent",
-                Verbose = false,
-                Json = json,
-                SizeFormat = SizeFormat.IEC,
-                Threads = 1,
-            },
-            Gen9 = false,
+            LeftExePath = "/nonexistent",
+            RightExePath = "/nonexistent",
+            LeftGen9 = false,
+            RightGen9 = false,
             Recursive = false,
+            Progress = false,
+            Verbose = false,
+            Json = json,
+            SizeFormat = SizeFormat.IEC,
+            Threads = 1,
         };
 
     [Fact]
@@ -171,16 +171,16 @@ public sealed class DiffHandlerExecuteTests
                 {
                     LeftPath = leftRpf,
                     RightPath = "/nonexistent/right.rpf",
-                    Common = new CommonOptions
-                    {
-                        ExePath = dir,
-                        Verbose = false,
-                        Json = false,
-                        SizeFormat = SizeFormat.IEC,
-                        Threads = 1,
-                    },
-                    Gen9 = false,
+                    LeftExePath = dir,
+                    RightExePath = dir,
+                    LeftGen9 = false,
+                    RightGen9 = false,
                     Recursive = false,
+                    Progress = false,
+                    Verbose = false,
+                    Json = false,
+                    SizeFormat = SizeFormat.IEC,
+                    Threads = 1,
                 };
 
                 int exitCode = DiffHandler.Execute(options, TestContext.Current.CancellationToken);
