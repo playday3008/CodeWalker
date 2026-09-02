@@ -72,4 +72,24 @@ public sealed class RpfOptionsTests
         Assert.True(rpfOpts.Verbose);
         Assert.Equal(2, rpfOpts.Threads);
     }
+
+    [Fact]
+    public void AddTo_IncludesThreadsByDefault()
+    {
+        RootCommand root = [];
+        RpfCommandOptions opts = new();
+        opts.AddTo(root);
+        ParseResult pr = root.Parse("--rpf /tmp/test.rpf --exe /tmp/testdir  --threads 2");
+        Assert.Empty(pr.Errors);
+    }
+
+    [Fact]
+    public void AddTo_ExcludesThreads_WhenFlagIsFalse()
+    {
+        RootCommand root = [];
+        RpfCommandOptions opts = new();
+        opts.AddTo(root, includeThreads: false);
+        ParseResult pr = root.Parse("--rpf /tmp/test.rpf --exe /tmp/testdir  --threads 2");
+        Assert.NotEmpty(pr.Errors);
+    }
 }

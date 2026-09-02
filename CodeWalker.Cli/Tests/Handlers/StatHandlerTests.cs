@@ -610,7 +610,7 @@ public sealed class PrintJsonStatsTests
             Assert.Contains("\"compressedSizeFormatted\":", json);
             Assert.Contains("\"uncompressedSize\": 1200", json);
             Assert.Contains("\"uncompressedSizeFormatted\":", json);
-            Assert.Contains("\"compressionRatio\": 0.6667", json);
+            Assert.Contains($"\"compressionRatio\": {JsonSerializer.Serialize(0.6667)}", json);
             Assert.Contains("\"extensions\":", json);
         }
         finally { Console.SetOut(orig); }

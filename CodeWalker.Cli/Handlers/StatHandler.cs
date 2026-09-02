@@ -19,7 +19,7 @@ internal static class StatHandler
         RpfCommandOptions rpfOpts = new();
 
         Command command = new("stat", "Show aggregate statistics for RPF archive contents");
-        rpfOpts.AddTo(command);
+        rpfOpts.AddTo(command, includeThreads: false);
         command.Aliases.Add("S");
 
         command.SetAction(parseResult => Execute(rpfOpts.Parse(parseResult), cancellationToken));
@@ -46,7 +46,8 @@ internal static class StatHandler
             return RpfService.ReportError(
                 initError,
                 options.Json,
-                ErrorResult([], options));
+                ErrorResult([], options)
+            );
         }
 
         List<string> scanErrors = [];
@@ -73,11 +74,15 @@ internal static class StatHandler
             if (options.Json)
                 PrintJsonStats(result);
             else
-                PrintStats(result, options);
+                PrintStats(result, options, cancellationToken);
 
             return scanErrors.Count > 0 ? 1 : 0;
         }
-        catch (OperationCanceledException) { throw; }
+        catch (OperationCanceledException)
+        {
+            // Gracefully handle cancellation without printing an error message
+            throw;
+        }
         catch (Exception ex)
         {
             return RpfService.ReportError(
@@ -196,7 +201,10 @@ internal static class StatHandler
                     TotalSize = kv.Value.total,
                     TotalSizeFormatted = options.SizeFormat.ToFormattedString(kv.Value.total),
                     AvgSize = kv.Value.count > 0 ? kv.Value.total / kv.Value.count : 0,
-                    AvgSizeFormatted = options.SizeFormat.ToFormattedString(kv.Value.count > 0 ? kv.Value.total / kv.Value.count : 0),
+                    AvgSizeFormatted =
+                        options.SizeFormat.ToFormattedString(kv.Value.count > 0
+                            ? kv.Value.total / kv.Value.count
+                            : 0),
                     MinSize = kv.Value.min,
                     MinSizeFormatted = options.SizeFormat.ToFormattedString(kv.Value.min),
                     MaxSize = kv.Value.max,
@@ -235,8 +243,10 @@ internal static class StatHandler
     /// </summary>
     /// <param name="result">The collected statistics to print.</param>
     /// <param name="options">The options used to format size values in the output.</param>
-    internal static void PrintStats(Json.StatResult result, RpfOptions options)
+    /// <param name="cancellationToken">A cancellation token to observe while printing.</param>
+    internal static void PrintStats(Json.StatResult result, RpfOptions options, CancellationToken cancellationToken = default)
     {
+        cancellationToken.ThrowIfCancellationRequested();
         // Collect all rows for dynamic column sizing
         string[] headers = ["Extension", "Count", "Total", "Avg", "Min", "Max"];
         string[][] rows = [

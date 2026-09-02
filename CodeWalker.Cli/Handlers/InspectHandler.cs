@@ -71,9 +71,9 @@ internal static class InspectHandler
             return RpfService.ReportError(initError, options.Json, ErrorResult([]));
         }
 
+        List<string> scanErrors = [];
         try
         {
-            List<string> scanErrors = [];
             RpfFile rpf = RpfService.OpenRpf(
                 options.RpfPath,
                 options.Verbose,
@@ -95,7 +95,7 @@ internal static class InspectHandler
                 return RpfService.ReportError(
                     $"File not found in archive: {filePath}",
                     options.Json,
-                    ErrorResult([])
+                    ErrorResult([.. scanErrors])
                 );
             }
 
@@ -162,7 +162,7 @@ internal static class InspectHandler
             return RpfService.ReportError(
                 ex.Message,
                 options.Json,
-                ErrorResult([]),
+                ErrorResult([.. scanErrors]),
                 options.Verbose ? ex.StackTrace : null
             );
         }
